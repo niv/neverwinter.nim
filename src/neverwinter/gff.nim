@@ -3,8 +3,7 @@ when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
 import strutils, sequtils, algorithm, streams, future, tables, sets, encodings,
   typetraits
 
-import util/io
-import util/misc
+import util
 
 const NwnEncoding = "windows-1252"
 

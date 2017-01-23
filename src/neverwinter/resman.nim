@@ -10,7 +10,7 @@ type
     containers: seq[ResContainer]
     cache: WeightedLRU[ResRef, Res]
 
-proc newResMan*(cacheSizeMB = 0): ResMan =
+proc newResMan*(cacheSizeMB = 100): ResMan =
   new(result)
   result.containers = newSeq[ResContainer]()
   assert(cacheSizeMB >= 0)

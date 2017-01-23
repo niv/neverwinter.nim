@@ -1,6 +1,6 @@
 when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
 
-import streams, strutils, sequtils, tables
+import streams, strutils, sequtils, tables, times
 
 import resman, util
 
@@ -16,6 +16,7 @@ type
   Erf* = ref object of ResContainer
     io: Stream
     ioStart: int
+    mtime: Time
 
     fileType: string
 
@@ -37,6 +38,7 @@ proc readFromStream*(io: Stream): Erf =
   result.files = newSeq[ResRef]()
   result.offsets = newSeq[tuple[offset: int, size: int]]()
   result.locStrings = newSeq[LocString]()
+  result.mtime = getTime()
 
   result.fileType = io.readStrOrErr(4)
   expect(["MOD ", "ERF ", "HAK "].find(result.fileType) != -1, "unsupported erf type")
@@ -70,7 +72,7 @@ proc readFromStream*(io: Stream): Erf =
     io.setPosition(io.getPosition + 4) # id - we're not using it
     let restype = io.readInt16()
     io.setPosition(io.getPosition + 2) # unused NULLs
-    result.files.add((resRef: resref, resType: restype.ResType).ResRef)
+    result.files.add(newResRef(resref, restype.ResType))
 
   # reslist
   for i in 0..<entryCount:
@@ -86,6 +88,6 @@ method demand*(self: Erf, rr: ResRef): Res =
   let index = self.files.find(rr)
   doAssert(index > -1)
   let offset = self.offsets[index]
-  result = newRes(self.files[index], self.io, offset.offset, offset.size)
+  result = newRes(self.files[index], self.mtime, self.io, offset.offset, offset.size)
 
 method count*(self: Erf): int = self.files.len

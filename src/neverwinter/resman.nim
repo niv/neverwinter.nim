@@ -1,7 +1,8 @@
 import options, streams
+export options, streams
 
-import resref, res, util, lru
-export resref, res
+import resref, restype, res, util, lru
+export resref, restype, res
 
 type
   ResContainer* = ref object of RootObj
@@ -52,6 +53,10 @@ proc demand*(self: ResMan, rr: ResRef, usecache = true): Res =
 proc count*(self: ResMan): int =
   result = 0
   for c in self.containers: result += c.count()
+
+proc `[]`*(self: ResMan, rr: ResolvedResRef): Option[Res] =
+  ## Alias for contains + demand.
+  if self.contains(rr): result = some(self.demand(rr))
 
 proc `[]`*(self: ResMan, rr: ResRef): Option[Res] =
   ## Alias for contains + demand.

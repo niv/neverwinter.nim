@@ -1,125 +1,57 @@
 import tables, strutils, options
+from hashes import hash, Hash, `!&`
 
-import util
+import restype, util
 
 const
   ResRefMaxLength = 16
 
 type
-  ResType* = uint16
+  ResRef* = ref object of RootObj
+    resRef: string
+    resType: ResType
 
-  ResRef* = tuple[resRef: string, resType: ResType]
+  ResolvedResRef* = ref object of ResRef
+    resExt: string
 
-var types  = initTable[ResType, string]()
-var rtypes = initTable[string, ResType]()
+proc hash*(self: ResRef): Hash =
+  result = 0
+  result = result !& hash(self.resRef)
+  result = result !& hash(self.resType)
 
-proc registerResType*(resType: ResType, extension: string) =
-  expect(extension.len > 0) #  and extension.len <= 3)
+proc isValidResRefPart1(s: string): bool = s.len > 0 and s.len <= ResRefMaxLength
 
-  types[resType] = extension.toLowerAscii
-  rtypes[extension.toLowerAscii] = resType
+proc newResRef*(resRef: string, resType: ResType): ResRef =
+  expect(resRef.isValidResRefPart1, "'" & resRef & "' is not a valid resref")
+  new(result)
+  result.resRef = resRef.toLowerAscii
+  result.resType = resType
 
-proc lookupResType*(extension: string): Option[ResType] =
-  if rtypes.hasKey(extension.toLowerAscii):
-    result = some(rtypes[extension.toLowerAscii])
-
-proc lookupResExtension(resType: ResType): Option[string] =
-  if types.hasKey(resType): result = some(types[resType])
-
-converter toResRef*(rr: string): ResRef =
-  let sp = rr.split(".", 2)
-
-  expect(sp.len == 2 and
-    sp[0].len > 0 and sp[0].len <= ResRefMaxLength and
-    sp[1].len > 0) #  and sp[1].len <= 3)
-
-  let ext = lookupResType(sp[1])
+proc resolve*(rr: ResRef): Option[ResolvedResRef] =
+  let ext = lookupResExt(rr.resType)
   if ext.isSome:
-    result = (resRef: sp[0], resType: ext.get()).ResRef
-  else:
-    raise newException(ValueError,
-      "a restype with extension " & sp[1] & " is not registered")
+    let r = new(ResolvedResRef)
+    r.resRef = rr.resRef
+    r.resType = rr.resType
+    r.resExt = ext.get()
+    result = some(r)
 
-proc `$`*(r: ResType): string =
-  proc IntToStr(x: int): string {.magic: "IntToStr", noSideEffect.}
-  let ext = lookupResExtension(r)
-  "$1:$2" % [ IntToStr(r.int), if ext.isSome: ext.get() else: "(noext)" ]
+proc tryNewResolvedResRef*(filename: string): Option[ResolvedResRef] =
+  let sp = filename.toLowerAscii.split(".", 2)
+  if sp.len == 2 and isValidResRefPart1(sp[0]):
+    let ext = lookupResType(sp[1])
+    if ext.isSome:
+      result = newResRef(sp[0], ext.get()).resolve()
 
-# nwn1
-registerResType(1, "bmp");
-registerResType(2, "mve");
-registerResType(3, "tga");
-registerResType(4, "wav");
-registerResType(6, "plt");
-registerResType(7, "ini");
-registerResType(8, "bmu");
-registerResType(9, "mpg");
-registerResType(10, "txt");
-registerResType(2000, "plh");
-registerResType(2001, "tex");
-registerResType(2002, "mdl");
-registerResType(2003, "thg");
-registerResType(2005, "fnt");
-registerResType(2007, "lua");
-registerResType(2008, "slt");
-registerResType(2009, "nss");
-registerResType(2010, "ncs");
-registerResType(2011, "mod");
-registerResType(2012, "are");
-registerResType(2013, "set");
-registerResType(2014, "ifo");
-registerResType(2015, "bic");
-registerResType(2016, "wok");
-registerResType(2017, "2da");
-registerResType(2018, "tlk");
-registerResType(2022, "txi");
-registerResType(2023, "git");
-registerResType(2024, "bti");
-registerResType(2025, "uti");
-registerResType(2026, "btc");
-registerResType(2027, "utc");
-registerResType(2029, "dlg");
-registerResType(2030, "itp");
-registerResType(2031, "btt");
-registerResType(2032, "utt");
-registerResType(2033, "dds");
-registerResType(2034, "bts");
-registerResType(2035, "uts");
-registerResType(2036, "ltr");
-registerResType(2037, "gff");
-registerResType(2038, "fac");
-registerResType(2039, "bte");
-registerResType(2040, "ute");
-registerResType(2041, "btd");
-registerResType(2042, "utd");
-registerResType(2043, "btp");
-registerResType(2044, "utp");
-registerResType(2045, "dft");
-registerResType(2046, "gic");
-registerResType(2047, "gui");
-registerResType(2048, "css");
-registerResType(2049, "ccs");
-registerResType(2050, "btm");
-registerResType(2051, "utm");
-registerResType(2052, "dwk");
-registerResType(2053, "pwk");
-registerResType(2054, "btg");
-registerResType(2055, "utg");
-registerResType(2056, "jrl");
-registerResType(2057, "sav");
-registerResType(2058, "utw");
-registerResType(2059, "4pc");
-registerResType(2060, "ssf");
-registerResType(2061, "hak");
-registerResType(2062, "nwm");
-registerResType(2063, "bik");
-registerResType(2064, "ndb");
-registerResType(2065, "ptm");
-registerResType(2066, "ptt");
-registerResType(2067, "bak");
-registerResType(2068, "dat");
-registerResType(2069, "shd");
-registerResType(2070, "xbc");
-registerResType(9997, "erf");
-registerResType(9998, "bif");
-registerResType(9999, "key");
+proc newResolvedResRef*(filename: string): ResolvedResRef =
+  let r = tryNewResolvedResRef(filename)
+  expect(r.isSome, "'" & filename & "' is not a resolvable resref")
+  result = r.get()
+
+proc `$`*(rr: ResRef): string = rr.resRef & ".(" & $rr.resType & ")"
+
+proc toFile*(rr: ResolvedResRef): string = rr.resRef & "." & rr.resExt
+proc `$`*(rr: ResolvedResRef): string = rr.toFile
+
+converter stringToResolvedResRef*(filename: string): ResolvedResRef =
+  newResolvedResRef(filename)

@@ -1,6 +1,6 @@
 when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
 
-import streams, options, sequtils, strutils, tables
+import streams, options, sequtils, strutils, tables, times, os
 
 import resman, util
 
@@ -16,6 +16,7 @@ type
   Bif* = ref object
     keyTable: KeyTable
     filename: string
+    mtime: Time
     io: Stream
     fileType: string
     fileVersion: string
@@ -36,6 +37,7 @@ proc openBif(io: Stream, owner: KeyTable, filename: string): Bif =
   result.io = io
   result.keyTable = owner
   result.filename = filename
+  result.mtime = getLastModificationTime(filename)
 
   result.fileType = io.readStrOrErr(4)
   expect(result.fileType == "BIFF")
@@ -135,7 +137,7 @@ proc readFromStream*(io: Stream): KeyTable =
     expect(bifIdx >= 0 and bifIdx < result.bifs.len)
     expect(result.bifs[bifIdx].hasResId(bifId), "bifId not in bif: " & $bifId)
 
-    let rr: Resref = (resRef: resref, resType: restype)
+    let rr = newResRef(resref, restype)
     result.resrefIdLookup[rr] = resId
 
 method contains*(self: KeyTable, rr: ResRef): bool =
@@ -152,6 +154,6 @@ method demand*(self: KeyTable, rr: ResRef): Res =
   let va = b.getVariableResource(bifId)
   let st = b.getStreamForVariableResource(bifId)
 
-  result = newRes(rr, st, va.offset, va.fileSize)
+  result = newRes(rr, b.mtime, st, va.offset, va.fileSize)
 
 method count*(self: KeyTable): int = self.resrefIdLookup.len

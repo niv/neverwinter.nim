@@ -42,7 +42,8 @@ converter toResRef*(rr: string): ResRef =
 
 proc `$`*(r: ResType): string =
   proc IntToStr(x: int): string {.magic: "IntToStr", noSideEffect.}
-  "$1:$2" % [ IntToStr(r.int), $lookupResExtension(r) ]
+  let ext = lookupResExtension(r)
+  "$1:$2" % [ IntToStr(r.int), if ext.isSome: ext.get() else: "(noext)" ]
 
 # nwn1
 registerResType(1, "bmp");

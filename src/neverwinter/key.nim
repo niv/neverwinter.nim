@@ -2,7 +2,7 @@ when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
 
 import streams, options, sequtils, strutils, tables
 
-import resman, resref, util
+import resman, util
 
 type
   ResId = int
@@ -152,4 +152,6 @@ method demand*(self: KeyTable, rr: ResRef): Res =
   let va = b.getVariableResource(bifId)
   let st = b.getStreamForVariableResource(bifId)
 
-  result = newRes(st, va.fileSize)
+  result = newRes(rr, st, va.offset, va.fileSize)
+
+method count*(self: KeyTable): int = self.resrefIdLookup.len

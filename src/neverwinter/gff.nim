@@ -5,8 +5,6 @@ import strutils, sequtils, algorithm, streams, future, tables, sets, encodings,
 
 import util
 
-const NwnEncoding = "windows-1252"
-
 type
   GffStruct* = ref object of RootObj
     root: GffRoot
@@ -439,7 +437,7 @@ proc resolve(self: GffField): GffField =
       let exoId = loader.io.readInt32()
       let strSz = loader.io.readInt32()
       self.gffCExoLocString.entries[exoId] =
-        loader.io.readStrOrErr(strSz).convert(getCurrentEncoding(), NwnEncoding)
+        loader.io.readStrOrErr(strSz).fromNwnEncoding
 
 
   of GffFieldKind.Dword64: self.gffDword64 = cast[uint64](loader.io.readInt64())
@@ -447,12 +445,10 @@ proc resolve(self: GffField): GffField =
   of GffFieldKind.Double: self.gffDouble = cast[float64](loader.io.readFloat64())
 
   of GffFieldKind.CExoString: self.gffCExoString =
-    loader.io.readStrOrErr(loader.io.readInt32()).
-      convert(getCurrentEncoding(), NwnEncoding)
+    loader.io.readStrOrErr(loader.io.readInt32()).fromNwnEncoding
 
   of GffFieldKind.ResRef: self.gffResRef =
-    loader.io.readStrOrErr(loader.io.readInt8()).
-      convert(getCurrentEncoding(), NwnEncoding).GffResRef
+    loader.io.readStrOrErr(loader.io.readInt8()).GffResRef
 
   of GffFieldKind.Void: self.gffVoid =
     loader.io.readStrOrErr(loader.io.readInt32()).GffVoid
@@ -600,13 +596,13 @@ proc writeToStream*(root: GffRoot, io: Stream) =
 
         case v.fieldKind:
         of GffFieldKind.CExoString:
-          let s = v.getValue(GffCExoString).convert(NwnEncoding, getCurrentEncoding())
+          let s = v.getValue(GffCExoString).toNwnEncoding
           fieldData.write(s.len.int32)
           fieldData.write(s)
           assert(fieldData.getPosition == f.dataOrOffset + 4 + s.len)
 
         of GffFieldKind.ResRef:
-          let s = v.getValue(GffResRef).string.convert(NwnEncoding, getCurrentEncoding())
+          let s = v.getValue(GffResRef).string
           fieldData.write(s.len.int8)
           fieldData.write(s)
           assert(fieldData.getPosition == f.dataOrOffset + 1 + s.len)
@@ -615,7 +611,7 @@ proc writeToStream*(root: GffRoot, io: Stream) =
           let s = v.getValue(GffCExoLocString)
           let m = newStringStream()
           for lang, str in pairs(s.entries):
-            let str2 = str.convert(NwnEncoding, getCurrentEncoding())
+            let str2 = str.toNwnEncoding
             m.write(lang.int32)
             m.write(str2.len.int32)
             m.write(str2)

@@ -1,4 +1,4 @@
-import streams
+import streams, encodings
 
 proc readStrChunked*(io: Stream, size: int): TaintedString =
   result = ""
@@ -23,3 +23,7 @@ template expect*(cond: bool, msg: string = "") =
   {.line: instantiationInfo().}:
     if not cond:
       raise newException(ValueError, "Expectation failed: " & astToStr(cond) & ' ' & msg)
+
+const NwnEncoding = "windows-1252"
+template toNwnEncoding*(s: string): string = s.convert(NwnEncoding, getCurrentEncoding())
+template fromNwnEncoding*(s: string): string = s.convert(getCurrentEncoding(), NwnEncoding)

@@ -483,7 +483,7 @@ proc resolve(self: GffField): GffField =
 
   self.resolved = true
 
-proc readFromStream*(fromIO: Stream, lazyLoad: bool = true): GffRoot =
+proc readGffRoot*(fromIO: Stream, lazyLoad: bool = true): GffRoot =
   ## Reads a gff from a IO.
   ## This assumes that `fromIO` is positioned at the beginning of the gff header,
   ## including the magic bytes ("BIC V3.2")
@@ -556,7 +556,7 @@ proc readFromStream*(fromIO: Stream, lazyLoad: bool = true): GffRoot =
     result.loader.root = nil
     result.loader = nil
 
-proc writeToStream*(root: GffRoot, io: Stream) =
+proc write*(io: Stream, root: GffRoot) =
   # Write a gff root object to a stream!
 
   expect(root.fileType.len == 4)

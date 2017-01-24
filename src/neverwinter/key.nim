@@ -30,7 +30,7 @@ type
     bifs: seq[Bif]
     resrefIdLookup: Table[ResRef, ResId]
 
-proc openBif(io: Stream, owner: KeyTable, filename: string): Bif =
+proc readBif(io: Stream, owner: KeyTable, filename: string): Bif =
   new(result)
 
   result.variableResources = initTable[ResId, VariableResource]()
@@ -71,7 +71,7 @@ proc getStreamForVariableResource*(self: Bif, id: ResId): Stream =
   result = newFileStream(self.filename)
   result.setPosition(self.variableResources[id].offset)
 
-proc readFromStream*(io: Stream): KeyTable =
+proc readKeyTable*(io: Stream): KeyTable =
   new(result)
   result.io = io
   result.ioStart = io.getPosition
@@ -124,7 +124,7 @@ proc readFromStream*(io: Stream): KeyTable =
   for fn in filenameTable:
     let fnio = newFileStream(fn)
     expect(fnio != nil, "key file referenced file " & fn & " but cannot open")
-    result.bifs.add(openBif(fnio, result, fn))
+    result.bifs.add(readBif(fnio, result, fn))
 
   io.setPosition(offsetToKeyTable)
   for i in 0..<keyCount:

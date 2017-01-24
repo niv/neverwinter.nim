@@ -23,7 +23,7 @@ proc contents*(self: Erf): TableRef[ResRef, Res] =
 proc locStrings*(self: Erf): TableRef[int, string] =
   self.locStrings
 
-proc readFromStream*(io: Stream): Erf =
+proc readErf*(io: Stream): Erf =
   new(result)
   result.locStrings = newTable[int, string]()
   result.contents = newTable[ResRef, Res]()
@@ -75,7 +75,7 @@ proc readFromStream*(io: Stream): Erf =
     var erfObj = newRes(rr, result.mtime, io, size = resData.size, offset = resData.offset)
     result.contents[rr] = erfObj
 
-proc writeToStream*(self: Erf, io: Stream) =
+proc write*(io: Stream, self: Erf) =
   let ioStart = io.getPosition
 
   var locStrSize = 0

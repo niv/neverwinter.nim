@@ -32,7 +32,7 @@ proc len*(self: Res): int =
 proc mtime*(self: Res): Time =
   self.mtime
 
-method read*(self: Res): string {.base.} =
+method readAll*(self: Res): string {.base.} =
   ## Reads the full data of this res.
   if self.cached:
     result = self.cache

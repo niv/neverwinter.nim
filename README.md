@@ -12,9 +12,11 @@ It has a nice, fluid API to it that transparently maps native data types to GFF 
 import neverwinter.gff
 
 # GffRoot is like a GffStruct
-let root: GffRoot = readFromStream(newFileStream(paramStr(1)), true)
+let root: GffRoot = newFileStream(paramStr(1)).readGffRoot(true)
 
 echo root["Str", byte]
+root["Str", byte] = 3
+newFileStream("out.gff").write(root)
 ```
 
 ## import neverwinter.json
@@ -24,7 +26,7 @@ gff<->json transformation helpers.
 ```nim
 import neverwinter.gff, neverwinter.gffjson
 
-let root: GffRoot = readFromStream(newFileStream(paramStr(1)), false)
+let root: GffRoot = newFileStream(paramStr(1)).readGffRoot(false)
 let json: JSONNode = someRoot.toJson()
 let root2 = s.gffRootFromJson()
 ```
@@ -47,9 +49,9 @@ import neverwinter.resman, neverwinter.key
 let r = resman.newResMan(100) #100MB of in-memory cache for requests
 
 for f in ["chitin", "xp1", "xp1patch", "xp2", "xp2patch", "xp3"]:
-  r.add(key.readFromStream(newFileStream(f & ".key")))
+  r.add(newFileStream(f & ".key").readKeyTable())
 
-r.add(erf.readFromStream(newFileStream("my.erf")))
+r.add(newFileStream("my.erf").readErf())
 
 r.add(resdir.newResDir("./override/"))
 

@@ -26,7 +26,7 @@ proc newRes*(resref: ResRef, mtime: Time, io: Stream, offset = 0, size = -1): Re
 
 proc resRef*(self: Res): ResRef = self.resRef
 
-proc size*(self: Res): int =
+proc len*(self: Res): int =
   self.size
 
 proc mtime*(self: Res): Time =

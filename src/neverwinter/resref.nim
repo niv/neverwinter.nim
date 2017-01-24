@@ -15,9 +15,10 @@ type
     resExt: string
 
 proc hash*(self: ResRef): Hash =
-  result = 0
-  result = result !& hash(self.resRef)
-  result = result !& hash(self.resType)
+  0 !& hash(self.resRef) !& hash(self.resType)
+
+proc `==`*(a, b: ResRef): bool =
+  a.resRef == b.resRef and a.resType == b.resType
 
 proc isValidResRefPart1(s: string): bool = s.len > 0 and s.len <= ResRefMaxLength
 
@@ -48,10 +49,12 @@ proc newResolvedResRef*(filename: string): ResolvedResRef =
   expect(r.isSome, "'" & filename & "' is not a resolvable resref")
   result = r.get()
 
-proc `$`*(rr: ResRef): string = rr.resRef & ".(" & $rr.resType & ")"
+converter stringToResolvedResRef*(filename: string): ResolvedResRef =
+  newResolvedResRef(filename)
 
+proc `$`*(rr: ResRef): string = rr.resRef & ".(" & $rr.resType & ")"
 proc toFile*(rr: ResolvedResRef): string = rr.resRef & "." & rr.resExt
 proc `$`*(rr: ResolvedResRef): string = rr.toFile
 
-converter stringToResolvedResRef*(filename: string): ResolvedResRef =
-  newResolvedResRef(filename)
+proc resRef*(rr: ResRef): string = rr.resRef
+proc resType*(rr: ResRef): ResType = rr.resType

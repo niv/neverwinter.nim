@@ -47,7 +47,7 @@ proc demand*(self: ResMan, rr: ResRef, usecache = true): Res =
       result = c.demand(rr)
       if usecache:
         # echo "rr=", rr, " put in cache"
-        self.cache[rr, result.size] = result
+        self.cache[rr, result.len] = result
       break
 
 proc count*(self: ResMan): int =

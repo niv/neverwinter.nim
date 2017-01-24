@@ -17,7 +17,7 @@ let root: GffRoot = readFromStream(newFileStream(paramStr(1)), true)
 echo root["Str", byte]
 ```
 
-## import neverwinter.gffjson
+## import neverwinter.json
 
 gff<->json transformation helpers.
 

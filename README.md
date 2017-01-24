@@ -1,35 +1,69 @@
 # neverwinter.nim
 
-This is a nim-lang library to read and write data files used by Neverwinter Nights
-1 & 2.  It's for you if you don't have the patience for C, are unreasonably scared
-of modern C++, don't like Java, and Ruby is too slow!
+This is a nim-lang library to read and write data files used by Neverwinter Nights 1 & 2.  It's for you if you don't have the patience for C, are unreasonably scared of modern C++, don't like Java, and Ruby is too slow!
 
-## Current feature set
+## import neverwinter.gff
 
-* a somewhat-opinionated, easy to use API to manage gff structures
-* gff V3.2 reader both in streaming and full mode
-* gff V3.2 writer
-* json transformations
+A fully-featured gff reader and writer, that can work both in gobble-all mode or in streaming mode.  It supports all known data types and has been battle-tested through fuzzing, so it should be perfectly safe to pass user input to it.
 
-## Example
+It has a nice, fluid API to it that transparently maps native data types to GFF fields.  Please see the generated docs for details.
 
 ```nim
-import neverwinter
+import neverwinter.gff
 
+# GffRoot is like a GffStruct
 let root: GffRoot = readFromStream(newFileStream(paramStr(1)), true)
 
 echo root["Str", byte]
-root["Str", byte] = 5.byte
-echo root["Str", byte]
-echo root.fields["Str"]
+```
 
-let outio = newFileStream("out.gff", fmWrite)
-root.writeToStream(outio)
+## import neverwinter.gffjson
+
+gff<->json transformation helpers.
+
+```nim
+import neverwinter.gff, neverwinter.gffjson
+
+let root: GffRoot = readFromStream(newFileStream(paramStr(1)), false)
+let json: JSONNode = someRoot.toJson()
+let root2 = s.gffRootFromJson()
+```
+
+## import neverwinter.resman
+
+A eventually-fully-featured resman implementation that works just like the one in the game.  You can stack compatible containers into it (key, erf, directories, ..) or just write your own.
+
+Also includes helpers to identify resources (ResRef) and a streaming API to read data out of those containers (Res).
+
+Also also includes a rather experimental, builtin weighted LRU cache that will feather off multiple reads to the same resource.
+
+## import neverwinter.key, neverwinter.erf, neverwinter.resdir
+
+.key/.bif/.erf/override-style readonly support, to be used together with resman.  Fuzz-tested to catch the biggest snafus.
+
+```nim
+import neverwinter.resman, neverwinter.key
+
+let r = resman.newResMan(100) #100MB of in-memory cache for requests
+
+for f in ["chitin", "xp1", "xp1patch", "xp2", "xp2patch", "xp3"]:
+  r.add(key.readFromStream(newFileStream(f & ".key")))
+
+r.add(erf.readFromStream(newFileStream("my.erf")))
+
+r.add(resdir.newResDir("./override/"))
+
+echo r = r["nwscript.nss"]
+if r.isSome: echo r.read()
 ```
 
 ## Why?
 
 Is that a trick question?
+
+## Is it fast?
+
+Yes.
 
 ## Is it any good?
 

@@ -22,7 +22,10 @@ template expect*(cond: bool, msg: string = "") =
   bind instantiationInfo
   {.line: instantiationInfo().}:
     if not cond:
-      raise newException(ValueError, "Expectation failed: " & astToStr(cond) & ' ' & msg)
+      let expmsg =
+        if msg != "": msg
+        else: "Expectation failed: " & astToStr(cond)
+      raise newException(ValueError, expmsg)
 
 const NwnEncoding = "windows-1252"
 template toNwnEncoding*(s: string): string = s.convert(NwnEncoding, getCurrentEncoding())

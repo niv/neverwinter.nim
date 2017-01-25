@@ -1,0 +1,6 @@
+2DA V2.0
+
+  A              B
+0 "test string"  bval
+1 ****           bval2  "drop me"
+2 "missing entry wooooo"

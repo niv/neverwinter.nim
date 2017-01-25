@@ -39,7 +39,7 @@ Also includes helpers to identify resources (ResRef) and a streaming API to read
 
 Also also includes a rather experimental, builtin weighted LRU cache that will feather off multiple reads to the same resource.
 
-## import neverwinter.key, neverwinter.erf, neverwinter.resdir
+## import neverwinter.key, neverwinter.erf, neverwinter.resdir, neverwinter.resfile
 
 .key/.bif/.erf/override-style readonly support, to be used together with resman.  Fuzz-tested to catch the biggest snafus.
 
@@ -54,6 +54,8 @@ for f in ["chitin", "xp1", "xp1patch", "xp2", "xp2patch", "xp3"]:
 r.add(newFileStream("my.erf").readErf())
 
 r.add(resdir.newResDir("./override/"))
+
+r.add(resdir.newResFile("./dialog.tlk"))
 
 echo r = r["nwscript.nss"]
 if r.isSome: echo r.read()

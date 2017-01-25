@@ -71,6 +71,17 @@ echo app[5]["Race"] # lookups are case-insensitive
 newFileStream(stdout).write(app)
 ```
 
+## import neverwinter.tlk
+
+A tlk file reader. It's using a LRU cache to theoretically speed up access.
+
+```nim
+import neverwinter.tlk
+
+let t = newFileStream("dialog.tlk").readTlk
+echo t[5].text # => Cleric
+```
+
 ## Why?
 
 Is that a trick question?

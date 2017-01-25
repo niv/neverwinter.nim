@@ -59,6 +59,17 @@ echo r = r["nwscript.nss"]
 if r.isSome: echo r.read()
 ```
 
+## import neverwinter.twoda
+
+A simple twoda parser.
+
+```nim
+import neverwinter.twoda
+
+let app = newFileStream("appearance.2da").readTwoDA()
+echo app[5]["Race"] # lookups are case-insensitive
+```
+
 ## Why?
 
 Is that a trick question?

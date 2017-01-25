@@ -13,7 +13,7 @@ import lists, tables, options, strutils
 type
   WeightedLRU*[K,V] = ref WeightedLRUImpl[K,V]
 
-  Weight = int
+  Weight* = int
 
   Pair[K,V] = tuple
     key: K
@@ -36,6 +36,9 @@ proc newWeightedLRU*[K,V](maxWeight: Weight, minSize = 1): WeightedLRU[K,V] =
   doAssert(maxWeight > 0, "maxWeight must be a positive integer")
   doAssert(minSize >= 0, "minSize must be >= 0")
 
+  when not defined(release):
+    echo("newWeightedLRU(maxWeight=", maxWeight, ",", "minSize=", minSize, ")")
+
   new(result)
   result.minSize = minSize
   result.maxWeight = maxWeight
@@ -56,6 +59,29 @@ proc `[]`*[K,V](self: WeightedLRU[K,V], key: K): Option[V] =
     # move ourselves in first position because we were touched!
     self.cachelist.remove(node)
     self.cachelist.prepend(node)
+
+proc getOrPut*[K,V](self: WeightedLRU[K,V], key: K,
+                    whenMissing: proc(key: K): (Weight, V) {.closure.}): V =
+  ## Attempts to read a cache entry, and calls whenMissing when it's missing;
+  ## then puts the result of that into the cache. This is the variant that allows
+  ## you to specify a weight.
+  let opt = self[key]
+  if opt.isSome: result = opt.get()
+  else:
+    let ret = whenMissing(key)
+    result = ret[1]
+    self[key, ret[0]] = result
+
+proc getOrPut*[K,V](self: WeightedLRU[K,V], key: K,
+                    whenMissing: proc(key: K): V {.closure.}): V =
+  ## Attempts to read a cache entry, and calls whenMissing when it's missing;
+  ## then puts the result of that into the cache. This is the variant that uses
+  ## the default weight value (1).
+  let opt = self[key]
+  if opt.isSome: result = opt.get()
+  else:
+    result = whenMissing(key)
+    self[key] = result
 
 proc len*[K,V](self: WeightedLRU[K,V]): int =
   ## Returns the total item count.

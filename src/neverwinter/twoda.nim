@@ -2,19 +2,17 @@ import streams, strutils, sequtils
 
 import res, resref, util
 
-proc mapWithIndex[T, R](data: openArray[T],
-                        op: proc(x: T, idx: int): R {.closure.}): seq[R] {.inline.} =
-  newSeq[R](result, data.len)
-  for i in 0..<data.len: result[i] = op(data[i], i)
-
-iterator itemsWithIndex[T](data: openArray[T]): (T, int) =
-  for i in 0..<data.len: yield(data[i], i)
+const
+  CellPadding = 2
+  MaxColumns = 1024 # im a hack
 
 type
   Row*   = seq[string]
   TwoDA* = ref object
     headers*: Row
     rows*: seq[Row]
+    # If you edit headers, make sure this matches. This is headers transformed
+    # to lowercase to speed up column lookups.
     headersForLookup*: Row
 
 proc `[]`*(self: TwoDA, row: int): Row =
@@ -78,7 +76,7 @@ proc readTwoDA*(io: Stream): TwoDA =
   # skip post-header whitespace
   skipEmptyLines()
 
-  result.headers = line().readFields(1024) # arbitary limit on number of columns
+  result.headers = line().readFields(MaxColumns)
   result.headersForLookup = result.headers.
     map() do (x: auto) -> auto: x.toLowerAscii
 
@@ -103,15 +101,13 @@ proc writeField(field: string): string =
   elif field.find(" ") != -1: '"' & field & '"' else: field
 
 proc write*(io: Stream, self: TwoDA) =
-  ## Writes a twoda to the stream. Doesn't do any formatting.
-
-  const CellPadding = 2
+  ## Writes a twoda to the stream. Attempts to format the twoda to look pretty.
 
   let prows = self.rows.map() do (row: auto) -> auto:
     row.map() do (r: auto) -> auto: r.writeField
 
   let maxColWidth: seq[int] = self.headers.
-    mapWithIndex() do (hdr: string, idx: int) -> int:
+    mapWithIndex() do (idx: int, hdr: string) -> int:
       max(hdr.len, self.rows.map() do (row: auto) -> int: row[idx].len)
 
   let idWidth = max(3, len($self.rows.len))

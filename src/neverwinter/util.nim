@@ -22,7 +22,10 @@ template expect*(cond: bool, msg: string = "") =
   bind instantiationInfo
   {.line: instantiationInfo().}:
     if not cond:
-      raise newException(ValueError, "Expectation failed: " & astToStr(cond) & ' ' & msg)
+      let expmsg =
+        if msg != "": msg
+        else: "Expectation failed: " & astToStr(cond)
+      raise newException(ValueError, expmsg)
 
 const NwnEncoding = "windows-1252"
 template toNwnEncoding*(s: string): string = s.convert(NwnEncoding, getCurrentEncoding())
@@ -33,3 +36,4 @@ proc mapWithIndex*[T, R](data: openArray[T],
   ## same as sequtil.map(), except that it yields the index too.
   newSeq[R](result, data.len)
   for i in 0..<data.len: result[i] = op(i, data[i])
+

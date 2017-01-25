@@ -27,3 +27,9 @@ template expect*(cond: bool, msg: string = "") =
 const NwnEncoding = "windows-1252"
 template toNwnEncoding*(s: string): string = s.convert(NwnEncoding, getCurrentEncoding())
 template fromNwnEncoding*(s: string): string = s.convert(getCurrentEncoding(), NwnEncoding)
+
+proc mapWithIndex*[T, R](data: openArray[T],
+                        op: proc(idx: int, x: T): R {.closure.}): seq[R] {.inline.} =
+  ## same as sequtil.map(), except that it yields the index too.
+  newSeq[R](result, data.len)
+  for i in 0..<data.len: result[i] = op(i, data[i])

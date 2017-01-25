@@ -61,13 +61,14 @@ if r.isSome: echo r.read()
 
 ## import neverwinter.twoda
 
-A simple twoda parser.
+A simple twoda parser/writer.
 
 ```nim
 import neverwinter.twoda
 
 let app = newFileStream("appearance.2da").readTwoDA()
 echo app[5]["Race"] # lookups are case-insensitive
+newFileStream(stdout).write(app)
 ```
 
 ## Why?

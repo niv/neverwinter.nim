@@ -32,6 +32,18 @@ proc len*(self: Res): int =
 proc mtime*(self: Res): Time =
   self.mtime
 
+proc io*(self: Res): Stream =
+  self.io
+
+proc ioOffset*(self: Res): int =
+  self.offset
+
+proc cached*(self: Res): bool =
+  self.cached
+
+proc seek*(self: Res) =
+  self.io.setPosition(self.offset)
+
 method readAll*(self: Res): string {.base.} =
   ## Reads the full data of this res.
   if self.cached:

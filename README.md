@@ -78,10 +78,18 @@ newFileStream(stdout).write(app)
 A tlk file reader. It's using a LRU cache to theoretically speed up access.
 
 ```nim
+import neverwinter.resman
 import neverwinter.tlk
 
-let t = newFileStream("dialog.tlk").readTlk
-echo t[5].text # => Cleric
+let rs = newResMan()
+rs.add(newResFile("dialog.tlk"))
+rs.add(newResFile("dialogf.tlk"))
+
+let dlg = newTlk(@[
+  (rs["dialog.tlk"].get(), rs["dialogf.tlk"].get())
+])
+
+echo dlg[5, gender = Gender.Female]
 ```
 
 ## Why?

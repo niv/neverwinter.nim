@@ -1,6 +1,7 @@
-import streams, strutils
+import streams, strutils, options, sequtils
 
-import util, lru, languages
+import util, lru, res, resref, languages
+export languages
 
 type
   StrRef* = uint32
@@ -10,7 +11,7 @@ type
     soundResRef*: string
     soundLength*: float
 
-  Tlk* = ref object
+  SingleTlk = ref object
     io: Stream
     ioStartPos: int
     language: Language
@@ -18,16 +19,22 @@ type
     entriesOffset: int
     cache*: WeightedLRU[StrRef, TlkEntry]
 
+  TlkPair* = tuple[male: SingleTlk, female: SingleTlk]
+  Tlk* = ref object
+    chain*: seq[TlkPair]
+
 const
   HeaderSize = 20
   DataElementSize = 40
 
-proc `[]`*(self: Tlk, str: StrRef, language = Language.English): TlkEntry =
+proc `$`*(self: TlkEntry): string = self.text
+
+proc `[]`*(self: SingleTlk, str: StrRef): Option[TlkEntry] =
   ## Look up a TLK entry.
 
-  expect(str.int <= self.entrycount)
+  if str.int >= self.entrycount: return
 
-  self.cache.getOrPut(str) do (_: StrRef) -> (Weight, TlkEntry):
+  let rs = self.cache.getOrPut(str) do (_: StrRef) -> (Weight, TlkEntry):
     new(result[1])
     self.io.setPosition(HeaderSize + DataElementSize * str.int)
 
@@ -41,12 +48,20 @@ proc `[]`*(self: Tlk, str: StrRef, language = Language.English): TlkEntry =
 
     self.io.setPosition(self.ioStartPos + self.entriesOffset + offsetToString)
     result[1].text = self.io.readStrOrErr(stringSz).fromNwnEncoding
-    result[0] = result[1].text.len
+    result[0] = sizeof(TlkEntry) + result[1].soundResRef.len + result[1].text.len
 
-proc len*(self: Tlk): int =
-  self.entrycount
+  result = some(rs)
 
-proc readTlk*(io: Stream): Tlk =
+proc `[]`*(self: Tlk, str: StrRef, gender = Gender.Male): Option[TlkEntry] =
+  for pair in self.chain:
+    if gender == Gender.Female and pair.female != nil:
+      let queried = pair.female[str]
+      if queried.isSome: return queried
+    elif gender == Gender.MAle and pair.male != nil:
+      let queried = pair.male[str]
+      if queried.isSome: return queried
+
+proc readSingleTlk*(io: Stream): SingleTlk =
   new(result)
   result.io = io
   result.ioStartPos = io.getPosition
@@ -59,4 +74,18 @@ proc readTlk*(io: Stream): Tlk =
   result.entriesOffset = io.readInt32()
 
   # Try to be smart about the cache size: wild guess is 1/3 of entries
-  result.cache = newWeightedLRU[StrRef, TlkEntry](result.entrycount div 3, 1)
+  result.cache = newWeightedLRU[StrRef, TlkEntry](
+    sizeof(TlkEntry) * result.entrycount div 2, 1)
+
+proc readSingleTlk*(res: Res): SingleTlk =
+  res.seek()
+  result = res.io.readSingleTlk()
+
+proc newTlk*(chain: seq[tuple[male: Res, female: Res]]): Tlk =
+  ## Creates a new tlk object that can be used to query a list of entries.
+  new(result)
+  result.chain = chain.map() do (tu: auto) -> TlkPair:
+    (
+      male:   if tu[0] != nil: tu[0].readSingleTlk else: nil,
+      female: if tu[1] != nil: tu[1].readSingleTlk else: nil
+    ).TlkPair

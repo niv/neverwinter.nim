@@ -19,7 +19,7 @@ root["Str", byte] = 3
 newFileStream("out.gff").write(root)
 ```
 
-## import neverwinter.json
+## import neverwinter.gffjson
 
 gff<->json transformation helpers.
 

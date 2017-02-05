@@ -333,7 +333,7 @@ proc readStructInto(loader: GffLazyLoader, idx: int, into: GffStruct) =
   doAssert(loader.root != nil)
   into.root = loader.root
 
-  expect(idx < loader.structs.len)
+  expect(idx >= 0 and idx < loader.structs.len)
 
   let structData = loader.structs[idx]
   expect(not structData.resolved, "struct idx referenced multiple times")

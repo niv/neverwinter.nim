@@ -8,7 +8,7 @@ include neverwinter.key
 try:
 
   when defined(gff):
-    discard gff.readFromStream(newFileStream(stdin), false)
+    discard newFileStream(stdin).readGffRoot(false)
 
   elif defined(key):
     discard key.readFromStream(newFileStream(stdin))

@@ -528,9 +528,13 @@ proc readGffRoot*(fromIO: Stream, lazyLoad: bool = true): GffRoot =
 
   # Unpack fields (type, lblidx, dataOrOffset)
   fromIO.setPosition(ip + header.fieldOffset)
-  result.loader.fieldsArray = lc[
-    (fromIO.readInt32().GffFieldKind, fromIO.readInt32().int, fromIO.readInt32().int, false) |
-    (idx <- 0..<header.fieldCount), GffRootFieldEntry]
+  result.loader.fieldsArray = newSeq[GffRootFieldEntry]()
+  for i in 0..<header.fieldCount:
+    let kind = fromIO.readInt32().int
+    expect(kind >= GffFieldKind.low.int and kind <= GffFieldKind.high.int)
+    let labelIdx = fromIO.readInt32().int
+    let dataOrOffset = fromIO.readInt32().int
+    result.loader.fieldsArray.add((kind.GffFieldKind, labelIdx, dataOrOffset, false).GffRootFieldEntry)
 
   expect(result.loader.fieldsArray.len == header.fieldCount)
 

@@ -406,7 +406,10 @@ proc resolve(self: GffField): GffField =
 
   # Complex types store their field data in the big-bad data array. Because
   # I'm a cheap hack, I'm just storing the io and seeking on demand.
-  if isComplexType(self.fieldKind):
+  if isComplexType(self.fieldKind) and
+      self.fieldKind != GffFieldKind.Struct and
+      self.fieldKind != GffFieldKind.List:
+
     expect(self.dataOrOffset >= 0 and self.dataOrOffset <
       loader.header.fieldDatasize)
 

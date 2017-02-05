@@ -462,7 +462,7 @@ proc resolve(self: GffField): GffField =
 
     # # The first DWORD is the Size of the List, and it specifies how many Struct
     # # elements the List contains.
-    expect(offset < loader.listIndices.len)
+    expect(offset >= 0 and offset < loader.listIndices.len)
     let listSz = loader.listIndices[offset]
 
     # # There are Size DWORDS after that, each one an index into the Struct Array

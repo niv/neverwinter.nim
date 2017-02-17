@@ -1,5 +1,5 @@
-import options, streams
-export options, streams
+import options, streams, sets
+export options, streams, sets
 
 import resref, restype, res, util, lru
 export resref, restype, res
@@ -24,6 +24,11 @@ method demand*(self: ResContainer, rr: ResRef): Res {.base.} =
   raise newException(ValueError, "Implement me!")
 
 method count*(self: ResContainer): int {.base.} =
+  raise newException(ValueError, "Implement me!")
+
+method contents*(self: ResContainer): HashSet[ResRef] =
+  ## Returns the contents of this container, as a set.
+  ## This is a potentially *expensive operation*.
   raise newException(ValueError, "Implement me!")
 
 proc contains*(self: ResMan, rr: ResRef, usecache = true): bool =
@@ -53,6 +58,14 @@ proc demand*(self: ResMan, rr: ResRef, usecache = true): Res =
 proc count*(self: ResMan): int =
   result = 0
   for c in self.containers: result += c.count()
+
+proc contents*(self: ResMan): HashSet[ResRef] =
+  ## Returns the contents of resman. This is a potentially *very expensive
+  ## operation*, as it walks the lookup chain and collects the contents
+  ## of each container.
+  result = initSet[ResRef]()
+  for c in self.containers:
+    result.incl(c.contents())
 
 proc `[]`*(self: ResMan, rr: ResolvedResRef): Option[Res] =
   ## Alias for contains + demand.

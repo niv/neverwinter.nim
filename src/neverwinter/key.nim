@@ -1,6 +1,6 @@
 when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
 
-import streams, options, sequtils, strutils, tables, times, os
+import streams, options, sequtils, strutils, tables, times, os, sets
 
 import resman, util
 
@@ -166,3 +166,8 @@ method demand*(self: KeyTable, rr: ResRef): Res =
   result = newRes(rr, b.mtime, st, va.offset, va.fileSize)
 
 method count*(self: KeyTable): int = self.resrefIdLookup.len
+
+method contents*(self: KeyTable): HashSet[ResRef] =
+  result = initSet[ResRef]()
+  for k in keys(self.resrefIdLookup):
+    result.incl(k)

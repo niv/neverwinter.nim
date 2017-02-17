@@ -134,8 +134,14 @@ proc readKeyTable*(io: Stream): KeyTable =
     let bifIdx = resId shr 20
     let bifId = resId and 0xfffff
 
-    expect(bifIdx >= 0 and bifIdx < result.bifs.len)
-    expect(result.bifs[bifIdx].hasResId(bifId), "bifId not in bif: " & $bifId)
+    expect(bifIdx >= 0 and bifIdx < result.bifs.len,
+      "while reading res " & $resId & ", bifidx not indiced by keyfile: " &
+      $bifIdx)
+
+    expect(result.bifs[bifIdx].hasResId(bifId),
+      "keytable references non-existant " &
+      "(id: " & $bifId & ", resref: " & $resref & "." & $restype & ")" &
+      " in bif " & filenameTable[bifIdx])
 
     let rr = newResRef(resref, restype)
     result.resrefIdLookup[rr] = resId

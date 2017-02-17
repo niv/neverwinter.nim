@@ -52,9 +52,10 @@ proc newResolvedResRef*(filename: string): ResolvedResRef =
 converter stringToResolvedResRef*(filename: string): ResolvedResRef =
   newResolvedResRef(filename)
 
-proc `$`*(rr: ResRef): string = rr.resRef & ".(" & $rr.resType & ")"
+proc `$`*(rr: ResRef): string = rr.resRef & "._" & $rr.resType
 proc toFile*(rr: ResolvedResRef): string = rr.resRef & "." & rr.resExt
 proc `$`*(rr: ResolvedResRef): string = rr.toFile
 
 proc resRef*(rr: ResRef): string = rr.resRef
 proc resType*(rr: ResRef): ResType = rr.resType
+proc resExt*(rr: ResolvedResRef): string = rr.resExt

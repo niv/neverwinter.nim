@@ -114,7 +114,7 @@ proc readKeyTable*(io: Stream): KeyTable =
 
   let filenameTable = fileTable.map(proc (entry: auto): string =
     io.setPosition(ioStart + entry.fnOffset)
-    expect(entry.fnSize > 1, "bif filename in filenametable empty")
+    expect(entry.fnSize >= 1, "bif filename in filenametable empty")
     result = io.readStrOrErr(entry.fnSize - 1)
 
     when defined(posix):

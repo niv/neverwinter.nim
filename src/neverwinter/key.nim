@@ -37,7 +37,7 @@ proc readBif(io: Stream, owner: KeyTable, filename: string): Bif =
   result.io = io
   result.keyTable = owner
   result.filename = filename
-  result.mtime = getLastModificationTime(filename)
+  result.mtime = getTime() # getLastModificationTime(filename)
 
   result.fileType = io.readStrOrErr(4)
   expect(result.fileType == "BIFF")
@@ -68,10 +68,13 @@ proc getVariableResource*(self: Bif, id: ResId): VariableResource =
   self.variableResources[id]
 
 proc getStreamForVariableResource*(self: Bif, id: ResId): Stream =
-  result = newFileStream(self.filename)
+  result = self.io
+  expect(self.variableResources.hasKey(id), "attempted to look up id " & $id &
+    " in bif, but not found")
+
   result.setPosition(self.variableResources[id].offset)
 
-proc readKeyTable*(io: Stream): KeyTable =
+proc readKeyTable*(io: Stream, resolveBif: proc (fn: string): Stream): KeyTable =
   new(result)
   result.io = io
   result.ioStart = io.getPosition
@@ -122,7 +125,7 @@ proc readKeyTable*(io: Stream): KeyTable =
   )
 
   for fn in filenameTable:
-    let fnio = newFileStream(fn)
+    let fnio = resolveBif(fn)
     expect(fnio != nil, "key file referenced file " & fn & " but cannot open")
     result.bifs.add(readBif(fnio, result, fn))
 

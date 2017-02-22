@@ -15,10 +15,7 @@ type
 
     strRef*: int
     locStrings: TableRef[int, string]
-    contents: TableRef[ResRef, Res]
-
-proc contents*(self: Erf): TableRef[ResRef, Res] =
-  self.contents
+    entries: TableRef[ResRef, Res]
 
 proc locStrings*(self: Erf): TableRef[int, string] =
   self.locStrings
@@ -26,7 +23,7 @@ proc locStrings*(self: Erf): TableRef[int, string] =
 proc readErf*(io: Stream): Erf =
   new(result)
   result.locStrings = newTable[int, string]()
-  result.contents = newTable[ResRef, Res]()
+  result.entries = newTable[ResRef, Res]()
   result.mtime = getTime()
 
   result.fileType = io.readStrOrErr(4)
@@ -69,11 +66,11 @@ proc readErf*(io: Stream): Erf =
     io.setPosition(io.getPosition + 2) # unused NULLs
 
     let rr = newResRef(resref, restype.ResType)
-    expect(not result.contents.hasKey(rr), "duplicate resref in erf: " & $rr)
+    expect(not result.entries.hasKey(rr), "duplicate resref in erf: " & $rr)
 
     let resData = resList[i]
     var erfObj = newRes(rr, result.mtime, io, size = resData.size, offset = resData.offset)
-    result.contents[rr] = erfObj
+    result.entries[rr] = erfObj
 
 proc write*(io: Stream, self: Erf) =
   let ioStart = io.getPosition
@@ -83,7 +80,7 @@ proc write*(io: Stream, self: Erf) =
 
   let offsetToLocStr = 160
   let offsetToKeyList = offsetToLocStr + locStrSize
-  let keyListSize = self.contents.len * 24
+  let keyListSize = self.entries.len * 24
   let offsetToResourceList = offsetToKeyList + keyListSize
 
   expect(self.fileType.len == 4)
@@ -91,7 +88,7 @@ proc write*(io: Stream, self: Erf) =
   io.write("V1.0")
   io.write(self.locStrings.len.int32)
   io.write(locStrSize.int32)
-  io.write(self.contents.len.int32)
+  io.write(self.entries.len.int32)
   io.write(offsetToLocStr.int32)
   io.write(offsetToKeyList.int32)
   io.write(offsetToResourceList.int32)
@@ -102,7 +99,7 @@ proc write*(io: Stream, self: Erf) =
   assert(io.getPosition == ioStart + 160)
 
   var keysToWrite = newSeq[ResRef]()
-  for k in self.contents.keys: keysToWrite.add(k)
+  for k in self.entries.keys: keysToWrite.add(k)
 
   # we save out entries sorted alphabetically for now.
   keysToWrite.sort() do (x, y: auto) -> int:
@@ -117,7 +114,7 @@ proc write*(io: Stream, self: Erf) =
   # key list
   var id = 0
   for rr in keysToWrite:
-    let cc = self.contents[rr]
+    let cc = self.entries[rr]
     # resref, id, restype, 0, 0
     io.write(rr.resRef & repeat("\x0", 16 - rr.resRef.len))
     io.write(id.int32)
@@ -128,21 +125,26 @@ proc write*(io: Stream, self: Erf) =
   # res list
   var currentOffset = 0
   for rr in keysToWrite:
-    let cc = self.contents[rr]
+    let cc = self.entries[rr]
     io.write(currentOffset.int32)
     io.write(cc.len.int32)
     currentOffset += cc.len
 
   # res data
   for rr in keysToWrite:
-    let cc = self.contents[rr]
-    io.write(cc.read())
+    let cc = self.entries[rr]
+    io.write(cc.readAll())
 
 method contains*(self: Erf, rr: ResRef): bool =
-  self.contents.hasKey(rr)
+  self.entries.hasKey(rr)
 
 method demand*(self: Erf, rr: ResRef): Res =
-  self.contents[rr]
+  self.entries[rr]
 
 method count*(self: Erf): int =
-  self.contents.len
+  self.entries.len
+
+method contents*(self: Erf): HashSet[ResRef] =
+  result = initSet[ResRef]()
+  for rr, re in self.entries:
+    result.incl(rr)

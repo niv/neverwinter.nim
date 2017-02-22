@@ -23,7 +23,8 @@ method contains*(self: ResFile, rr: ResRef): bool =
 method demand*(self: ResFile, rr: ResRef): Res =
   let fp = self.resRefToFullPath(rr.resolve().get())
   let mtime = getLastModificationTime(fp)
-  result = newRes(rr, mtime, newFileStream(fp))
+
+  result = newRes(newResOrigin(self), rr, mtime, newFileStream(fp))
 
 method count*(self: ResFile): int = # TODO: check for access/existence
   if fileExists(self.resRefToFullPath(self.resRef)): 1 else: 0
@@ -32,3 +33,6 @@ method contents*(self: ResFile): HashSet[ResRef] =
   result = initSet[ResRef]()
   if fileExists(self.resRefToFullPath(self.resRef)):
     result.incl(self.resRef)
+
+method `$`*(self: ResFile): string =
+  "ResFile:" & self.filename

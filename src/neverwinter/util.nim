@@ -1,6 +1,8 @@
 import streams, encodings
 
 proc readStrChunked*(io: Stream, size: int): TaintedString =
+  ## Read size bytes from stream, in chunks as to avoid memory contention.
+
   result = ""
   var remaining = size
 
@@ -13,6 +15,7 @@ proc readStrChunked*(io: Stream, size: int): TaintedString =
     result &= buf
 
 proc readStrOrErr*(io: Stream, size: int): string =
+  ## Reads a string of exactly size bytes off io, or error out.
   result = io.readStrChunked(size)
 
 template expect*(cond: bool, msg: string = "") =

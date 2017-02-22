@@ -26,6 +26,7 @@ type
   KeyTable* = ref object of ResContainer
     io: Stream
     ioStart: int
+    label: string
 
     bifs: seq[Bif]
     resrefIdLookup: Table[ResRef, ResId]
@@ -74,8 +75,9 @@ proc getStreamForVariableResource*(self: Bif, id: ResId): Stream =
 
   result.setPosition(self.variableResources[id].offset)
 
-proc readKeyTable*(io: Stream, resolveBif: proc (fn: string): Stream): KeyTable =
+proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Stream): KeyTable =
   new(result)
+  result.label = label
   result.io = io
   result.ioStart = io.getPosition
   result.bifs = newSeq[Bif]()
@@ -149,6 +151,9 @@ proc readKeyTable*(io: Stream, resolveBif: proc (fn: string): Stream): KeyTable 
     let rr = newResRef(resref, restype)
     result.resrefIdLookup[rr] = resId
 
+proc readKeyTable*(io: Stream, resolveBif: proc (fn: string): Stream): KeyTable =
+  readKeyTable(io, label = "(anon-io)", resolveBif)
+
 method contains*(self: KeyTable, rr: ResRef): bool =
   result = self.resrefIdLookup.hasKey(rr)
 
@@ -163,7 +168,8 @@ method demand*(self: KeyTable, rr: ResRef): Res =
   let va = b.getVariableResource(bifId)
   let st = b.getStreamForVariableResource(bifId)
 
-  result = newRes(rr, b.mtime, st, va.offset, va.fileSize)
+  result = newRes(newResOrigin(self, b.filename),
+    rr, b.mtime, st, va.offset, va.fileSize)
 
 method count*(self: KeyTable): int = self.resrefIdLookup.len
 
@@ -171,3 +177,6 @@ method contents*(self: KeyTable): HashSet[ResRef] =
   result = initSet[ResRef]()
   for k in keys(self.resrefIdLookup):
     result.incl(k)
+
+method `$`*(self: KeyTable): string =
+  "KeyTable:" & self.label

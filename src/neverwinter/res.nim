@@ -1,12 +1,13 @@
 when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
 
 import options, streams, times
-
-import resref, util
+import resref, util, rescontainer
 
 const MemoryCacheThreshold = 1024 * 1024 # 1MB
 
 type
+  ResOrigin* = tuple[container: ResContainer, label: string]
+
   Res* = ref object of RootObj
     mtime: Time
     io: Stream
@@ -16,13 +17,28 @@ type
     cached: bool
     cache: string
 
-proc newRes*(resref: ResRef, mtime: Time, io: Stream, offset = 0, size = -1): Res =
+    origin: ResOrigin
+
+proc newResOrigin*(c: ResContainer, label = ""): ResOrigin =
+  # if label == "": label = "(no-label)" # todo
+  (container: c, label: label).ResOrigin
+
+proc `$`*(self: ResOrigin): string =
+  if self.label == "":
+    $self.container
+  else:
+    $self.container & "(" & self.label & ")"
+
+proc newRes*(origin: ResOrigin, resref: ResRef, mtime: Time, io: Stream,
+    offset = 0, size = -1): Res =
+
   new(result)
   result.io = io
   result.resref = resref
   result.offset = offset
   result.size = size
   result.mtime = mtime
+  result.origin = origin
 
 proc resRef*(self: Res): ResRef = self.resRef
 
@@ -43,6 +59,9 @@ proc cached*(self: Res): bool =
 
 proc seek*(self: Res) =
   self.io.setPosition(self.offset)
+
+proc origin*(self: Res): ResOrigin =
+  self.origin
 
 method readAll*(self: Res): string {.base.} =
   ## Reads the full data of this res.

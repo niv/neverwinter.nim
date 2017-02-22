@@ -20,10 +20,13 @@ method contains*(self: ResMemFile, rr: ResRef): bool =
   self.resRef == rr
 
 method demand*(self: ResMemFile, rr: ResRef): Res =
-  newRes(rr, self.mtime, self.io)
+  newRes(newResOrigin(self), rr, self.mtime, self.io)
 
 method count*(self: ResMemFile): int = 1
 
 method contents*(self: ResMemFile): HashSet[ResRef] =
   result = initSet[ResRef]()
   result.incl(self.resRef)
+
+method `$`*(self: ResMemFile): string =
+  "ResMemFile:(anon)"

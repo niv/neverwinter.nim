@@ -1,12 +1,10 @@
 import options, streams, sets
 export options, streams, sets
 
-import resref, restype, res, util, lru
-export resref, restype, res
+import rescontainer, resref, restype, res, util, lru
+export rescontainer, resref, restype, res
 
 type
-  ResContainer* = ref object of RootObj
-
   ResMan* = ref object
     containers: seq[ResContainer]
     cache: WeightedLRU[ResRef, Res]

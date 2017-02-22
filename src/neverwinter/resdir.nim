@@ -22,7 +22,7 @@ method contains*(self: ResDir, rr: ResRef): bool =
 method demand*(self: ResDir, rr: ResRef): Res =
   let fp = self.resRefToFullPath(rr.resolve().get())
   let mtime = getLastModificationTime(fp)
-  result = newRes(rr, mtime, newFileStream(fp))
+  result = newRes(newResOrigin(self), rr, mtime, newFileStream(fp))
 
 method count*(self: ResDir): int =
   self.contents.card
@@ -35,3 +35,6 @@ method contents*(self: ResDir): HashSet[ResRef] =
       let rr = tryNewResolvedResRef(pc.path)
       if rr.isSome:
         result.incl(rr.get())
+
+method `$`*(self: ResDir): string =
+  "ResDir:" & self.directory

@@ -10,6 +10,8 @@ type
 
     fileType*: string
 
+    filename: string
+
     buildYear*: int
     buildDay*: int
 
@@ -20,11 +22,12 @@ type
 proc locStrings*(self: Erf): TableRef[int, string] =
   self.locStrings
 
-proc readErf*(io: Stream): Erf =
+proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
   new(result)
   result.locStrings = newTable[int, string]()
   result.entries = newTable[ResRef, Res]()
   result.mtime = getTime()
+  result.filename = filename
 
   result.fileType = io.readStrOrErr(4)
   expect(["MOD ", "ERF ", "HAK "].find(result.fileType) != -1, "unsupported erf type")
@@ -69,7 +72,8 @@ proc readErf*(io: Stream): Erf =
     expect(not result.entries.hasKey(rr), "duplicate resref in erf: " & $rr)
 
     let resData = resList[i]
-    var erfObj = newRes(rr, result.mtime, io, size = resData.size, offset = resData.offset)
+    var erfObj = newRes(newResOrigin(result), rr, result.mtime, io,
+      size = resData.size, offset = resData.offset)
     result.entries[rr] = erfObj
 
 proc write*(io: Stream, self: Erf) =
@@ -148,3 +152,6 @@ method contents*(self: Erf): HashSet[ResRef] =
   result = initSet[ResRef]()
   for rr, re in self.entries:
     result.incl(rr)
+
+method `$`*(self: Erf): string =
+  "Erf:" & self.filename

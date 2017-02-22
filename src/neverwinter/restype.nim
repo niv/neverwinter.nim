@@ -106,6 +106,7 @@ registerResType(2067, "bak");
 registerResType(2068, "dat");
 registerResType(2069, "shd");
 registerResType(2070, "xbc");
+registerResType(9996, "ids");
 registerResType(9997, "erf");
 registerResType(9998, "bif");
 registerResType(9999, "key");

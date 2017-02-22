@@ -28,7 +28,8 @@ proc lookupResExt*(resType: ResType): Option[string] =
 proc `$`*(r: ResType): string =
   proc IntToStr(x: int): string {.magic: "IntToStr", noSideEffect.}
   let ext = lookupResExt(r)
-  "$1:$2" % [ IntToStr(r.int), if ext.isSome: ext.get() else: "(noext)" ]
+  if ext.isSome: ext.get()
+  else: $r.int
 
 # nwn1
 registerResType(1, "bmp");

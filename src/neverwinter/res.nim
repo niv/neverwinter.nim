@@ -14,6 +14,7 @@ type
   Res* = ref object of RootObj
     mtime: Time
     io: Stream
+    ioOwned: bool
     resref: ResRef
     offset: int
     size: int
@@ -33,7 +34,7 @@ proc `$`*(self: ResOrigin): string =
     $self.container & "(" & self.label & ")"
 
 proc newRes*(origin: ResOrigin, resref: ResRef, mtime: Time, io: Stream,
-    offset = 0, size = -1): Res =
+    offset = 0, size = -1, ioOwned = false): Res =
 
   new(result)
   result.io = io
@@ -42,6 +43,7 @@ proc newRes*(origin: ResOrigin, resref: ResRef, mtime: Time, io: Stream,
   result.size = size
   result.mtime = mtime
   result.origin = origin
+  result.ioOwned = ioOwned
 
 proc resRef*(self: Res): ResRef = self.resRef
 
@@ -86,4 +88,5 @@ method readAll*(self: Res): string {.base.} =
     if self.size < MemoryCacheThreshold:
       self.cached = true
       self.cache = result
+      if self.ioOwned: self.io.close()
       self.io = nil

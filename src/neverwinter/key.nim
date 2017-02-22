@@ -129,7 +129,8 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
   let filenameTable = fileTable.map(proc (entry: auto): string =
     io.setPosition(ioStart + entry.fnOffset)
     expect(entry.fnSize >= 1, "bif filename in filenametable empty")
-    result = io.readStrOrErr(entry.fnSize - 1)
+
+    result = io.readStrOrErr(entry.fnSize).strip(false, true, {'\0'})
 
     when defined(posix):
       result = result.replace("\\", "/")
@@ -142,7 +143,7 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
 
   io.setPosition(offsetToKeyTable)
   for i in 0..<keyCount:
-    let resref = io.readStrOrErr(16).strip(true, true, {'\0'})
+    let resref = io.readStrOrErr(16).strip(false, true, {'\0'})
     let restype = io.readInt16().ResType
     let resId = io.readInt32()
     let bifIdx = resId shr 20

@@ -10,23 +10,28 @@ type
     cache: WeightedLRU[ResRef, Res]
 
 proc newResMan*(cacheSizeMB = 100): ResMan =
+  ## Creates a new resman, with the given cache size.
+
   new(result)
   result.containers = newSeq[ResContainer]()
   assert(cacheSizeMB >= 0)
   result.cache = newWeightedLRU[ResRef, Res](cacheSizeMB * 1024 * 1024)
 
 method contains*(self: ResContainer, rr: ResRef): bool {.base.} =
+  ## Implement this in any ResContainer. See the proc on ResMan for a description.
   raise newException(ValueError, "Implement me!")
 
 method demand*(self: ResContainer, rr: ResRef): Res {.base.} =
+  ## Implement this in any ResContainer. See the proc on ResMan for a description.
   raise newException(ValueError, "Implement me!")
 
 method count*(self: ResContainer): int {.base.} =
+  ## Implement this in any ResContainer. See the proc on ResMan for a description.
   raise newException(ValueError, "Implement me!")
 
 method contents*(self: ResContainer): HashSet[ResRef] =
   ## Returns the contents of this container, as a set.
-  ## This is a potentially *expensive operation*.
+  ## This can be a potentially *expensive operation*.
   raise newException(ValueError, "Implement me!")
 
 proc contains*(self: ResMan, rr: ResRef, usecache = true): bool =
@@ -54,6 +59,7 @@ proc demand*(self: ResMan, rr: ResRef, usecache = true): Res =
       break
 
 proc count*(self: ResMan): int =
+  ## Returns the number of resrefs known to this resman.
   result = 0
   for c in self.containers: result += c.count()
 
@@ -83,9 +89,12 @@ proc containers*(self: ResMan): seq[ResContainer] =
   self.containers
 
 proc del*(self: ResMan, c: ResContainer) =
+  ## Remove a container from this ResMan.
   let idx = self.containers.find(c)
   if idx > -1: self.containers.del(idx)
 
 proc del*(self: ResMan, idx: int) = self.containers.del(idx)
+  ## Remove a container from this ResMan (by id).
 
 proc cache*(self: ResMan): WeightedLRU[ResRef, Res] = self.cache
+  ## Returns the LRU cache used by this ResMan.

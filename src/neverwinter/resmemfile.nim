@@ -9,12 +9,14 @@ type
     resRef: ResRef
     io: StringStream
     mtime: Time
+    label: string
 
-proc newResMemFile*(io: StringStream, rr: ResRef): ResMemFile =
+proc newResMemFile*(io: StringStream, rr: ResRef, label = "anon"): ResMemFile =
   new(result)
   result.io = io
   result.resRef = rr
   result.mtime = getTime()
+  result.label = ""
 
 method contains*(self: ResMemFile, rr: ResRef): bool =
   self.resRef == rr
@@ -29,4 +31,4 @@ method contents*(self: ResMemFile): HashSet[ResRef] =
   result.incl(self.resRef)
 
 method `$`*(self: ResMemFile): string =
-  "ResMemFile:(anon)"
+  "ResMemFile:(" & self.label & ")"

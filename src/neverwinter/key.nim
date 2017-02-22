@@ -7,14 +7,19 @@ import resman, util
 type
   ResId = int32
 
-  VariableResource = ref object
-    id*: ResId
-    offset*: int
-    fileSize*: int
-    resType*: ResType
+  VariableResource* = ref object
+    # N.B.: Full ID (with bif idx)
+    id: ResId
 
-    # fullId: ResId
-    resref*: ResRef
+    # Where in the bif can we find our data?
+    offset: int
+    fileSize: int
+
+    # This is a bit of a hack: We are storing the resref in the bif structure,
+    # because our key_unpack utility needs to know that in order to write out
+    # the data on a per-bif basis; and this is a bit faster than a global lookup
+    # table on the keyfile itself.
+    resref: ResRef
 
   Bif* = ref object
     keyTable: KeyTable
@@ -34,7 +39,20 @@ type
     bifs: seq[Bif]
     resrefIdLookup: Table[ResRef, ResId]
 
-proc readBif(io: Stream, owner: KeyTable, filename: string): Bif =
+# Accessors for VariableResource: Don't allow modifications from outside.
+proc id*(self: VariableResource): ResId = self.id
+  ## The id of this VA. Note: This is already stripped of the bif idx component.
+proc offset*(self: VariableResource): int = self.offset
+  ## The offset where this VA starts inside a bif.
+proc fileSize*(self: VariableResource): int = self.fileSize
+  ## The data size of this VA inside the owning bif.
+proc resref*(self: VariableResource): ResRef = self.resref
+  ## The resref of this VA.
+
+proc readBif(io: Stream, owner: KeyTable, filename: string, expectIdx: int): Bif =
+  ## Read a bif file from a stream. Used internally; as reading bif files from
+  ## the outside isn't very useful (you can't get resrefs).
+
   new(result)
 
   result.variableResources = initTable[ResId, VariableResource]()
@@ -56,35 +74,63 @@ proc readBif(io: Stream, owner: KeyTable, filename: string): Bif =
 
   io.setPosition(variableTableOffset)
   for i in 0..<varResCount:
+    let fullId = io.readInt32()
+    let offset = io.readInt32()
+    let fileSize = io.readInt32()
+    let resType = io.readInt32()
+
     let r = VariableResource(
-      id: (io.readInt32() and 0xfffff).ResId,
-      offset: io.readInt32().int,
-      fileSize: io.readInt32().int,
-      resType: io.readInt32().ResType
+      id: fullId.ResId,
+      offset: offset,
+      fileSize: fileSize
     )
 
-    result.variableResources[r.id] = r
+    # I'm not even sure anymore what's wrong with you, nwn data files.
+    # This triggers with the distro files from 1.69.
+    # let bifId = fullId shr 20
+    # expect(expectIdx == bifId, "bif " & filename & " has ID not belonging to its " &
+    #   "idx: expected " & $expectIdx & " but got " & $bifId)
+
+    result.variableResources[r.id and 0xfffff] = r
 
 proc hasResId*(self: Bif, id: ResId): bool =
-  self.variableResources.hasKey(id)
+  ## Returns true if this bif has a id of ResId.
+  self.variableResources.hasKey(id and 0xfffff)
 
 proc getVariableResource*(self: Bif, id: ResId): VariableResource =
-  self.variableResources[id]
+  ## Returns a variable resource by ID.
+
+  self.variableResources[id and 0xfffff]
 
 proc getVariableResources*(self: Bif): seq[VariableResource] =
+  ## Returns a seq of all VariableResouces contained in this bif.
+
   result = newSeq[VariableResource]()
   for k, v in self.variableResources: result.add(v)
 
 proc getStreamForVariableResource*(self: Bif, id: ResId): Stream =
+  ## Gets the stream data for a ID. The offset is already correct; but you
+  ## will have to know the VA length to read data correctly (see getVariableResource).
+
   result = self.io
-  expect(self.variableResources.hasKey(id), "attempted to look up id " & $id &
+  expect(self.variableResources.hasKey(id and 0xfffff), "attempted to look up id " & $id &
     " in bif, but not found")
 
-  result.setPosition(self.variableResources[id].offset)
+  result.setPosition(self.variableResources[id and 0xfffff].offset)
 
-proc filename*(self: Bif): string = self.filename
+proc filename*(self: Bif): string =
+  ## Returns the filename with which this bif was referenced in the key table.
+  self.filename
 
 proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Stream): KeyTable =
+  ## Read a key table from a stream.
+  ## The optional label contains debug info that describes where the table came from;
+  ## you usually want to set this to the path/filename.
+  ##
+  ## resolveBif is expected to look up a bif (by the stored filename) and return
+  ## a open, readable stream to it.  This stream will be kept open until the key
+  ## table itself is closed.
+
   new(result)
   result.label = label
   result.io = io
@@ -123,8 +169,9 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
     let fnOffset = io.readInt32()
     let fnSize = io.readInt16()
     let drives = io.readInt16()
+    let e = (fSize, fnOffset, fnSize, drives)
     # expect(drives == 1, "only drives = 1 supported, but got: " & $drives)
-    fileTable.add((fSize, fnOffset, fnSize, drives))
+    fileTable.add(e)
 
   let filenameTable = fileTable.map(proc (entry: auto): string =
     io.setPosition(ioStart + entry.fnOffset)
@@ -136,10 +183,11 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
       result = result.replace("\\", "/")
   )
 
-  for fn in filenameTable:
+  for fnidx, fn in filenameTable:
     let fnio = resolveBif(fn)
     expect(fnio != nil, "key file referenced file " & fn & " but cannot open")
-    result.bifs.add(readBif(fnio, result, fn))
+    let bf = readBif(fnio, result, fn, fnidx)
+    result.bifs.add(bf)
 
   io.setPosition(offsetToKeyTable)
   for i in 0..<keyCount:
@@ -147,25 +195,29 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
     let restype = io.readInt16().ResType
     let resId = io.readInt32()
     let bifIdx = resId shr 20
-    let bifId = resId and 0xfffff
 
     expect(bifIdx >= 0 and bifIdx < result.bifs.len,
       "while reading res " & $resId & ", bifidx not indiced by keyfile: " &
       $bifIdx)
 
-    expect(result.bifs[bifIdx].hasResId(bifId),
-      "keytable references non-existant " &
-      "(id: " & $bifId & ", resref: " & $resref & "." & $restype & ")" &
+    let rr = newResRef(resref, restype)
+
+    expect(result.bifs[bifIdx].hasResId(resId),
+      "keytable references non-existent id: " & $resId & ", resref: " & $rr &
       " in bif " & filenameTable[bifIdx])
 
-    let rr = newResRef(resref, restype)
     result.resrefIdLookup[rr] = resId
 
-    let vra = result.bifs[bifIdx].getVariableResource(bifId)
-    # expect(vra != nil, "key table references unknown variable resource")
+    # We're reading VAs from the bif files above (in readBif); and here we
+    # re-assign the ID we just read to a resref, so the bif has the proper
+    # data entry for it.
+    let vra = result.bifs[bifIdx].getVariableResource(resId)
+    expect(vra != nil, "key table references unknown variable resource (bug?): " &
+      $bifIdx & " doesn't have " & $resId)
     vra.resref = rr
 
 proc readKeyTable*(io: Stream, resolveBif: proc (fn: string): Stream): KeyTable =
+  ## Alias for readKeyTable, just without a label.
   readKeyTable(io, label = "(anon-io)", resolveBif)
 
 method contains*(self: KeyTable, rr: ResRef): bool =
@@ -174,15 +226,14 @@ method contains*(self: KeyTable, rr: ResRef): bool =
 method demand*(self: KeyTable, rr: ResRef): Res =
   let resId = self.resrefIdLookup[rr]
   let bifIdx = resId shr 20
-  let bifId = resId and 0xfffff
 
   expect(bifIdx >= 0 and bifIdx < self.bifs.len)
 
   let b = self.bifs[bifIdx]
-  let va = b.getVariableResource(bifId)
-  let st = b.getStreamForVariableResource(bifId)
+  let va = b.getVariableResource(resId)
+  let st = b.getStreamForVariableResource(resId)
 
-  result = newRes(newResOrigin(self, "id=" & $resId & ",bifid=" & $bifId & " in " & b.filename),
+  result = newRes(newResOrigin(self, "id=" & $resId & " in " & b.filename),
     rr, b.mtime, st, va.offset, va.fileSize)
 
 method count*(self: KeyTable): int = self.resrefIdLookup.len
@@ -196,4 +247,5 @@ method `$`*(self: KeyTable): string =
   "KeyTable:" & self.label
 
 proc bifs*(self: KeyTable): seq[Bif] =
+  ## Returns the bifs this key table references.
   self.bifs

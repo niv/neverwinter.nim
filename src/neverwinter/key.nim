@@ -5,13 +5,16 @@ import streams, options, sequtils, strutils, tables, times, os, sets
 import resman, util
 
 type
-  ResId = int
+  ResId = int32
 
-  VariableResource = tuple
-    id: ResId
-    offset: int
-    fileSize: int
-    resType: ResType
+  VariableResource = ref object
+    id*: ResId
+    offset*: int
+    fileSize*: int
+    resType*: ResType
+
+    # fullId: ResId
+    resref*: ResRef
 
   Bif* = ref object
     keyTable: KeyTable
@@ -53,7 +56,7 @@ proc readBif(io: Stream, owner: KeyTable, filename: string): Bif =
 
   io.setPosition(variableTableOffset)
   for i in 0..<varResCount:
-    let r: VariableResource = (
+    let r = VariableResource(
       id: (io.readInt32() and 0xfffff).ResId,
       offset: io.readInt32().int,
       fileSize: io.readInt32().int,
@@ -68,12 +71,18 @@ proc hasResId*(self: Bif, id: ResId): bool =
 proc getVariableResource*(self: Bif, id: ResId): VariableResource =
   self.variableResources[id]
 
+proc getVariableResources*(self: Bif): seq[VariableResource] =
+  result = newSeq[VariableResource]()
+  for k, v in self.variableResources: result.add(v)
+
 proc getStreamForVariableResource*(self: Bif, id: ResId): Stream =
   result = self.io
   expect(self.variableResources.hasKey(id), "attempted to look up id " & $id &
     " in bif, but not found")
 
   result.setPosition(self.variableResources[id].offset)
+
+proc filename*(self: Bif): string = self.filename
 
 proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Stream): KeyTable =
   new(result)
@@ -151,6 +160,10 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
     let rr = newResRef(resref, restype)
     result.resrefIdLookup[rr] = resId
 
+    let vra = result.bifs[bifIdx].getVariableResource(bifId)
+    # expect(vra != nil, "key table references unknown variable resource")
+    vra.resref = rr
+
 proc readKeyTable*(io: Stream, resolveBif: proc (fn: string): Stream): KeyTable =
   readKeyTable(io, label = "(anon-io)", resolveBif)
 
@@ -180,3 +193,6 @@ method contents*(self: KeyTable): HashSet[ResRef] =
 
 method `$`*(self: KeyTable): string =
   "KeyTable:" & self.label
+
+proc bifs*(self: KeyTable): seq[Bif] =
+  self.bifs

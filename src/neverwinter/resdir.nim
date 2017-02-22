@@ -12,14 +12,6 @@ proc newResDir*(directory: string): ResDir =
   new(result)
   result.directory = directory
 
-proc contents*(self: ResDir): seq[string] =
-  result = newSeq[string]()
-  for pc in walkDir(self.directory, true):
-    if (pc.kind == pcFile or pc.kind == pcLinkToFile):
-      let rr = tryNewResolvedResRef(pc.path)
-      if rr.isSome:
-        result.add(pc.path)
-
 proc resRefToFullPath(self: ResDir, rr: ResolvedResRef): string =
   self.directory & DirSep & rr.toFile
 
@@ -33,4 +25,13 @@ method demand*(self: ResDir, rr: ResRef): Res =
   result = newRes(rr, mtime, newFileStream(fp))
 
 method count*(self: ResDir): int =
-  self.contents.len
+  self.contents.card
+
+method contents*(self: ResDir): HashSet[ResRef] =
+  result = initSet[ResRef]()
+
+  for pc in walkDir(self.directory, true):
+    if (pc.kind == pcFile or pc.kind == pcLinkToFile):
+      let rr = tryNewResolvedResRef(pc.path)
+      if rr.isSome:
+        result.incl(rr.get())

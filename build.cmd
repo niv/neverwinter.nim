@@ -1,1 +1,2 @@
-for %%v in (src\*.nim) do nim -o:"bin\%%~nv.exe" c "%%v"
+
+for %%v in (src\*.nim) do nim -p:"extlib/neverwinter.nim/src" -o:"bin\%%~nv.exe" -d:release c "%%v"

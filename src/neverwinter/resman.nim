@@ -153,7 +153,7 @@ method count*(self: ResContainer): int {.base.} =
   ## container.
   raise newException(ValueError, "Implement me!")
 
-method contents*(self: ResContainer): HashSet[ResRef] {.base.} =
+method contents*(self: ResContainer): OrderedSet[ResRef] {.base.} =
   ## Implement this in any ResContainer. See the proc on ResMan for a description.
   ##
   ## Returns the contents of this container, as a set.

@@ -30,8 +30,8 @@ method demand*(self: ResFile, rr: ResRef): Res =
 method count*(self: ResFile): int =
   if fileExists(self.resRefToFullPath(self.resRef)): 1 else: 0
 
-method contents*(self: ResFile): HashSet[ResRef] =
-  result = initSet[ResRef]()
+method contents*(self: ResFile): OrderedSet[ResRef] =
+  result = initOrderedSet[ResRef]()
   if fileExists(self.resRefToFullPath(self.resRef)):
     result.incl(self.resRef)
 

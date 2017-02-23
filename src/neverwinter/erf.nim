@@ -15,7 +15,7 @@ type
 
     strRef*: int
     locStrings: TableRef[int, string]
-    entries: TableRef[ResRef, Res]
+    entries: OrderedTableRef[ResRef, Res]
 
 proc locStrings*(self: Erf): TableRef[int, string] =
   self.locStrings
@@ -23,7 +23,7 @@ proc locStrings*(self: Erf): TableRef[int, string] =
 proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
   new(result)
   result.locStrings = newTable[int, string]()
-  result.entries = newTable[ResRef, Res]()
+  result.entries = newOrderedTable[ResRef, Res]()
   result.mtime = getTime()
   result.filename = filename
 
@@ -146,8 +146,8 @@ method demand*(self: Erf, rr: ResRef): Res =
 method count*(self: Erf): int =
   self.entries.len
 
-method contents*(self: Erf): HashSet[ResRef] =
-  result = initSet[ResRef]()
+method contents*(self: Erf): OrderedSet[ResRef] =
+  result = initOrderedSet[ResRef]()
   for rr, re in self.entries:
     result.incl(rr)
 

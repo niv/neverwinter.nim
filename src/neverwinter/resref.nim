@@ -46,7 +46,7 @@ proc resolve*(rr: ResRef): Option[ResolvedResRef] =
 
 proc tryNewResolvedResRef*(filename: string): Option[ResolvedResRef] =
   ## Alias for newResRef().resolve()
-  let sp = filename.toLowerAscii.split(".", 2)
+  let sp = filename.toLowerAscii.rsplit(".", 1)
   if sp.len == 2 and isValidResRefPart1(sp[0]):
     let ext = lookupResType(sp[1])
     if ext.isSome:

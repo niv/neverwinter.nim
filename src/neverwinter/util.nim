@@ -40,9 +40,24 @@ template expect*(cond: bool, msg: string = "") =
 #  Encoding
 # ----------
 
-const NwnEncoding = "windows-1252"
-template toNwnEncoding*(s: string): string = s.convert(NwnEncoding, getCurrentEncoding())
-template fromNwnEncoding*(s: string): string = s.convert(getCurrentEncoding(), NwnEncoding)
+var nwnEncoding = "windows-1252"
+
+proc getNwnEncoding*(): string = nwnEncoding
+  ## Returns the configured encoding you expect to be used by NWN data files.
+  ## The default is windows-1252 for western NWN1.
+
+proc setNwnEncoding*(e: string) = nwnEncoding = e
+  ## Sets the encoding you expect your local data files to be in.
+
+template toNwnEncoding*(s: string): string =
+  ## Converts a string from the local/os encoding (probably UTF-8) to the
+  ## configured NWN encoding.
+  s.convert(nwnEncoding, getCurrentEncoding())
+
+template fromNwnEncoding*(s: string): string =
+  ## Converts a string to the local/os encoding (probably UTF-8) from the
+  ## configured NWN encoding.
+  s.convert(getCurrentEncoding(), nwnEncoding)
 
 # --------------------------------
 #  Other helpers/stdlib additions

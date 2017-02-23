@@ -37,7 +37,7 @@ proc readFields(line: string, count: int): Row =
   var quotes = false
 
   proc addField(r: var seq[string]): bool =
-    if currentField == "****": r.add("") else: r.add(currentField)
+    if currentField == "****": r.add("") else: r.add(currentField.fromNwnEncoding)
     currentField = ""
     if r.len >= count: return true
 
@@ -55,6 +55,10 @@ proc readFields(line: string, count: int): Row =
   discard addField(result)
 
 proc readTwoDA*(io: Stream): TwoDA =
+  ## Read a TwoDA from a stream.
+  ## Will silently fix any and all errors found in the source 2da: Your data may
+  ## or may not be preserved; but it will match what nwserver is seeing.
+
   proc line(): string =
     var tn = TaintedString""
     if io.readLine(tn): result = tn.strip else: raise newException(IOError,
@@ -86,8 +90,8 @@ proc readTwoDA*(io: Stream): TwoDA =
 
       let ln = line().readFields(result.headers.len + 1)
 
-      # let rowId = ln[0] # just ignore the row altogether
-      var row = ln[1..<ln.len]
+      # discard the ID field: we just rewrite it anyways.
+      var row: seq[string] = if ln.len > 1: ln[1..<ln.len] else: @[]
 
       # fill in missing columns
       while row.len < result.headers.len: row.add("")
@@ -112,21 +116,22 @@ proc write*(io: Stream, self: TwoDA) =
 
   let idWidth = max(3, len($self.rows.len))
 
-  io.write("2DA V1.0\n\n")
+  io.write("2DA V1.0\c\L\c\L")
   io.write(repeat(" ", idWidth + CellPadding))
   for idx, h in self.headers:
     io.write(h)
     io.write(repeat(" ", maxColWidth[idx] - h.len + 3 + CellPadding))
-  io.write("\n")
+  io.write("\c\L")
 
   for rowidx, row in prows:
     let thisId = $rowIdx
     io.write(thisId & repeat(" ", idWidth + CellPadding - thisId.len))
+
     for cellidx, cell in row:
       # let fmt = cell.writeField
-      io.write(cell)
+      io.write(cell.toNwnEncoding)
       io.write(repeat(" ", maxColWidth[cellidx] - cell.len + 3 + CellPadding))
-    io.write("\n")
+    io.write("\c\L")
 
 proc as2DA*(self: Res): TwoDA =
   ## Attempts to parse the given res as a 2da.

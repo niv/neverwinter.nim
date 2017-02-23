@@ -1,5 +1,9 @@
 import streams, encodings
 
+# -----------------------
+#  IO and error handling
+# -----------------------
+
 proc readStrChunked*(io: Stream, size: int): TaintedString =
   ## Read size bytes from stream, in chunks as to avoid memory contention.
 
@@ -30,12 +34,22 @@ template expect*(cond: bool, msg: string = "") =
         else: "Expectation failed: " & astToStr(cond)
       raise newException(ValueError, expmsg)
 
+
+
+# ----------
+#  Encoding
+# ----------
+
 const NwnEncoding = "windows-1252"
 template toNwnEncoding*(s: string): string = s.convert(NwnEncoding, getCurrentEncoding())
 template fromNwnEncoding*(s: string): string = s.convert(getCurrentEncoding(), NwnEncoding)
 
-proc mapWithIndex*[T, R](data: openArray[T],
-                        op: proc(idx: int, x: T): R {.closure.}): seq[R] {.inline.} =
+# --------------------------------
+#  Other helpers/stdlib additions
+# --------------------------------
+
+proc map*[T, R](data: openArray[T],
+                op: proc(idx: int, x: T): R {.closure.}): seq[R] {.inline.} =
   ## same as sequtil.map(), except that it yields the index too.
   newSeq[R](result, data.len)
   for i in 0..<data.len: result[i] = op(i, data[i])

@@ -111,7 +111,7 @@ proc write*(io: Stream, self: TwoDA) =
     row.map() do (r: auto) -> auto: r.writeField
 
   let maxColWidth: seq[int] = self.headers.
-    mapWithIndex() do (idx: int, hdr: string) -> int:
+    map() do (idx: int, hdr: string) -> int:
       max(hdr.len, self.rows.map() do (row: auto) -> int: row[idx].len)
 
   let idWidth = max(3, len($self.rows.len))

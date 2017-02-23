@@ -27,7 +27,7 @@ type
     fileType: string
     fileVersion: string
 
-    variableResources: Table[ResId, VariableResource]
+    variableResources: OrderedTable[ResId, VariableResource]
 
   KeyTable* = ref object of ResContainer
     io: Stream
@@ -35,7 +35,7 @@ type
     label: string
 
     bifs: seq[Bif]
-    resrefIdLookup: Table[ResRef, ResId]
+    resrefIdLookup: OrderedTable[ResRef, ResId]
 
 # Accessors for VariableResource: Don't allow modifications from outside.
 proc id*(self: VariableResource): ResId = self.id
@@ -53,7 +53,7 @@ proc readBif(io: Stream, owner: KeyTable, filename: string, expectIdx: int): Bif
 
   new(result)
 
-  result.variableResources = initTable[ResId, VariableResource]()
+  result.variableResources = initOrderedTable[ResId, VariableResource]()
   result.io = io
   result.keyTable = owner
   result.filename = filename
@@ -135,7 +135,7 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
   result.ioStart = io.getPosition
   result.bifs = newSeq[Bif]()
 
-  result.resrefIdLookup = initTable[Resref, ResId]()
+  result.resrefIdLookup = initOrderedTable[Resref, ResId]()
 
   let ioStart = result.ioStart
 
@@ -236,8 +236,8 @@ method demand*(self: KeyTable, rr: ResRef): Res =
 
 method count*(self: KeyTable): int = self.resrefIdLookup.len
 
-method contents*(self: KeyTable): HashSet[ResRef] =
-  result = initSet[ResRef]()
+method contents*(self: KeyTable): OrderedSet[ResRef] =
+  result = initOrderedSet[ResRef]()
   for k in keys(self.resrefIdLookup):
     result.incl(k)
 

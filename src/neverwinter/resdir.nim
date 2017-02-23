@@ -30,8 +30,8 @@ method demand*(self: ResDir, rr: ResRef): Res =
 method count*(self: ResDir): int =
   self.contents.card
 
-method contents*(self: ResDir): HashSet[ResRef] =
-  result = initSet[ResRef]()
+method contents*(self: ResDir): OrderedSet[ResRef] =
+  result = initOrderedSet[ResRef]()
 
   for pc in walkDir(self.directory, true):
     if (pc.kind == pcFile or pc.kind == pcLinkToFile):

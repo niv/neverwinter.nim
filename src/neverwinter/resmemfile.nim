@@ -24,8 +24,8 @@ method demand*(self: ResMemFile, rr: ResRef): Res =
 
 method count*(self: ResMemFile): int = 1
 
-method contents*(self: ResMemFile): HashSet[ResRef] =
-  result = initSet[ResRef]()
+method contents*(self: ResMemFile): OrderedSet[ResRef] =
+  result = initOrderedSet[ResRef]()
   result.incl(self.resRef)
 
 method `$`*(self: ResMemFile): string =

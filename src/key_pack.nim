@@ -52,7 +52,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
   info "bif: found " & $totalcount & " resrefs for " & $bifs.len & " bifs"
 
   # first, write all bifs.
-  for bif in bifs:
+  for bifidx, bif in bifs:
     let bifFn = targetDir & DirSep & bif.fname.toLowerAscii # & ".bif"
     let ioBif = newFileStream(bifFn, fmWrite)
     ioBif.write("BIFFV1  ")
@@ -61,10 +61,11 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
     ioBif.write(uint32 20) # varres table offset, always immediately after hdr
 
     doAssert(ioBif.getPosition == 20)
-    var offset: BiggestInt = 0
-    info "bif: " & bif.fname.toLowerAscii & ", writing key table"
+    var offset: BiggestInt = 20 + bif.entries.len * 16 + 0
+
+    info "bif: " & bif.fname.toLowerAscii & "(idx=" & $bifidx & "), writing key table"
     for i, e in bif.entries:
-      let id = (0 shl 20) + i
+      let id = (i shl 20) + i
       ioBif.write(uint32 id) # id: assigned in same order as entries
       ioBif.write(uint32 offset) # offset
       let fullFn = sourceDir & DirSep & bif.fname & DirSep & e.toFile
@@ -91,7 +92,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
   let ioFileTable = newStringStream()
   let ioFilenames = newStringStream()
   for bifidx, bif in bifs:
-    debug "filetable data for bif ", bifidx
+    # debug "filetable data for bif ", bifidx
     ioFileTable.write(uint32 bif.sz) # bif file size
 
     let fn = bifPrefix & DirSep & bif.fname.toLowerAscii

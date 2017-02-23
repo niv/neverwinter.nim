@@ -39,17 +39,21 @@ Also includes helpers to identify resources (ResRef) and a streaming API to read
 
 Also also includes a rather experimental, builtin weighted LRU cache that will feather off multiple reads to the same resource.
 
-## import neverwinter.key, neverwinter.erf, neverwinter.resdir, neverwinter.resfile
+## import neverwinter.key, neverwinter.erf, neverwinter.resdir, neverwinter.resfile, neverwinter.resmemfile
 
 .key/.bif/.erf/override-style readonly support, to be used together with resman.  Fuzz-tested to catch the biggest snafus.
 
 ```nim
-import neverwinter.resman, neverwinter.key
+import neverwinter.resman, neverwinter.key, neverwinter.resref
 
 let r = resman.newResMan(100) #100MB of in-memory cache for requests
 
 for f in ["chitin", "xp1", "xp1patch", "xp2", "xp2patch", "xp3"]:
-  r.add(newFileStream(f & ".key").readKeyTable())
+  let keyTable = newFileStream(f & ".key").readKeyTable(f) do (bifFn: string) -> Stream:
+    doAssert(fileExists(bifFn), "key file asks for " & bifFn & ", but not found")
+    newFileStream(bifFn)
+
+  r.add(keyTable)
 
 r.add(newFileStream("my.erf").readErf())
 
@@ -57,8 +61,10 @@ r.add(resdir.newResDir("./override/"))
 
 r.add(resdir.newResFile("./dialog.tlk"))
 
+r.add(resdir.newResMemFile(newStringStream("khaaaaaaan"), "test.txt""))
+
 echo r = r["nwscript.nss"]
-if r.isSome: echo r.read()
+if r.isSome: echo r.get().readAll()
 ```
 
 ## import neverwinter.twoda
@@ -91,15 +97,3 @@ let dlg = newTlk(@[
 
 echo dlg[5, gender = Gender.Female]
 ```
-
-## Why?
-
-Is that a trick question?
-
-## Is it fast?
-
-Yes.
-
-## Is it any good?
-
-Yes.

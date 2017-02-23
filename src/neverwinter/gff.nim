@@ -1,5 +1,3 @@
-when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
-
 import strutils, sequtils, algorithm, streams, future, tables, sets, encodings,
   typetraits
 

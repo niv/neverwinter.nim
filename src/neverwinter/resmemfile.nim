@@ -1,5 +1,3 @@
-when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
-
 import streams, strutils, os, times
 
 import resman, util

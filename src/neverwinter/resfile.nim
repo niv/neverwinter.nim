@@ -1,4 +1,5 @@
-when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
+## A ResFile is a single file mapped into resman: it needs to live in the
+## file system and remain accessible.
 
 import streams, strutils, os
 
@@ -26,7 +27,7 @@ method demand*(self: ResFile, rr: ResRef): Res =
 
   result = newRes(newResOrigin(self), rr, mtime, newFileStream(fp))
 
-method count*(self: ResFile): int = # TODO: check for access/existence
+method count*(self: ResFile): int =
   if fileExists(self.resRefToFullPath(self.resRef)): 1 else: 0
 
 method contents*(self: ResFile): HashSet[ResRef] =

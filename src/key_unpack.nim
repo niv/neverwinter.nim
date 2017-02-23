@@ -7,7 +7,7 @@
 ## Example: key_unpack xp1.key xp1out/
 ##   -> Unpacks to xp1out/bif1.bif...
 
-import streams, tables, os, options, sequtils, securehash, logging, times
+import streams, tables, os, options, sequtils, securehash, logging, times, sets
 
 import neverwinter.key, neverwinter.resref
 
@@ -37,6 +37,17 @@ let kt = readKeyTable(newFileStream(keyfile)) do (bif: string) -> Stream:
   info "Loading bif: ", bifn
   newFileStream(bifn)
 
+
+let metaKeyOrder = newFileStream(dest & DirSep & "key_order.txt", fmWrite)
+doAssert(metaKeyOrder != nil)
+for e in kt.contents: metaKeyOrder.writeLine($e)
+metaKeyOrder.close()
+
+let metaBifOrder = newFileStream(dest & DirSep & "bif_order.txt", fmWrite)
+doAssert(metaBifOrder != nil)
+for e in kt.bifs: metaBifOrder.writeLine(e.filename.extractFilename)
+metaBifOrder.close()
+
 for bif in kt.bifs:
   let baseFn = extractFilename(bif.filename)
   let vrs = bif.getVariableResources()
@@ -44,9 +55,16 @@ for bif in kt.bifs:
   info "Unpacking bif: ", baseFn, " containing ", vrs.len, " resources to ", targetDir
 
   createDir(targetDir)
+  let metaFn = dest & DirSep & baseFn & "_order.txt"
+  var metaBifEntriesOrder = newFileStream(metaFn, fmWrite)
+  doAssert(metaBifEntriesOrder != nil, "Could not create meta file: " & metaFn)
 
   for vr in vrs:
     let fs = newFileStream(targetDir & $vr.resref, fmWrite)
     let str = bif.getStreamForVariableResource(vr.id)
     fs.write(str.readStr(vr.fileSize))
     fs.close()
+
+    metaBifEntriesOrder.writeLine($vr.resref)
+
+  metaBifEntriesOrder.close()

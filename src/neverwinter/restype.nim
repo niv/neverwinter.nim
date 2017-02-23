@@ -1,3 +1,9 @@
+## A ResType is just a 16bit identifier mapping a file type to a human-readable
+## extension.
+##
+## There are a few builtins (all that NWN1 knows about); and if that makes you
+## unhappy, you can add these global procs to add more at runtime.
+
 import tables, strutils, options
 
 import util

@@ -1,4 +1,6 @@
-when sizeof(int) < 4: {.fatal: "Only 32/64bit supported." }
+## A Resdir is the contents of a single directory mapped into resman. The contents
+## are available live (meaning that adding files makes them available immediately).
+## This may change in the future.
 
 import streams, strutils, os
 

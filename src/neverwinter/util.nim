@@ -39,4 +39,3 @@ proc mapWithIndex*[T, R](data: openArray[T],
   ## same as sequtil.map(), except that it yields the index too.
   newSeq[R](result, data.len)
   for i in 0..<data.len: result[i] = op(i, data[i])
-

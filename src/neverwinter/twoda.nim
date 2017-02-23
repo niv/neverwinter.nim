@@ -1,6 +1,6 @@
 import streams, strutils, sequtils
 
-import res, resref, util
+import resman, resref, util
 
 const
   CellPadding = 2

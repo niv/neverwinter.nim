@@ -20,11 +20,11 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
   proc indexBif(dir: string): Bif =
     var sz: BiggestInt = 0
     var entries = newSeq[ResolvedResRef]()
-    for f in walkDir(sourceDir & DirSep & dir, true):
+    for f in walkDir(sourceDir / dir, true):
       if f.kind == pcFile:
         # this will exception if the res doesnt have a good type
         entries.add(newResolvedResRef(f.path))
-        let fullFn = sourceDir & DirSep & dir & DirSep & f.path
+        let fullFn = sourceDir / dir / f.path
         sz += getFileSize(fullFn)
 
     # Make sure resrefs are stored in alphabetical order (per bif), to produce
@@ -53,7 +53,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
 
   # first, write all bifs.
   for bifidx, bif in bifs:
-    let bifFn = targetDir & DirSep & bif.fname.toLowerAscii # & ".bif"
+    let bifFn = targetDir / bif.fname.toLowerAscii # & ".bif"
     let ioBif = newFileStream(bifFn, fmWrite)
     ioBif.write("BIFFV1  ")
     ioBif.write(uint32 bif.entries.len)
@@ -68,7 +68,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
       let id = (i shl 20) + i
       ioBif.write(uint32 id) # id: assigned in same order as entries
       ioBif.write(uint32 offset) # offset
-      let fullFn = sourceDir & DirSep & bif.fname & DirSep & e.toFile
+      let fullFn = sourceDir / bif.fname / e.toFile
       let size = getFileSize(fullFn)
       ioBif.write(uint32 size) # size
       offset += size
@@ -76,7 +76,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
 
     info "bif: " & bif.fname & ", writing file data"
     for e in bif.entries:
-      let fullFn = sourceDir & DirSep & bif.fname & DirSep & e.toFile
+      let fullFn = sourceDir / bif.fname / e.toFile
       let rr = newFileStream(fullFn, fmRead)
       ioBif.write(rr.readAll)
       rr.close
@@ -95,7 +95,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
     # debug "filetable data for bif ", bifidx
     ioFileTable.write(uint32 bif.sz) # bif file size
 
-    let fn = bifPrefix & DirSep & bif.fname.toLowerAscii
+    let fn = bifPrefix / bif.fname.toLowerAscii
     let offset = startOfFileNamesData + ioFilenames.getPosition
 
     ioFileTable.write(uint32 offset) # byte pos of this bifs filename in table
@@ -112,7 +112,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
   ioFileTable.setPosition(0)
   ioFilenames.setPosition(0)
 
-  let ioKey = newFileStream(targetDir & DirSep & keyFilename, fmWrite)
+  let ioKey = newFileStream(targetDir / keyFilename, fmWrite)
   ioKey.write("KEY V1  ")
   ioKey.write(uint32 bifs.len)
   ioKey.write(uint32 totalcount)

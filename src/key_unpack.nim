@@ -32,18 +32,18 @@ if dirExists(dest):
 createDir(dest)
 
 let kt = readKeyTable(newFileStream(keyfile)) do (bif: string) -> Stream:
-  let bifn = keyfileLocation & DirSep & extractFilename(bif) # eat "data\"
+  let bifn = keyfileLocation / extractFilename(bif) # eat "data\"
   doAssert(fileExists(bifn), "keyfile attempted to read nonexistant file '" & bif & "'")
   info "Loading bif: ", bifn
   newFileStream(bifn)
 
 
-let metaKeyOrder = newFileStream(dest & DirSep & "key_order.txt", fmWrite)
+let metaKeyOrder = newFileStream(dest / "key_order.txt", fmWrite)
 doAssert(metaKeyOrder != nil)
 for e in kt.contents: metaKeyOrder.writeLine($e)
 metaKeyOrder.close()
 
-let metaBifOrder = newFileStream(dest & DirSep & "bif_order.txt", fmWrite)
+let metaBifOrder = newFileStream(dest / "bif_order.txt", fmWrite)
 doAssert(metaBifOrder != nil)
 for e in kt.bifs: metaBifOrder.writeLine(e.filename.extractFilename)
 metaBifOrder.close()
@@ -51,11 +51,11 @@ metaBifOrder.close()
 for bif in kt.bifs:
   let baseFn = extractFilename(bif.filename)
   let vrs = bif.getVariableResources()
-  let targetDir = dest & DirSep & baseFn & DirSep
+  let targetDir = dest / baseFn
   info "Unpacking bif: ", baseFn, " containing ", vrs.len, " resources to ", targetDir
 
   createDir(targetDir)
-  let metaFn = dest & DirSep & baseFn & "_order.txt"
+  let metaFn = dest / baseFn & "_order.txt"
   var metaBifEntriesOrder = newFileStream(metaFn, fmWrite)
   doAssert(metaBifEntriesOrder != nil, "Could not create meta file: " & metaFn)
 

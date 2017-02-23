@@ -27,28 +27,33 @@ proc getInOutFilesFromParams*(allowOverwrite = false): tuple[i: Stream, o: Strea
     doAssert(result.o != nil, "Could not open file for writing: " & paramStr(2))
 
 
-proc newBasicResMan*(root: string): ResMan =
+proc newBasicResMan*(root: string, language = ""): ResMan =
   ## Sets up a resman that defaults to what 1.8 looks like.
+  ## Will load an additional language directory, if language is given.
 
   let keys = ["chitin", "xp1",  "xp2", "xp3", "xp2patch"]
 
+  let tryOther = language != ""
+  let otherLangRoot = root / "lang" / language / "data"
+
+  doAssert(not tryOther or dirExists(otherLangRoot), "language " & otherLangRoot &
+    " not found")
+
   proc loadKey(into: ResMan, key: string) =
-    # let fn = if tryOther and fileExists(otherLangRoot & "data" & DirSep & key & ".key"):
-    #            otherLangRoot & "data" & DirSep & key & ".key"
-    #          else: root & "data" & DirSep & key & ".key"
+    let fn = if tryOther and fileExists(otherLangRoot / key & ".key"):
+               otherLangRoot / key & ".key"
+             else: root / "data" / key & ".key"
 
-    let fn = root & "data" & DirSep & key & ".key"
+    let ktfn = newFileStream(fn)
+    doAssert(ktfn != nil, "key not found or inaccessible: " & fn)
 
-    # echo "  key: ", key, " from ", fn
-    doAssert(fileExists(fn), "key not found in other or base: " & key)
+    let kt = readKeyTable(ktfn, fn) do (fn: string) -> Stream:
+      let otherBifFn = otherLangRoot / fn.extractFilename()
+      let bifFn = if tryOther and fileExists(otherBifFn): otherBifFn
+                  else: root / fn
 
-    let kt = readKeyTable(newFileStream(fn), fn) do (fn: string) -> Stream:
-      # let bifFn = if tryOther and fileExists(otherLangRoot & fn): otherLangRoot & fn
-      #             else: root & fn
-      let bifFn = root & fn
-      doAssert(fileExists(bifFn), "key file asks for " & fn & ", but not found")
-      # echo "    bif: ", bifFn
-      newFileStream(bifFn)
+      result = newFileStream(bifFn)
+      doAssert(result != nil, "bif not found or inaccessible: " & bifFn)
 
     into.add(kt)
 
@@ -56,4 +61,4 @@ proc newBasicResMan*(root: string): ResMan =
 
   # Load resman. keyfiles and distro override.
   for k in keys: result.loadKey(k)
-  result.add(newResDir(root & "ovr"))
+  result.add(newResDir(root / "ovr"))

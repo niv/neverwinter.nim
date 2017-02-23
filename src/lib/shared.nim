@@ -1,5 +1,13 @@
 import os, streams
 
+import neverwinter.resman,
+  neverwinter.resref,
+  neverwinter.key,
+  neverwinter.resfile,
+  neverwinter.resmemfile,
+  neverwinter.resdir,
+  neverwinter.erf
+
 proc getInOutFilesFromParams*(allowOverwrite = false): tuple[i: Stream, o: Stream] =
   ## Used by command line utilities to transform simple in/out parameters to
   ## file streams.
@@ -17,3 +25,35 @@ proc getInOutFilesFromParams*(allowOverwrite = false): tuple[i: Stream, o: Strea
 
     result.o = newFileStream(paramStr(2), fmWrite)
     doAssert(result.o != nil, "Could not open file for writing: " & paramStr(2))
+
+
+proc newBasicResMan*(root: string): ResMan =
+  ## Sets up a resman that defaults to what 1.8 looks like.
+
+  let keys = ["chitin", "xp1",  "xp2", "xp3", "xp2patch"]
+
+  proc loadKey(into: ResMan, key: string) =
+    # let fn = if tryOther and fileExists(otherLangRoot & "data" & DirSep & key & ".key"):
+    #            otherLangRoot & "data" & DirSep & key & ".key"
+    #          else: root & "data" & DirSep & key & ".key"
+
+    let fn = root & "data" & DirSep & key & ".key"
+
+    # echo "  key: ", key, " from ", fn
+    doAssert(fileExists(fn), "key not found in other or base: " & key)
+
+    let kt = readKeyTable(newFileStream(fn), fn) do (fn: string) -> Stream:
+      # let bifFn = if tryOther and fileExists(otherLangRoot & fn): otherLangRoot & fn
+      #             else: root & fn
+      let bifFn = root & fn
+      doAssert(fileExists(bifFn), "key file asks for " & fn & ", but not found")
+      # echo "    bif: ", bifFn
+      newFileStream(bifFn)
+
+    into.add(kt)
+
+  result = resman.newResMan()
+
+  # Load resman. keyfiles and distro override.
+  for k in keys: result.loadKey(k)
+  result.add(newResDir(root & "ovr"))

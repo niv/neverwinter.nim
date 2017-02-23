@@ -30,7 +30,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
     # Make sure resrefs are stored in alphabetical order (per bif), to produce
     # reproducible builds.
     sort(entries) do (lhs, rhs: ResolvedResRef) -> int:
-      system.cmp[string](lhs.toFile, rhs.toFile)
+      system.cmp[string](lhs.toFile.toUpperAscii, rhs.toFile.toUpperAscii)
 
     result = (fname: dir, sz: sz, entries: entries)
 

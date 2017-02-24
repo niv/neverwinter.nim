@@ -23,7 +23,7 @@ let match = $args["<partial>"]
 let rm = newBasicResMan(root)
 
 var q = newSeq[ResRef]()
-for o in rm.contents:
+for o in rm.contents.withProgressBar("filter: "):
   let str = $o
   if str.find(match) != -1: q.add(o)
 

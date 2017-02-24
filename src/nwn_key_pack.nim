@@ -1,7 +1,15 @@
-import streams, tables, os, options, sequtils, times, logging, strutils, algorithm
-import neverwinter.resref
+import shared
+let args = DOC """
+This utility packs a .key file and all associated bifs from directory tree.
 
-addHandler newConsoleLogger()
+Usage:
+  $0 [options] <key> <source> <destination>
+  $0 -h | --help
+
+Options:
+  -f --force                  Force pack even if target directory has stuff in it.
+  $OPT
+"""
 
 type Bif = tuple
   fname: string
@@ -75,7 +83,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
       ioBif.write(uint32 e.resType) # restype
 
     info "bif: " & bif.fname & ", writing file data"
-    for e in bif.entries:
+    for e in bif.entries.withProgressBar("filedata " & bif.fname & ": "):
       let fullFn = sourceDir / bif.fname / e.toFile
       let rr = newFileStream(fullFn, fmRead)
       ioBif.write(rr.readAll)
@@ -148,21 +156,15 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
   ioKey.close
   info "key: " & keyFilename & " written, all done"
 
-if paramCount() != 3:
-  echo "This application packs a set of directories into a key file; with one " &
-    "bif file per directory. bif files are always parented to a data/ subdirectory."
-  echo ""
-  echo "Syntax: <keyname> <srcDir> <targetDir>"
-  echo ""
-  echo "Example: patch.key src/ out/"
-  quit(1)
+let keyName   = $args["<key>"]
+let sourceDir = $args["<source>"]
+let targetDir = $args["<destination>"]
 
-let keyName   = paramStr(1)
-let sourceDir = paramStr(2)
-let targetDir = paramStr(3)
+if not dirExists(sourceDir):
+  quit("source does not contain any data")
 
 # Make sure we have a target dir
-if dirExists(targetDir):
+if not args["--force"] and dirExists(targetDir):
   for k in walkDir(targetDir):
     quit("Target directory not empty; aborting for your own safety.")
 

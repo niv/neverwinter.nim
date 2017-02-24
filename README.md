@@ -5,7 +5,7 @@ internal nim tools for nwn development
 
 Note: All tools built are being prefixed with `nwn_`.
 
-* `json2gff, gff2json`: Transforms gff data to/from json.
+* `gff`: Transforms gff data to/from various formats.
 * `key_pack, key_unpack`: Un/packs a keyfile into/from a directory structure.
 * `key_shadows`: Get data on file shadowing in a list of key files.
 * `key_transparent`: Get data on file duplication in a list of key files.

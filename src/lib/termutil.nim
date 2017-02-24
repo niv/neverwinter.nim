@@ -24,3 +24,4 @@ iterator withProgressBar*[T](items: Iterable[T], prefix = "", showitemstring = t
   if isatty(stdout):
     setCursorXPos(0)
     eraseLine()
+    stdout.flushFile

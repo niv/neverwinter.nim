@@ -232,7 +232,7 @@ method demand*(self: KeyTable, rr: ResRef): Res =
   let st = b.getStreamForVariableResource(resId)
 
   result = newRes(newResOrigin(self, "id=" & $resId & " in " & b.filename),
-    rr, b.mtime, st, va.offset, va.fileSize)
+    resref = rr, mtime = b.mtime, io = st, offset = va.offset, size = va.fileSize)
 
 method count*(self: KeyTable): int = self.resrefIdLookup.len
 

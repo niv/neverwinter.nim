@@ -16,7 +16,7 @@
 ## inherits from ResConainer and then creating the required methods (see below).
 
 
-import options, streams, sets, times
+import options, streams, sets, times, strutils
 export options, streams, sets
 
 import resref, restype, util, lru
@@ -52,12 +52,68 @@ type
 
 
 
+# --------------
+#  ResContainer
+# --------------
+
+method `$`*(self: ResContainer): string {.base.} = "ResContainer:?"
+  ## Implement this in a ResContainer. See the proc on ResMan for a description.
+  ##
+  ## This should output a short description of this ResContainer; it should at
+  ## the very least include any backing storage info.
+
+method contains*(self: ResContainer, rr: ResRef): bool {.base.} =
+  ## Implement this in a ResContainer. See the proc on ResMan for a description.
+  ##
+  ## It needs to return true if the ResContainer has knowledge of the given ResRef.
+  ## It must never error.
+  raise newException(ValueError, "Implement me!")
+
+method demand*(self: ResContainer, rr: ResRef): Res {.base.} =
+  ## Implement this in any ResContainer. See the proc on ResMan for a description.
+  ##
+  ## This needs to return a Res. It must be safe to call even if contains() was
+  ## not checked beforehand; a missing entry should raise a ValueError.
+  raise newException(ValueError, "Implement me!")
+
+method count*(self: ResContainer): int {.base.} =
+  ## Implement this in any ResContainer. See the proc on ResMan for a description.
+  ##
+  ## This needs to return the total count of *available/readable* resrefs in this
+  ## container.
+  raise newException(ValueError, "Implement me!")
+
+method contents*(self: ResContainer): OrderedSet[ResRef] {.base.} =
+  ## Implement this in any ResContainer. See the proc on ResMan for a description.
+  ##
+  ## Returns the contents of this container, as a set.
+  ## This can be a potentially *expensive operation*.
+  raise newException(ValueError, "Implement me!")
+
+
+
+# -----------
+#  ResOrigin
+# -----------
+
+proc newResOrigin*(c: ResContainer, label = ""): ResOrigin =
+  # if label == "": label = "(no-label)" # todo
+  (container: c, label: label).ResOrigin
+
+proc `$`*(self: ResOrigin): string =
+  if self.label == "":
+    $self.container
+  else:
+    $self.container & "(" & self.label & ")"
+
+
+
 # -----
 #  Res
 # -----
 
 proc newRes*(origin: ResOrigin, resref: ResRef, mtime: Time, io: Stream,
-    offset = 0, size = -1, ioOwned = false): Res =
+    size: int, offset = 0, ioOwned = false): Res =
 
   new(result)
   result.io = io
@@ -120,61 +176,8 @@ method readAll*(self: Res): string {.base.} =
       if self.ioOwned: self.io.close()
       self.io = nil
 
-
-
-# --------------
-#  ResContainer
-# --------------
-
-method `$`*(self: ResContainer): string {.base.} = "ResContainer:?"
-  ## Implement this in a ResContainer. See the proc on ResMan for a description.
-  ##
-  ## This should output a short description of this ResContainer; it should at
-  ## the very least include any backing storage info.
-
-method contains*(self: ResContainer, rr: ResRef): bool {.base.} =
-  ## Implement this in a ResContainer. See the proc on ResMan for a description.
-  ##
-  ## It needs to return true if the ResContainer has knowledge of the given ResRef.
-  ## It must never error.
-  raise newException(ValueError, "Implement me!")
-
-method demand*(self: ResContainer, rr: ResRef): Res {.base.} =
-  ## Implement this in any ResContainer. See the proc on ResMan for a description.
-  ##
-  ## This needs to return a Res. It must be safe to call even if contains() was
-  ## not checked beforehand; a missing entry should raise a ValueError.
-  raise newException(ValueError, "Implement me!")
-
-method count*(self: ResContainer): int {.base.} =
-  ## Implement this in any ResContainer. See the proc on ResMan for a description.
-  ##
-  ## This needs to return the total count of *available/readable* resrefs in this
-  ## container.
-  raise newException(ValueError, "Implement me!")
-
-method contents*(self: ResContainer): OrderedSet[ResRef] {.base.} =
-  ## Implement this in any ResContainer. See the proc on ResMan for a description.
-  ##
-  ## Returns the contents of this container, as a set.
-  ## This can be a potentially *expensive operation*.
-  raise newException(ValueError, "Implement me!")
-
-
-
-# -----------
-#  ResOrigin
-# -----------
-
-proc newResOrigin*(c: ResContainer, label = ""): ResOrigin =
-  # if label == "": label = "(no-label)" # todo
-  (container: c, label: label).ResOrigin
-
-proc `$`*(self: ResOrigin): string =
-  if self.label == "":
-    $self.container
-  else:
-    $self.container & "(" & self.label & ")"
+proc `$`*(self: Res): string =
+  "$#@$#".format(self.resref, self.origin)
 
 
 

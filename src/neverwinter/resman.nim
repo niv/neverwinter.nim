@@ -190,12 +190,12 @@ proc newResMan*(cacheSizeMB = 100): ResMan =
 
   new(result)
   result.containers = newSeq[ResContainer]()
-  assert(cacheSizeMB >= 0)
-  result.cache = newWeightedLRU[ResRef, Res](cacheSizeMB * 1024 * 1024)
+  if cacheSizeMB > 0:
+    result.cache = newWeightedLRU[ResRef, Res](cacheSizeMB * 1024 * 1024)
 
 proc contains*(self: ResMan, rr: ResRef, usecache = true): bool =
   ## Returns true if this ResMan knows about the res you gave it.
-  if usecache and self.cache.hasKey(rr): return true
+  if self.cache != nil and usecache and self.cache.hasKey(rr): return true
 
   for c in self.containers:
     if c.contains(rr): return true
@@ -203,7 +203,7 @@ proc contains*(self: ResMan, rr: ResRef, usecache = true): bool =
 
 proc demand*(self: ResMan, rr: ResRef, usecache = true): Res =
   ## Resolves the given resref. Will raise an error if things fail.
-  if usecache:
+  if self.cache != nil and usecache:
     let cached = self.cache[rr]
     if cached.isSome:
       # echo "rr=", rr, " served from cache"
@@ -212,7 +212,7 @@ proc demand*(self: ResMan, rr: ResRef, usecache = true): Res =
   for c in self.containers:
     if c.contains(rr):
       result = c.demand(rr)
-      if usecache:
+      if self.cache != nil and usecache:
         # echo "rr=", rr, " put in cache"
         self.cache[rr, result.len] = result
       break
@@ -256,4 +256,4 @@ proc del*(self: ResMan, idx: int) = self.containers.del(idx)
   ## Remove a container from this ResMan (by id).
 
 proc cache*(self: ResMan): WeightedLRU[ResRef, Res] = self.cache
-  ## Returns the LRU cache used by this ResMan.
+  ## Returns the LRU cache used by this ResMan. nil if disabled.

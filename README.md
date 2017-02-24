@@ -15,7 +15,8 @@ Note: All tools built are being prefixed with `nwn_`.
 * `twoda_reformat`: Reformats a twoda file to be nicely formatted and valid.
 
 All utilities write their working output to stdout, and any library- or tool-
-related logging goes to stderr.
+related logging goes to stderr.  You can turn on debug logging with `--verbose`,
+and turn off all logging except errors with `--quiet`.
 
 ## Build Process
 

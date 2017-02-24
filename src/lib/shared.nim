@@ -35,7 +35,8 @@ const GlobalOpts = """
   --root ROOT                 Set NWN root
   --keys KEYS                 Key files loaded in ascending order [default: nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch]
   --ovr BOOL                  Include ovr/ in resman [default: true]
-  --verbose                   Turn on debug logging"""
+  --verbose                   Turn on debug logging
+  --quiet                     Turn off all logging except errors"""
 
 var Args: Table[string, docopt_internal.Value]
 
@@ -46,7 +47,9 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
   result = docopt_internal.docopt(body2)
   Args = result
 
-  if Args.hasKey("--verbose") and Args["--verbose"]: setLogFilter(lvlDebug) else: setLogFilter(lvlInfo)
+  if Args.hasKey("--verbose") and Args["--verbose"]: setLogFilter(lvlDebug)
+  elif Args.hasKey("--quiet") and Args["--quiet"]: setLogFilter(lvlError)
+  else: setLogFilter(lvlInfo)
 
 proc getInOutFilesFromParams*(allowOverwrite = false): tuple[i: Stream, o: Stream] =
   ## Used by command line utilities to transform simple in/out parameters to

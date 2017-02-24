@@ -1,5 +1,5 @@
-import strutils, algorithm, os, streams, json, sequtils, logging
-export strutils, algorithm, os, streams, json, sequtils, logging
+import strutils, algorithm, os, streams, json, sequtils, logging, times
+export strutils, algorithm, os, streams, json, sequtils, logging, times
 
 import neverwinter.resman,
   neverwinter.resref,

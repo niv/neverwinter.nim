@@ -1,31 +1,28 @@
-## This tool unpacks a key file to the destination directory, exploded into subdirs.
-## This will only work on *one* keyfile; if you wish to expand a full set of key files,
-## you will have to do it for each one.
-#
-## Syntax: key_unpack <file.key> <destinationParent>
-##
-## Example: key_unpack xp1.key xp1out/
-##   -> Unpacks to xp1out/bif1.bif...
+import shared
+let args = DOC """
+This tool unpacks a key file to the destination directory, exploded into subdirs.
+This will only work on *one* keyfile; if you wish to expand a full set of key files,
+you will have to do it for each one.
 
-import streams, tables, os, options, sequtils, securehash, logging, times, sets
+Usage:
+  $0 [options] <key> <destination>
+  $0 -h | --help
 
-import neverwinter.key, neverwinter.resref
+Options:
+  -f --force                  Force unpack even if target directory has stuff in it.
+  $OPT
+"""
 
-addHandler newConsoleLogger()
-
-if paramCount() != 2: quit("Syntax: <file.key> <destinationParent>")
-
-let keyfile = paramStr(1)
+let keyfile = $args["<key>"]
 doAssert(fileExists(keyfile), "file not found: " & keyfile)
-var keyfileLocation = splitFile(keyfile).dir
-if keyfileLocation == "": keyfileLocation = "." # thanks, windows
+var keyfileLocation = splitFile(keyfile.expandFilename).dir
 
-let dest = paramStr(2) & DirSep
+let dest = $args["<destination>"]
 
 info "Will attempt to locate bif files in: ", keyfileLocation
 info "Will unpack to: ", dest
 
-if dirExists(dest):
+if not args["--force"] and dirExists(dest):
   for k in walkDir(dest):
     quit("Target directory not empty; aborting for your own safety.")
 
@@ -59,8 +56,8 @@ for bif in kt.bifs:
   var metaBifEntriesOrder = newFileStream(metaFn, fmWrite)
   doAssert(metaBifEntriesOrder != nil, "Could not create meta file: " & metaFn)
 
-  for vr in vrs:
-    let fs = newFileStream(targetDir & $vr.resref, fmWrite)
+  for vr in vrs.withProgressBar(bif.filename & ": "):
+    let fs = newFileStream(targetDir / $vr.resref, fmWrite)
     let str = bif.getStreamForVariableResource(vr.id)
     fs.write(str.readStr(vr.fileSize))
     fs.close()

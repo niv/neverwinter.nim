@@ -18,7 +18,7 @@ proc readStrChunked*(io: Stream, size: int): TaintedString =
     remaining -= buf.len
     result &= buf
 
-proc readStrOrErr*(io: Stream, size: int): string =
+proc readStrOrErr*(io: Stream, size: int): TaintedString =
   ## Reads a string of exactly size bytes off io, or error out.
   result = io.readStrChunked(size)
 

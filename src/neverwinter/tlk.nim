@@ -1,6 +1,6 @@
 import streams, strutils, options, sequtils, tables
 
-import util, lru, res, resref, languages
+import util, lru, resman, resref, languages
 export languages
 
 type
@@ -16,6 +16,7 @@ type
 
     # Manually assigned entries.
     staticEntries: Table[StrRef, TlkEntry]
+    staticEntriesHighest: int
 
     # These are only valid when this tlk is sourced from a stream
     io: Stream
@@ -48,7 +49,7 @@ proc `[]`*(self: SingleTlk, str: StrRef): Option[TlkEntry] =
       self.io.setPosition(HeaderSize + DataElementSize * str.int)
 
       discard self.io.readInt32() # we dont care about flags atm
-      result[1].soundResRef = self.io.readStrOrErr(16).strip(true, true, {'\0'})
+      result[1].soundResRef = self.io.readStrOrErr(16).strip(false, true, {'\0'})
       discard self.io.readInt32() # volume variance is unused
       discard self.io.readInt32() # pitch variance is unused
       let offsetToString = self.io.readInt32()
@@ -66,6 +67,7 @@ proc `[]=`*(self: SingleTlk, str: StrRef, text: string) =
   ## as many entries as the strref requires.
   if self.ioCache != nil: self.ioCache.del(str)
   self.staticEntries[str] = TlkEntry(text: text)
+  self.staticEntriesHighest = max(self.staticEntriesHighest, str.int)
   discard
 
 proc `[]`*(self: Tlk, str: StrRef, gender = Gender.Male): Option[TlkEntry] =
@@ -76,6 +78,10 @@ proc `[]`*(self: Tlk, str: StrRef, gender = Gender.Male): Option[TlkEntry] =
     elif gender == Gender.MAle and pair.male != nil:
       let queried = pair.male[str]
       if queried.isSome: return queried
+
+proc highest*(self: SingleTlk): int = max(self.ioEntryCount, self.staticEntriesHighest)
+  ## Returns the highest entry in this SingleTlk.  Note: entries might not be
+  ## continuous.
 
 proc newSingleTlk*(): SingleTlk =
   new(result)

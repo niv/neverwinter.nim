@@ -46,6 +46,7 @@ proc fileSize*(self: VariableResource): int = self.fileSize
   ## The data size of this VA inside the owning bif.
 proc resref*(self: VariableResource): ResRef = self.resref
   ## The resref of this VA.
+proc `$`*(self: VariableResource): string = $self.resref
 
 proc readBif(io: Stream, owner: KeyTable, filename: string, expectIdx: int): Bif =
   ## Read a bif file from a stream. Used internally; as reading bif files from

@@ -35,7 +35,7 @@ const GlobalOpts = """
   --root ROOT                 Set NWN root
   --keys KEYS                 Key files loaded in ascending order [default: nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch]
   --ovr BOOL                  Include ovr/ in resman [default: true]
-  -v --verbose                Turn on debug logging"""
+  --verbose                   Turn on debug logging"""
 
 var Args: Table[string, docopt_internal.Value]
 

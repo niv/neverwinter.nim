@@ -87,7 +87,7 @@ proc findNwnRoot*(): string =
   if result == "" or not dirExists(result): raise newException(ValueError, "Could not locate NWN")
   debug "NWN root: ", result
 
-proc newBasicResMan*(root: string, language = "en"): ResMan =
+proc newBasicResMan*(root: string, language = "en", cacheSize = 0): ResMan =
   ## Sets up a resman that defaults to what 1.8 looks like.
   ## Will load an additional language directory, if language is given.
 
@@ -121,7 +121,7 @@ proc newBasicResMan*(root: string, language = "en"): ResMan =
     into.add(kt)
 
   debug "new resman: ", language
-  result = resman.newResMan(100)
+  result = resman.newResMan(cacheSize)
 
   for k in keys: result.loadKey(k)
 

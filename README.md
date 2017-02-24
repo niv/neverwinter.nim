@@ -1,6 +1,22 @@
 # neverwinter_utils.nim
 internal nim tools for nwn development
 
+## Tools provided
+
+Note: All tools built are being prefixed with `nwn_`.
+
+* `json2gff, gff2json`: Transforms gff data to/from json.
+* `key_pack, key_unpack`: Un/packs a keyfile into/from a directory structure.
+* `key_shadows`: Get data on file shadowing in a list of key files.
+* `key_transparent`: Get data on file duplication in a list of key files.
+* `resman_diff`: Diffs two resman views (for language support).
+* `resman_stats`: Get data on what is in a resman view.
+* `resman_grep`: Grep a resman view for data.
+* `twoda_reformat`: Reformats a twoda file to be nicely formatted and valid.
+
+All utilities write their working output to stdout, and any library- or tool-
+related logging goes to stderr.
+
 ## Build Process
 
 * Have nim-0.16 or newer on PATH, and a working mingw install (gcc). You can

@@ -46,7 +46,7 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
   result = docopt_internal.docopt(body2)
   Args = result
 
-  if Args["--verbose"]: setLogFilter(lvlDebug) else: setLogFilter(lvlInfo)
+  if Args.hasKey("--verbose") and Args["--verbose"]: setLogFilter(lvlDebug) else: setLogFilter(lvlInfo)
 
 proc getInOutFilesFromParams*(allowOverwrite = false): tuple[i: Stream, o: Stream] =
   ## Used by command line utilities to transform simple in/out parameters to

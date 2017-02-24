@@ -86,7 +86,8 @@ proc findNwnRoot*(): string =
     fo.keepItIf(dirExists(it))
     if fo.len > 0: result = fo[0]
 
-  if result == "" or not dirExists(result): raise newException(ValueError, "Could not locate NWN")
+  if result == "" or not dirExists(result): raise newException(ValueError,
+    "Could not locate NWN; try --root")
   debug "NWN root: ", result
 
 proc newBasicResMan*(root: string, language = "en", cacheSize = 0): ResMan =

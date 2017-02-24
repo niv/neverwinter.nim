@@ -13,6 +13,7 @@ Usage:
   $0 [options] <partial>
   $0 -h | --help
 
+Options:
 $OPT
 """
 

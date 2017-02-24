@@ -6,6 +6,7 @@ includes files seen by resman, not shadowed content.
 Usage:
   $0 [options]
 
+Options:
 $OPT
 """
 

@@ -24,8 +24,10 @@ method contains*(self: ResDir, rr: ResRef): bool =
 method demand*(self: ResDir, rr: ResRef): Res =
   let fp = self.resRefToFullPath(rr.resolve().get())
   let mtime = getLastModificationTime(fp)
+  let sz = getFileSize(fp).int
+
   let fs = newFileStream(fp, fmRead)
-  result = newRes(newResOrigin(self), rr, mtime, fs, ioOwned = true)
+  result = newRes(newResOrigin(self), rr, mtime, fs, size = sz, ioOwned = true)
 
 method count*(self: ResDir): int =
   self.contents.card

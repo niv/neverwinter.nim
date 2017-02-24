@@ -1,4 +1,4 @@
-import lists, tables, options, strutils
+import lists, tables, options, strutils, logging
 
 ## This is a weighted LRU cache. It works just like a regular, plain
 ## LRU cache, except you can specify the weight of each item manually.
@@ -37,7 +37,7 @@ proc newWeightedLRU*[K,V](maxWeight: Weight, minSize = 1): WeightedLRU[K,V] =
   doAssert(minSize >= 0, "minSize must be >= 0")
 
   when not defined(release):
-    echo("newWeightedLRU(maxWeight=", maxWeight, ",", "minSize=", minSize, ")")
+    debug("newWeightedLRU(maxWeight=", maxWeight, ",", "minSize=", minSize, ")")
 
   new(result)
   result.minSize = minSize
@@ -115,7 +115,7 @@ proc `[]=`*[K,V](self: WeightedLRU[K,V], key: K, weight: Weight, value: V) =
   ## Stores a key with a specific weight.
   when not defined(release):
     if (weight.float >= (self.maxWeight.float * 0.6)):
-      echo "debug warning: WeightedLRU key [" & repr(key) &
+      debug "WeightedLRU key [" & repr(key) &
         "] has 2/3rds of max cache weight; this would saturate the cache. " &
         "Consider increasing maxWeight."
 

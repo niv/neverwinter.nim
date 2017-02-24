@@ -6,21 +6,23 @@ type
   ResMemFile* = ref object of ResContainer
     resRef: ResRef
     io: StringStream
+    size: int
     mtime: Time
     label: string
 
-proc newResMemFile*(io: StringStream, rr: ResRef, label = "anon"): ResMemFile =
+proc newResMemFile*(io: StringStream, rr: ResRef, size: int, label = "anon"): ResMemFile =
   new(result)
   result.io = io
   result.resRef = rr
   result.mtime = getTime()
   result.label = ""
+  result.size = size
 
 method contains*(self: ResMemFile, rr: ResRef): bool =
   self.resRef == rr
 
 method demand*(self: ResMemFile, rr: ResRef): Res =
-  newRes(newResOrigin(self), rr, self.mtime, self.io)
+  newRes(newResOrigin(self), rr, self.mtime, self.io, size = self.size)
 
 method count*(self: ResMemFile): int = 1
 

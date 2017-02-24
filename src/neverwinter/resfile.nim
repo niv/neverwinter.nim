@@ -24,8 +24,9 @@ method contains*(self: ResFile, rr: ResRef): bool =
 method demand*(self: ResFile, rr: ResRef): Res =
   let fp = self.resRefToFullPath(rr.resolve().get())
   let mtime = getLastModificationTime(fp)
+  let sz = getFileSize(fp).int
 
-  result = newRes(newResOrigin(self), rr, mtime, newFileStream(fp))
+  result = newRes(newResOrigin(self), rr, mtime, io = newFileStream(fp), size = sz)
 
 method count*(self: ResFile): int =
   if fileExists(self.resRefToFullPath(self.resRef)): 1 else: 0

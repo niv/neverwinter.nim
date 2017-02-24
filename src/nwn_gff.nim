@@ -15,20 +15,22 @@ const SupportedFormats = {
 let args = DOC """
 Convert gff data to json.
 
-The json data is compatible with what https://github.com/niv/nwn-lib works with.
+The json data is compatible with https://github.com/niv/nwn-lib.
 
 Supported input/output formats: """ & SupportedFormatsSimple.join(", ") & """
 
+
+Input and output default to stdin/stdout respectively.
 
 Usage:
   $0 [options]
   $0 -h | --help
 
 Options:
-  -i IN                       Input file [default: stdin]
+  -i IN                       Input file [default: -]
   -l INFORMAT                 Input format [default: autodetect]
 
-  -o OUT                      Output file [default: stdout]
+  -o OUT                      Output file [default: -]
   -k OUTFORMAT                Output format [default: autodetect]
 
   -p, --pretty                Pretty output (json only)
@@ -37,46 +39,23 @@ Options:
 
 let inputfile   = $args["-i"]
 let outputfile  = $args["-o"]
-var informat    = $args["-l"]
-var outformat   = $args["-k"]
+let informat    = ensureValidFormat($args["-l"], inputfile, SupportedFormats)
+let outformat   = ensureValidFormat($args["-k"], outputfile, SupportedFormats)
 
-# attempt to detect format based on:
-# - cli param
-# - filename
-# - maybe later: peeking the stream
+let input  = if $args["-i"] == "-": newFileStream(stdin) else: newFileStream($args["-i"])
+let output = if $args["-o"] == "-": newFileStream(stdout) else: newFileStream($args["-o"], fmWrite)
 
-if informat == "autodetect" and inputfile != "stdin":
-  let ext = splitFile(inputfile).ext.strip(true, false, {'.'})
-  for fmt, exts in SupportedFormats:
-    if exts.contains(ext):
-      informat = fmt
-      break
-if informat == "autodetect":
-  quit("infile: cannot detect file format from filename: " & inputfile)
-if not SupportedFormats.hasKey(informat):
-  quit("informat: not supported format " & informat)
+var state: GffRoot
 
-if outformat == "autodetect" and outputfile != "stdout":
-  let ext = splitFile(outputfile).ext.strip(true, false, {'.'})
-  for fmt, exts in SupportedFormats:
-    if exts.contains(ext):
-      outformat = fmt
-      break
-if outformat == "autodetect":
-  quit("outformat: cannot detect file format from filename: " & outputfile)
-if not SupportedFormats.hasKey(outformat):
-  quit("outformat: not supported format " & outformat)
+case informat:
+of "gff":    state = input.readGffRoot(false)
+of "json":   state = input.parseJson(inputfile).gffRootFromJson()
+else: quit("Unsupported informat: " & informat)
 
-let input  = if $args["-i"] == "stdin": newFileStream(stdin) else: newFileStream($args["-i"])
-let output = if $args["-o"] == "stdout": newFileStream(stdout) else: newFileStream($args["-o"], fmWrite)
-
-if informat == "gff" and outformat == "json":
-  let j = input.readGffRoot(false).toJson()
-  output.write(if args["--pretty"]: j.pretty() else: $j)
-  output.write("\c\L")
-
-elif informat == "json" and outformat == "gff":
-  let j = input.parseJson(inputfile).gffRootFromJson()
-  output.write(j)
-else:
-  quit("Unsupported transformation: " & informat & " -> " & outformat)
+case outformat:
+of "gff":    output.write(state)
+of "json":
+             let j = state.toJson()
+             output.write(if args["--pretty"]: j.pretty() else: $j)
+             output.write("\c\L")
+else: quit("Unsupported outformat: " & outformat)

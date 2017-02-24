@@ -124,3 +124,18 @@ proc newBasicResMan*(root: string, language = "en", cacheSize = 0): ResMan =
     debug "  ", c
     result.add(c)
 
+proc ensureValidFormat*(format, filename: string,
+                       supportedFormats: Table[string, seq[string]]): string =
+  result = format
+  if result == "autodetect" and filename != "-":
+    let ext = splitFile(filename).ext.strip(true, false, {'.'})
+    for fmt, exts in supportedFormats:
+      if exts.contains(ext):
+        result = fmt
+        break
+
+  if result == "autodetect":
+    quit("Cannot detect file format from filename: " & filename)
+
+  if not supportedFormats.hasKey(result):
+    quit("Not a supported file format: " & result)

@@ -4,7 +4,7 @@ description   = "nwn1 development tools"
 license       = "mindflayer 1.0"
 
 #requires "nim >= 0.16.0"
-#requires "docopt >= 0.6.4"
+#requires "docopt = 0.6.4"
 
 #srcDir = "."
 #skipExt = @["nim"]

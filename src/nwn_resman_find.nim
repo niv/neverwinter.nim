@@ -1,30 +1,23 @@
-## This utility finds files matching a partial match in resman.
-##
-## Note: this is only the final resman view. This will NOT list resources
-##       not indiced by keyfiles/override/etc and will not list shadowed
-##       resource locations.
-##
-## Wildcards are not supported; just partial matches of the filename will be
-## printed.
-##
-## Example: resman_find .ids
-
-import streams, tables, os, options, sequtils, strutils, algorithm, pegs
-
-import neverwinter.resman,
-  neverwinter.resref,
-  neverwinter.key,
-  neverwinter.resfile,
-  neverwinter.resmemfile,
-  neverwinter.resdir,
-  neverwinter.erf
-
 import shared
+let args = DOC """
+This utility finds files matching a partial match in resman.
 
-if paramCount() != 2: quit("Syntax: <gameroot> <partial>")
+Note: this is only the final resman view. This will NOT list resources
+      not indiced by keyfiles/override/etc and will not list shadowed
+      resource locations.
 
-let root = paramStr(1)
-let match = paramStr(2)
+Wildcards are not supported; just partial matches of the filename will be
+printed.
+
+Usage:
+  $0 [options] <partial>
+  $0 -h | --help
+
+$OPT
+"""
+
+let root = findNwnRoot()
+let match = $args["<partial>"]
 
 let rm = newBasicResMan(root)
 

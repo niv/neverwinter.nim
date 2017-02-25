@@ -3,20 +3,22 @@ internal nim tools for nwn development
 
 ## Tools provided
 
-Note: All tools built are being prefixed with `nwn_`.
-
-* `gff`: Transforms gff data to/from various formats.
-* `key_pack, key_unpack`: Un/packs a keyfile into/from a directory structure.
-* `key_shadows`: Get data on file shadowing in a list of key files.
-* `key_transparent`: Get data on file duplication in a list of key files.
-* `resman_diff`: Diffs two resman views (for language support).
-* `resman_stats`: Get data on what is in a resman view.
-* `resman_grep`: Grep a resman view for data.
-* `twoda_reformat`: Reformats a twoda file to be nicely formatted and valid.
+* `nwn_gff`: Transforms gff data to/from various formats.
+* `nwn_key_pack, nwn_key_unpack`: Un/packs a keyfile into/from a directory structure.
+* `nwn_key_shadows`: Get data on file shadowing in a list of key files.
+* `nwn_key_transparent`: Get data on file duplication in a list of key files.
+* `nwn_resman_stats`: Get data on what is in a resman view.
+* `nwn_resman_grep`: Grep a resman view for data.
+* `nwn_resman_extract`: Pull files from resman into directory.
+* `nwn_resman_diff`: Diffs two resman views (for language support).
+* `nwn_twoda_reformat`: Reformats a twoda file to be nicely formatted and valid.
 
 All utilities write their working output to stdout, and any library- or tool-
 related logging goes to stderr.  You can turn on debug logging with `--verbose`,
 and turn off all logging except errors with `--quiet`.
+
+For detailed documentation, please see their source files in `src/`: They have
+a documentation header right at the top.
 
 ## Build Process
 

@@ -34,9 +34,17 @@ export docopt_internal
 
 const GlobalOpts = """
 
-  --root ROOT                 Set NWN root
-  --keys KEYS                 Key files loaded in ascending order [default: nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch]
-  --ovr BOOL                  Include ovr/ in resman [default: true]
+Resman:
+  --root ROOT                 Override NWN root (autodetected from BDX)
+  --no-keys                   Do not load keys into resman (ignore --keys)
+  --keys KEYS                 key files to load (from root:data/)
+                              [default: nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch]
+  --no-ovr                    Do not load ovr/ in resman
+
+  --erfs ERFS                 Load comma-separated erf files [default: ]
+  --dirs DIRS                 Load comma-separated directories [default: ]
+
+Logging:
   --verbose                   Turn on debug logging
   --quiet                     Turn off all logging except errors"""
 
@@ -81,7 +89,15 @@ proc newBasicResMan*(root = findNwnRoot(), language = "en", cacheSize = 0): ResM
   ## Sets up a resman that defaults to what 1.8 looks like.
   ## Will load an additional language directory, if language is given.
 
-  let keys = ($Args["--keys"]).split(",").mapIt(it.strip)
+  let keys = ($Args["--keys"]).split(",").mapIt(it.strip).filterIt(it.len > 0)
+  let erfs = ($Args["--erfs"]).split(",").mapIt(it.strip).filterIt(it.len > 0)
+  let dirs = ($Args["--dirs"]).split(",").mapIt(it.strip).filterIt(it.len > 0)
+
+  for e in erfs:
+    if not fileExists(e): quit("requested --erfs not found: " & e)
+
+  for d in dirs:
+    if not dirExists(d): quit("requested --dirs not found: " & d)
 
   let tryOther = language != "en"
   let otherLangRoot = root / "lang" / language
@@ -113,16 +129,27 @@ proc newBasicResMan*(root = findNwnRoot(), language = "en", cacheSize = 0): ResM
   debug "new resman: ", language
   result = resman.newResMan(cacheSize)
 
-  for k in keys: result.loadKey(k)
+  if not Args["--no-keys"]:
+    for k in keys: result.loadKey(k)
 
-  if Args["--ovr"]:
+  for e in erfs:
+    let fs = newFileStream(e)
+    if fs != nil:
+      result.add(fs.readErf())
+    else:
+      quit("Could not read erf: " & e)
+
+  if not Args["--no-ovr"]:
     let c = newResDir(root / "ovr")
     debug "  ", c
     result.add(c)
-  if tryOther and Args["--ovr"]:
+  if tryOther and not Args["--no-ovr"]:
     let c = newResDir(otherLangRoot / "ovr")
     debug "  ", c
     result.add(c)
+
+  for d in dirs:
+    result.add(newResDir(d))
 
 proc ensureValidFormat*(format, filename: string,
                        supportedFormats: Table[string, seq[string]]): string =

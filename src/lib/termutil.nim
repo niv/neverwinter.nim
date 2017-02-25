@@ -2,7 +2,7 @@ import terminal, sets, strutils, math
 
 export terminal
 
-type Iterable[T] = HashSet[T] | openArray[T] | set[T] | seq[T]
+type Iterable[T] = HashSet[T] | openArray[T] | set[T] | seq[T] | OrderedSet[T]
 
 proc scale(count: int): int =
   # We don't want to update for every item, because stdout on windows is

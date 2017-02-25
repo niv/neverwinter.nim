@@ -88,7 +88,7 @@ proc makeStatsForContainer(cont: ResContainer): StatsForContainer =
   result.container        = cont
 
   # echo "mkShSt, ouridx=", cntIdx, " high=", rm.containers.high
-  for o in cont.contents:
+  for o in cont.contents.withProgressBar($cont & " shadows: "):
     for theirIdx in 0..cntIdx-1:
       let theirCnt = rm.containers[theirIdx]
       doAssert(theirCnt != cont); doAssert(theirIdx != cntIdx)
@@ -100,7 +100,7 @@ proc makeStatsForContainer(cont: ResContainer): StatsForContainer =
         result.resShadowedSizes[o.resType] =
           result.resShadowedSizes.getOrDefault(o.resType) + cont.demand(o).len
 
-  for o in cont.contents:
+  for o in cont.contents.withProgressBar($cont & " contents: "):
     let res = cont.demand(o)
     # result.resRefs.add(o)
     result.resTotalSize += res.len

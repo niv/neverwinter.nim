@@ -4,6 +4,7 @@ internal nim tools for nwn development
 ## Tools provided
 
 * `nwn_gff`: Transforms gff data to/from various formats.
+* `nwn_erf`: Un/pack erf files.
 * `nwn_key_pack, nwn_key_unpack`: Un/packs a keyfile into/from a directory structure.
 * `nwn_key_shadows`: Get data on file shadowing in a list of key files.
 * `nwn_key_transparent`: Get data on file duplication in a list of key files.

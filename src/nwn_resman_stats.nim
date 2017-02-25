@@ -10,7 +10,7 @@ Options:
 $OPT
 """
 
-let rm = newBasicResMan(findNwnRoot())
+let rm = newBasicResMan()
 
 var count = initCountTable[ResType]()
 var size  = initTable[ResType, int64]()

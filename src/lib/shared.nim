@@ -77,7 +77,7 @@ proc findNwnRoot*(): string =
     "Could not locate NWN; try --root")
   debug "NWN root: ", result
 
-proc newBasicResMan*(root: string, language = "en", cacheSize = 0): ResMan =
+proc newBasicResMan*(root = findNwnRoot(), language = "en", cacheSize = 0): ResMan =
   ## Sets up a resman that defaults to what 1.8 looks like.
   ## Will load an additional language directory, if language is given.
 

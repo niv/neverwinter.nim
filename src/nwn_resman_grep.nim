@@ -22,9 +22,7 @@ $OPT
 if not args["--binary"] and not args["--pattern"]:
   quit("Give one of -b or -p")
 
-let root = findNwnRoot()
-
-let rm = newBasicResMan(root)
+let rm = newBasicResMan()
 
 let invert = args["--invert-match"]
 

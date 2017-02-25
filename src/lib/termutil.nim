@@ -16,18 +16,31 @@ iterator withProgressBar*[T](items: Iterable[T], prefix = "", showitemstring = t
   ## on stdout (if a tty).
   ## `prefix` can be a string that labels the current effort.
 
+  let tWidth = terminalWidth()
+
+  let lenlen = ($items.len).len
   let updateFreq = scale(items.len)
 
   var idx = 0
+  var displayTick = 0
   for i in items:
 
-    if isatty(stdout) and idx mod updateFreq == 0:
-      let t = prefix & $idx & "/" & $items.len & " " &
-        (if showitemstring: $i else: "")
-      stdout.write t, repeat(" ", terminalWidth() - t.len)
-      if defined(windows):
-        stdout.cursorUp() # ?? thanks, windows
-      setCursorXPos(0)
+    if isatty(stdout):
+      if idx mod updateFreq == 0:
+        let percentage = ((idx.float32 / items.len.float32) * 100).int
+
+        let repi = ($i).strip.replace("\n", "")
+
+        let t = prefix &
+                align($percentage, 3) & "% " &
+                align($idx & "/" & $items.len, lenlen * 2 + 1) & " " &
+                (if showitemstring: repi else: "")
+
+        let tmax = min(tWidth, t.high)
+        stdout.write "\r", t[0..<tmax], repeat(" ", tWidth - tmax)
+
+        displayTick += 1
+
       stdout.flushFile()
 
     idx += 1
@@ -35,9 +48,5 @@ iterator withProgressBar*[T](items: Iterable[T], prefix = "", showitemstring = t
     yield(i)
 
   if isatty(stdout):
-    setCursorXPos(0)
-    eraseLine()
-    if defined(windows):
-      stdout.cursorUp()
-      stdout.write("\L")
+    stdout.write "\r", repeat(" ", tWidth), "\r"
     stdout.flushFile()

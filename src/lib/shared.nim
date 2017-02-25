@@ -41,6 +41,8 @@ Resman:
                               [default: nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch]
   --no-ovr                    Do not load ovr/ in resman
 
+  --language LANG             Load language overrides [default: en]
+
   --erfs ERFS                 Load comma-separated erf files [default: ]
   --dirs DIRS                 Load comma-separated directories [default: ]
 
@@ -85,7 +87,7 @@ proc findNwnRoot*(): string =
     "Could not locate NWN; try --root")
   debug "NWN root: ", result
 
-proc newBasicResMan*(root = findNwnRoot(), language = "en", cacheSize = 0): ResMan =
+proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan =
   ## Sets up a resman that defaults to what 1.8 looks like.
   ## Will load an additional language directory, if language is given.
 
@@ -99,8 +101,10 @@ proc newBasicResMan*(root = findNwnRoot(), language = "en", cacheSize = 0): ResM
   for d in dirs:
     if not dirExists(d): quit("requested --dirs not found: " & d)
 
-  let tryOther = language != "en"
-  let otherLangRoot = root / "lang" / language
+  let resolvedLanguage = if language == "": $Args["--language"] else: language
+
+  let tryOther = resolvedLanguage != "en"
+  let otherLangRoot = root / "lang" / resolvedLanguage
 
   doAssert(not tryOther or dirExists(otherLangRoot), "language " & otherLangRoot &
     " not found")
@@ -126,7 +130,7 @@ proc newBasicResMan*(root = findNwnRoot(), language = "en", cacheSize = 0): ResM
 
     into.add(kt)
 
-  debug "new resman: ", language
+  debug "Resman (language=", resolvedLanguage, ")"
   result = resman.newResMan(cacheSize)
 
   if not Args["--no-keys"]:
@@ -135,7 +139,9 @@ proc newBasicResMan*(root = findNwnRoot(), language = "en", cacheSize = 0): ResM
   for e in erfs:
     let fs = newFileStream(e)
     if fs != nil:
-      result.add(fs.readErf())
+      let erf = fs.readErf()
+      debug "  ", erf
+      result.add(erf)
     else:
       quit("Could not read erf: " & e)
 
@@ -149,7 +155,9 @@ proc newBasicResMan*(root = findNwnRoot(), language = "en", cacheSize = 0): ResM
     result.add(c)
 
   for d in dirs:
-    result.add(newResDir(d))
+    let c = newResDir(d)
+    debug "  ", c
+    result.add(c)
 
 proc ensureValidFormat*(format, filename: string,
                        supportedFormats: Table[string, seq[string]]): string =

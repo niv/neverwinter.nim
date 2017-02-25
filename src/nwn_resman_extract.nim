@@ -4,19 +4,36 @@ Extract file(s) from resman into a directory.
 
 Usage:
   $0 [options] <file>...
+  $0 [options] --all
   $0 -h | --help
 
 Options:
-  -o DIRECTORY                Save files to DIRECTORY [default: .]
+  -d DIRECTORY                Save files to DIRECTORY [default: .]
 $OPT
 """
 
 let rm = newBasicResMan()
 
-let destination = ($args["-o"]).expandFilename
+let destination = ($args["-d"]).expandFilename
 doAssert(dirExists(destination), "destination directory does not exist")
 
-let res = args["<file>"].mapIt((rr: it, res: rm[it]))
-for o in res: doAssert(o.res.isSome, "Not in resman: " & $o.rr)
+proc toSeqx[T](c: HashSet[T]): seq[T] =
+  # Grrr, stdlib.
+  result = newSeq[T]()
+  for cc in c: result.add(cc)
 
-for o in res: writeFile(destination / $o.rr, o.res.get().readAll())
+let scope: seq[ResRef] =
+  if args["--all"]: toSeqx[ResRef](rm.contents)
+  else: map(@(args["<file>"])) do (x: string) -> ResRef: newResolvedResRef(x)
+
+let res = scope.mapIt(rm[it])
+
+for o in res:
+  if not o.isSome: quit("Could not find file in resman: " & $o & ", nothing written")
+
+var rr = newSeq[Res]()
+for o in res.withProgressBar("resolve: "):
+  rr.add(o.get())
+
+for resolved in rr.withProgressBar("write: "):
+  writeFile(destination / $resolved.resRef, resolved.readAll())

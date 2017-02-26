@@ -1,5 +1,15 @@
 # neverwinter_utils.nim
-internal nim tools for nwn development
+
+nim tools for nwn development.  Build it, and they will come, they said.
+On the other hand:  Good things are built with tools, but great things are built
+with great tools.
+
+Thus, If you are in need of a specific utility to solve a problem you are facing,
+*please* contact me and we'll get it sorted ASAP: niv@nwnx.io
+
+This suite is meant to eventually grow into a complete NWN toolkit that anyone,
+be it dev or community member, can use.  They must be available on ALL supported
+platforms and work on all of them equally well.
 
 ## Tools provided
 
@@ -21,6 +31,14 @@ and turn off all logging except errors with `--quiet`.
 For detailed documentation, please see their source files in `src/`: They have
 a documentation header right at the top.
 
+### Philosophy
+
+Most of these  utilities embed a complete resman.  The general idea is NOT to
+operate on single file formats.  Instead, they all utilise the underlying resman
+implementation from neverwinter.nim.  For example, if you want to get statistics
+about a key file, you do not unpack it:  Instead, you use `nwn_resman_stats` and
+tell it to only load the key file you are interested in.
+
 ## Build Process
 
 * Have nim-0.16 or newer on PATH, and a working mingw install (gcc). You can
@@ -34,14 +52,17 @@ a documentation header right at the top.
 * Clone this repository *with submodules*:
   `git clone --recursive https://github.com/niv/neverwinter_utils.nim`
 
-* Switch to it and run `build.cmd` (on Windows). This will build release binaries
-  into `bin`.
-
-* Optional: Add `neverwinter_utils.nim\bin` to your PATH, so you can call them
-  from everywhere.  All utilities are prefixed with nwn_.
+* Switch to it and run `build.cmd` (on Windows), or `build.sh` (on Linux). This
+  will build release binaries into `bin`.
 
 * To update the whole package, run `git pull --recurse-submodules --tags` and
   build again.
+
+* Optional: Add `neverwinter_utils.nim\bin` to your PATH, so you can call them
+  from everywhere.  All utilities are prefixed with `nwn_` so you can just tab-
+  complete your way to happiness.
+
+* All utilities have a help page. Just pass `-h` as the only argument.
 
 ## Debugging
 

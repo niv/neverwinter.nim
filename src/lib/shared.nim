@@ -32,7 +32,15 @@ system.addQuitProc do () -> void {.noconv.}:
 import docopt as docopt_internal
 export docopt_internal
 
+# Options common to ALL utilities
 const GlobalOpts = """
+
+Logging:
+  --verbose                   Turn on debug logging
+  --quiet                     Turn off all logging except errors"""
+
+# Options common to utilities working with a resman.
+const ResmanOpts = """
 
 Resman:
   --root ROOT                 Override NWN root (autodetected from BDX)
@@ -45,15 +53,13 @@ Resman:
 
   --erfs ERFS                 Load comma-separated erf files [default: ]
   --dirs DIRS                 Load comma-separated directories [default: ]
-
-Logging:
-  --verbose                   Turn on debug logging
-  --quiet                     Turn off all logging except errors"""
+""" & GlobalOpts
 
 var Args: Table[string, docopt_internal.Value]
 
 proc DOC*(body: string): Table[string, docopt_internal.Value] =
   let body2 = body.replace("$0", getAppFilename().extractFilename()).
+                   replace("$OPTRESMAN", ResmanOpts).
                    replace("$OPT", GlobalOpts)
 
   result = docopt_internal.docopt(body2)

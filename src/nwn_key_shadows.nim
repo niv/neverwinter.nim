@@ -6,6 +6,7 @@ data is shadowed.
 
 Usage:
   $0 [options] <key>...
+  $OPT
 """
 
 # Load keytables in order.

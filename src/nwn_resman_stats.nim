@@ -17,7 +17,7 @@ Usage:
 Options:
   -d                          More details
   -D                          Moaaaaaar details
-$OPT
+  $OPT
 """
 
 let rm = newBasicResMan()

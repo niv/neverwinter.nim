@@ -6,6 +6,7 @@ data is transparent (duplicates that do not add changes to resman).
 
 Usage:
   $0 [options] <key>...
+  $OPT
 """
 
 # Load keytables in order.

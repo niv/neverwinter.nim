@@ -16,7 +16,7 @@ Options:
   -b, --binary BINARY         List files where the data contains BINARY.
   -v, --invert-match          List non-matching files.
   -d, --details               Show more details.
-$OPT
+  $OPTRESMAN
 """
 
 if not args["--binary"] and not args["--pattern"]:

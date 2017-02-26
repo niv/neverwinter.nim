@@ -23,7 +23,7 @@ Usage:
 Options:
   --write-mismatches          Write out mismatches to a directory.
   --wav                       Include wav files in diff considation.
-  $OPT
+  $OPTRESMAN
 """
 
 # Warning: might spam your disk with a few files.

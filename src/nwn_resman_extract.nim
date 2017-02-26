@@ -9,7 +9,7 @@ Usage:
 
 Options:
   -d DIRECTORY                Save files to DIRECTORY [default: .]
-$OPT
+  $OPTRESMAN
 """
 
 let rm = newBasicResMan()

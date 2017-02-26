@@ -1,4 +1,4 @@
-import streams, strutils, sequtils, tables, times, algorithm
+import streams, strutils, sequtils, tables, times, algorithm, os, logging
 
 import resman, util
 
@@ -28,7 +28,10 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
   result.filename = filename
 
   result.fileType = io.readStrOrErr(4)
-  expect(["MOD ", "ERF ", "HAK "].find(result.fileType) != -1, "unsupported erf type")
+  if ["MOD ", "ERF ", "HAK "].find(result.fileType) != -1:
+    warn("Unknown erf file type: '" & repr(result.fileType) &
+         "', possibly invalid erf?")
+
   expect(io.readStrOrErr(4) == "V1.0", "unsupported erf version")
 
   let locStrCount = io.readInt32()
@@ -74,41 +77,54 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
       size = resData.size, offset = resData.offset)
     result.entries[rr] = erfObj
 
-proc write*(io: Stream, self: Erf) =
+proc writeErf*(io: Stream,
+               fileType: string,
+               entries: Table[ResRef, string], # resref to local file.
+               locStrings: Table[int, string] = initTable[int, string](),
+               strRef = 0,
+               progress: proc(r: ResRef): void = nil
+               # not supported yet:
+               # entries: seq[ResRef],
+               # resolver: proc(r: ResRef): tuple[s: Stream, sz: int]) =
+              ) =
+
+  ## Writes a new ERF.
+  ## `entries` maps resrefs to filenames on the local system.
+
   let ioStart = io.getPosition
 
   var locStrSize = 0
-  for id, str in self.locStrings: locStrSize += 8 + str.toNwnEncoding.len
+  for id, str in locStrings: locStrSize += 8 + str.toNwnEncoding.len
 
   let offsetToLocStr = 160
   let offsetToKeyList = offsetToLocStr + locStrSize
-  let keyListSize = self.entries.len * 24
+  let keyListSize = entries.len * 24
   let offsetToResourceList = offsetToKeyList + keyListSize
 
-  expect(self.fileType.len == 4)
-  io.write(self.fileType)
+  let myFileType = fileType[0..min(fileType.high, 3)] &
+                   strutils.repeat(" ", clamp(3 - fileType.high, 0,  4))
+  assert(myFileType.len == 4)
+  io.write(myFileType.toUpperAscii)
   io.write("V1.0")
-  io.write(self.locStrings.len.int32)
+  io.write(locStrings.len.int32)
   io.write(locStrSize.int32)
-  io.write(self.entries.len.int32)
+  io.write(entries.len.int32)
   io.write(offsetToLocStr.int32)
   io.write(offsetToKeyList.int32)
   io.write(offsetToResourceList.int32)
-  io.write(self.buildYear.int32)
-  io.write(self.buildDay.int32)
-  io.write(self.strRef.int32)
+  io.write(int32 getTime().getGMTime().year - 1900) # self.buildYear.int32)
+  io.write(int32 getTime().getGMTime().yearday) # self.buildDay.int32)
+  io.write(int32 strRef)
   io.write(repeat("\x0", 116))
   assert(io.getPosition == ioStart + 160)
 
-  var keysToWrite = newSeq[ResRef]()
-  for k in self.entries.keys: keysToWrite.add(k)
-
-  # we save out entries sorted alphabetically for now.
-  keysToWrite.sort() do (x, y: auto) -> int:
-    if x.resRef > y.resRef: 1 else: -1
+  # We save out entries sorted alphabetically for now. This ensures a reproducible
+  # build.
+  let keysToWrite = toSeq(entries.keys).sorted() do (a, b: ResRef) -> int:
+    system.cmp(a.resRef.toUpperAscii, b.resRef.toUpperAscii)
 
   # locstr list
-  for id, str in self.locStrings:
+  for id, str in locStrings:
     io.write(id.int32)
     io.write(str.toNwnEncoding.len.int32)
     io.write(str.toNwnEncoding)
@@ -116,8 +132,6 @@ proc write*(io: Stream, self: Erf) =
   # key list
   var id = 0
   for rr in keysToWrite:
-    let cc = self.entries[rr]
-    # resref, id, restype, 0, 0
     io.write(rr.resRef & repeat("\x0", 16 - rr.resRef.len))
     io.write(id.int32)
     io.write(rr.resType.int16)
@@ -127,15 +141,17 @@ proc write*(io: Stream, self: Erf) =
   # res list
   var currentOffset = 0
   for rr in keysToWrite:
-    let cc = self.entries[rr]
-    io.write(currentOffset.int32)
-    io.write(cc.len.int32)
-    currentOffset += cc.len
+    let sz = getFileSize(entries[rr]).int32
+    # let (rrio, sz) = resolver(rr) #  self.entries[rr]
+    io.write(int32 currentOffset)
+    io.write(int32 sz)
+    currentOffset += sz
 
   # res data
   for rr in keysToWrite:
-    let cc = self.entries[rr]
-    io.write(cc.readAll())
+    let fn = entries[rr]
+    if progress != nil: progress(rr)
+    io.write(readFile(fn))
 
 method contains*(self: Erf, rr: ResRef): bool =
   self.entries.hasKey(rr)

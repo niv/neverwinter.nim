@@ -1,4 +1,4 @@
-import shared, neverwinter.util
+import shared
 
 let Args = DOC """
 This utility walks a set of keyfiles and and prints out statistics on how much

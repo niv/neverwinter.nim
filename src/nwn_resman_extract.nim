@@ -1,4 +1,5 @@
 import shared
+
 let args = DOC """
 Extract file(s) from resman into a directory.
 

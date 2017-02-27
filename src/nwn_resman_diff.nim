@@ -1,4 +1,5 @@
 import shared
+
 let args = DOC """
 This utility diffs the base (english) view of resman versus a language
 override one as implemented for 1.8; so the torrent/lang/xx/data path is in code.

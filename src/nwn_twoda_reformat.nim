@@ -5,8 +5,7 @@
 
 import os, streams
 
-import neverwinter.twoda, neverwinter.util
-import shared
+import shared, neverwinter.twoda
 
 proc getInOutFilesFromParams*(allowOverwrite = false): tuple[i: Stream, o: Stream] =
   ## Used by command line utilities to transform simple in/out parameters to

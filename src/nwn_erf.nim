@@ -1,4 +1,6 @@
-import shared; let args = DOC """
+import shared
+
+let args = DOC """
 Un/packs erf files.
 
 Usage:
@@ -17,8 +19,6 @@ Options:
   -e, --erf-type TYPE         Set erf header type [default: ERF]
   $OPT
 """
-
-import neverwinter.erf
 
 let filename = $args["-f"]
 

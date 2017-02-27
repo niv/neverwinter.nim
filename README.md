@@ -16,6 +16,7 @@ platforms and work on all of them equally well.
 * `nwn_gff`: Transforms gff data to/from various formats.
 * `nwn_erf`: Un/pack erf files.
 * `nwn_tlk`: Transforms tlk tables from/to various formats.
+* `nwn_twoda`: Transforms 2da files from/to various formats.
 * `nwn_key_pack, nwn_key_unpack`: Un/packs a keyfile into/from a directory structure.
 * `nwn_key_shadows`: Get data on file shadowing in a list of key files.
 * `nwn_key_transparent`: Get data on file duplication in a list of key files.
@@ -23,7 +24,6 @@ platforms and work on all of them equally well.
 * `nwn_resman_grep`: Grep a resman view for data.
 * `nwn_resman_extract`: Pull files from resman into directory.
 * `nwn_resman_diff`: Diffs two resman views (for language support).
-* `nwn_twoda_reformat`: Reformats a twoda file to be nicely formatted and valid.
 
 All utilities write their working output to stdout, and any library- or tool-
 related logging goes to stderr.  You can turn on debug logging with `--verbose`,

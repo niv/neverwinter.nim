@@ -15,6 +15,7 @@ Usage:
   $0 -h | --help
 
 Options:
+  --all                       List all files.
   -p, --pattern PATTERN       List files where the name contains PATTERN.
                               Wildcards are not supported at this time.
   -b, --binary BINARY         List files where the data contains BINARY.
@@ -25,20 +26,22 @@ Options:
   $OPTRESMAN
 """
 
-if not args["--binary"] and not args["--pattern"]:
-  quit("Give one of -b or -p")
+if not args["--binary"] and not args["--pattern"] and not args["--all"]:
+  quit("Give one of -b, -p or --all")
 
 let rm = newBasicResMan()
 
 let invert = args["--invert-match"]
 
 var filtered = newSeq[Res]()
-for o in rm.contents.withProgressBar():
+for o in rm.contents.withProgressBar("filter: "):
   let str = $o
   let res = rm[o].get()
 
-  let match = (args["--pattern"] and str.find($args["--pattern"]) != -1) or
-              (args["--binary"] and res.readAll().find($args["--binary"]) != -1)
+  let match = args["--all"] or (
+               (args["--pattern"] and str.find($args["--pattern"]) != -1) or
+               (args["--binary"] and res.readAll().find($args["--binary"]) != -1)
+              )
 
   if (match and not invert) or (not match and invert):
     filtered.add(res)

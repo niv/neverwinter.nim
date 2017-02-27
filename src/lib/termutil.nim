@@ -2,7 +2,8 @@ import terminal, sets, strutils, math
 
 export terminal
 
-type Iterable[T] = HashSet[T] | openArray[T] | set[T] | seq[T] | OrderedSet[T]
+type Iterable[T] = HashSet[T] | openArray[T] | set[T] | seq[T] | OrderedSet[T] |
+                   Slice[T]
 
 proc scale(count: int): int =
   # We don't want to update for every item, because stdout on windows is
@@ -18,8 +19,14 @@ iterator withProgressBar*[T](items: Iterable[T], prefix = "", showitemstring = t
 
   let tWidth = terminalWidth()
 
-  let lenlen = ($items.len).len
-  let updateFreq = scale(items.len)
+  when compiles(items.len):
+    let itemCount = items.len
+  else:
+    # slice
+    let itemCount = items.b - items.a
+
+  let lenlen = ($itemCount).len
+  let updateFreq = scale(itemCount)
 
   var idx = 0
   var displayTick = 0
@@ -27,13 +34,13 @@ iterator withProgressBar*[T](items: Iterable[T], prefix = "", showitemstring = t
 
     if isatty(stdout):
       if idx mod updateFreq == 0:
-        let percentage = ((idx.float32 / items.len.float32) * 100).int
+        let percentage = ((idx.float32 / itemCount.float32) * 100).int
 
         let repi = ($i).strip.replace("\n", "")
 
         let t = prefix &
                 align($percentage, 3) & "% " &
-                align($idx & "/" & $items.len, lenlen * 2 + 1) & " " &
+                align($idx & "/" & $itemCount, lenlen * 2 + 1) & " " &
                 (if showitemstring: repi else: "")
 
         let tmax = min(tWidth, t.high)

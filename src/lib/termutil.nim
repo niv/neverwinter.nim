@@ -44,7 +44,9 @@ iterator withProgressBar*[T](items: Iterable[T], prefix = "", showitemstring = t
                 (if showitemstring: repi else: "")
 
         let tmax = min(tWidth, t.high)
+
         stdout.write "\r", t[0..<tmax], repeat(" ", tWidth - tmax)
+        if defined(windows): stdout.cursorUp()
 
         displayTick += 1
 
@@ -56,4 +58,5 @@ iterator withProgressBar*[T](items: Iterable[T], prefix = "", showitemstring = t
 
   if isatty(stdout):
     stdout.write "\r", repeat(" ", tWidth), "\r"
+    if defined(windows): stdout.cursorUp()
     stdout.flushFile()

@@ -1,4 +1,4 @@
-import shared
+import shared, securehash, md5
 
 let args = DOC """
 Find files in resman
@@ -6,6 +6,9 @@ Find files in resman
 Note: this is only the final resman view. This will NOT list resources
       not indiced by keyfiles/override/etc and will not list shadowed
       resource locations, only the latest.
+
+You can optionally generate file checksums for each entry found. The selectable
+algorithms are printed in the order listed in this help.
 
 Usage:
   $0 [options]
@@ -17,6 +20,8 @@ Options:
   -b, --binary BINARY         List files where the data contains BINARY.
   -v, --invert-match          List non-matching files.
   -d, --details               Show more details.
+  --md5                       Generate md5 checksums of files.
+  --sha1                      Generate sha1 checksums of files.
   $OPTRESMAN
 """
 
@@ -27,7 +32,8 @@ let rm = newBasicResMan()
 
 let invert = args["--invert-match"]
 
-for o in rm.contents:
+var filtered = newSeq[Res]()
+for o in rm.contents.withProgressBar():
   let str = $o
   let res = rm[o].get()
 
@@ -35,11 +41,22 @@ for o in rm.contents:
               (args["--binary"] and res.readAll().find($args["--binary"]) != -1)
 
   if (match and not invert) or (not match and invert):
-    stdout.write(str)
-    # print: <filename padded to resref>
-    if args["--details"]:
-      stdout.write repeat(" ", 20 - str.len), "  ",
-                   align(res.len.formatSize, 12), "  ",
-                   res.origin()
+    filtered.add(res)
 
-    stdout.write("\c\L")
+for res in filtered:
+  let str = $res.resRef
+  stdout.write(str)
+
+  if args["--md5"] or args["--sha1"] or args["--details"]:
+    stdout.write repeat(" ", 20 - str.len), "  "
+
+  if args["--md5"]:
+    stdout.write getMD5(res.readAll()), "  "
+  if args["--sha1"]:
+    stdout.write secureHash(res.readAll()), "  "
+
+  if args["--details"]:
+    stdout.write align(res.len.formatSize, 12), "  ",
+                 res.origin()
+
+  stdout.write("\c\L")

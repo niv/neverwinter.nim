@@ -16,10 +16,18 @@ Usage:
   $0 [options]
 
 Options:
-  -d                          More details
-  -D                          Moaaaaaar details
+  -d                          More details.
+  -D                          Moaaaaaar details.
+  --shadows-to FILE           Write out a list of shadowed files to FILE.                              one per container.
   $OPTRESMAN
 """
+
+if Args["--shadows-to"] and fileExists($Args["--shadows-to"]):
+  quit("--shadows-to exists, aborting for your own safety.")
+
+let shadowsFileIo: Stream =
+  if Args["--shadows-to"]: newFileStream($Args["--shadows-to"], fmWrite)
+  else: nil
 
 let rm = newBasicResMan()
 
@@ -100,6 +108,9 @@ proc makeStatsForContainer(cont: ResContainer): StatsForContainer =
         result.resShadowedTotalSize += cont.demand(o).len
         result.resShadowedSizes[o.resType] =
           result.resShadowedSizes.getOrDefault(o.resType) + cont.demand(o).len
+
+        if shadowsFileIo != nil:
+          shadowsFileIo.writeLine($o & "\t" & $cont)
 
   for o in cont.contents.withProgressBar($cont & " contents: "):
     let res = cont.demand(o)

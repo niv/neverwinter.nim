@@ -1,6 +1,6 @@
 # neverwinter.nim
 
-This is a nim-lang library to read and write data files used by Neverwinter Nights 1 & 2.  It's for you if you don't have the patience for C, are unreasonably scared of modern C++, don't like Java, and Ruby is too slow!
+This is a nim-lang library to read and write data files used by Neverwinter Nights 1.  It's for you if you don't have the patience for C, are unreasonably scared of modern C++, don't like Java, and Ruby is too slow!
 
 ## import neverwinter.gff
 

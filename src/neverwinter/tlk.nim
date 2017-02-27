@@ -11,7 +11,7 @@ type
     soundResRef*: string
     soundLength*: float
 
-  SingleTlk = ref object
+  SingleTlk* = ref object
     language*: Language
 
     # Manually assigned entries.
@@ -62,13 +62,17 @@ proc `[]`*(self: SingleTlk, str: StrRef): Option[TlkEntry] =
 
     result = some(rs)
 
-proc `[]=`*(self: SingleTlk, str: StrRef, text: string) =
+proc `[]=`*(self: SingleTlk, str: StrRef, entry: TlkEntry) =
   ## Assigns a str-ref to this tlk. The tlk will auto-expand to contain at least
   ## as many entries as the strref requires.
   if self.ioCache != nil: self.ioCache.del(str)
-  self.staticEntries[str] = TlkEntry(text: text)
+  self.staticEntries[str] = entry
   self.staticEntriesHighest = max(self.staticEntriesHighest, str.int)
-  discard
+
+proc `[]=`*(self: SingleTlk, str: StrRef, text: string) =
+  ## Assigns a str-ref to this tlk. The tlk will auto-expand to contain at least
+  ## as many entries as the strref requires.
+  self[str] = TlkEntry(text: text, soundResRef: "")
 
 proc `[]`*(self: Tlk, str: StrRef, gender = Gender.Male): Option[TlkEntry] =
   for pair in self.chain:

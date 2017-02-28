@@ -5,7 +5,7 @@ This utility packs a .key file and all associated bifs from directory tree.
 
 Usage:
   $0 [options] <key> <source> <destination>
-  $0 -h | --help
+  $USAGE
 
 Options:
   -f --force                  Force pack even if target directory has stuff in it.

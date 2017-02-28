@@ -23,6 +23,11 @@ system.addQuitProc do () -> void {.noconv.}:
 import docopt as docopt_internal
 export docopt_internal
 
+const GlobalUsage = """
+  $0 -h | --help
+  $0 --version
+""".strip
+
 # Options common to ALL utilities
 const GlobalOpts = """
 
@@ -51,7 +56,8 @@ Resman:
 var Args: Table[string, docopt_internal.Value]
 
 proc DOC*(body: string): Table[string, docopt_internal.Value] =
-  let body2 = body.replace("$0", getAppFilename().extractFilename()).
+  let body2 = body.replace("$USAGE", GlobalUsage).
+                   replace("$0", getAppFilename().extractFilename()).
                    replace("$OPTRESMAN", ResmanOpts).
                    replace("$OPT", GlobalOpts)
 

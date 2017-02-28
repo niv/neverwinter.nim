@@ -7,7 +7,7 @@ you will have to do it for each one.
 
 Usage:
   $0 [options] <key> <destination>
-  $0 -h | --help
+  $USAGE
 
 Options:
   -f --force                  Force unpack even if target directory has stuff in it.

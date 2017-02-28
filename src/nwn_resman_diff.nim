@@ -19,7 +19,7 @@ Resrefs only present in one side or the other are written to text files too.
 
 Usage:
   $0 [options] <otherLanguageKey>
-  $0 -h | --help
+  $USAGE
 
 Options:
   --write-mismatches          Write out mismatches to a directory.

@@ -6,7 +6,7 @@ Extract file(s) from resman into a directory.
 Usage:
   $0 [options] <file>...
   $0 [options] --all
-  $0 -h | --help
+  $USAGE
 
 Options:
   -d DIRECTORY                Save files to DIRECTORY [default: .]

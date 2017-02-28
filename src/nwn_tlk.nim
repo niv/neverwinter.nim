@@ -18,7 +18,7 @@ Input and output default to stdin/stdout respectively.
 
 Usage:
   $0 [options]
-  $0 -h | --help
+  $USAGE
 
 Options:
   -i IN                       Input file [default: -]

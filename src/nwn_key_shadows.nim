@@ -6,6 +6,8 @@ data is shadowed.
 
 Usage:
   $0 [options] <key>...
+  $USAGE
+
   $OPT
 """
 

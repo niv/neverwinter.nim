@@ -20,7 +20,7 @@ TwoDA format:
 
 Usage:
   $0 [options]
-  $0 -h | --help
+  $USAGE
 
 Options:
   -i IN                       Input file [default: -]

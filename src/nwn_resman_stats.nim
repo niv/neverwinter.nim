@@ -14,6 +14,7 @@ advertised separately at this point.
 
 Usage:
   $0 [options]
+  $USAGE
 
 Options:
   -d                          More details.

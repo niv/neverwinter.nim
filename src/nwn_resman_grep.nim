@@ -12,7 +12,7 @@ algorithms are printed in the order listed in this help.
 
 Usage:
   $0 [options]
-  $0 -h | --help
+  $USAGE
 
 Options:
   --all                       List all files.

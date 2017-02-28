@@ -7,7 +7,7 @@ Usage:
   $0 [options] -c <entry>...
   $0 [options] -x [<file>...]
   $0 [options] -t
-  $0 -h | --help
+  $USAGE
 
 Options:
   -f ERF                      Operate on FILE instead of stdin/out [default: -]

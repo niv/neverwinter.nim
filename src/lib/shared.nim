@@ -10,7 +10,7 @@ import neverwinter.util, neverwinter.resman,
 # Should clean this up at some point and let the utils deal with it.
 export util, resman, resref, key, resfile, resmemfile, resdir, erf, gff, gffjson
 
-import terminal, progressbar
+import terminal, progressbar, version
 export progressbar
 
 addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
@@ -28,7 +28,9 @@ const GlobalOpts = """
 
 Logging:
   --verbose                   Turn on debug logging
-  --quiet                     Turn off all logging except errors"""
+  --quiet                     Turn off all logging except errors
+  --version                   Show program version and licence info
+"""
 
 # Options common to utilities working with a resman.
 const ResmanOpts = """
@@ -55,6 +57,10 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
 
   result = docopt_internal.docopt(body2)
   Args = result
+
+  if Args["--version"]:
+    printVersion()
+    quit()
 
   if Args.hasKey("--verbose") and Args["--verbose"]: setLogFilter(lvlDebug)
   elif Args.hasKey("--quiet") and Args["--quiet"]: setLogFilter(lvlError)

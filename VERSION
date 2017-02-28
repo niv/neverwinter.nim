@@ -1,0 +1,18 @@
+LICENCE
+=======
+
+$LICENCE
+
+
+Library and utilities made with love to support Neverwinter Nights development.
+
+You can find the full source code at:
+
+* https://github.com/niv/neverwinter.nim
+   for the backing library
+* https://github.com/niv/neverwinter_utils.nim
+   for the toolkit code
+
+Author contact for help and suggestions: niv@nwnx.io
+
+Version: $VERSION

@@ -40,10 +40,10 @@ implementation from neverwinter.nim.  For example, if you want to get statistics
 about a key file, you do not unpack it:  Instead, you use `nwn_resman_stats` and
 tell it to only load the key file you are interested in.
 
-## Build Process
+## Build: Windows
 
-* Have nim-0.16 or newer on PATH, and a working mingw install (gcc). You can
-  grab a working one here (for Windows): https://nim-lang.org/download/mingw32.zip
+* Have nim-0.16 or newer on PATH, and a working mingw install (for gcc). You can
+  grab a working one here: https://nim-lang.org/download/mingw32.zip
 
   tl;dr:
   * Download nim.zip for windows, unpack to c:\nim-xxx.
@@ -53,8 +53,8 @@ tell it to only load the key file you are interested in.
 * Clone this repository *with submodules*:
   `git clone --recursive https://github.com/niv/neverwinter_utils.nim`
 
-* Switch to it and run `build.cmd` (on Windows), or `build.sh` (on Linux). This
-  will build release binaries into `bin`.
+* Switch to it and run `build.cmd` (on Windows). This will build release binaries
+  into `bin`.
 
 * To update the whole package, run `git pull --recurse-submodules --tags` and
   build again.
@@ -64,6 +64,13 @@ tell it to only load the key file you are interested in.
   complete your way to happiness.
 
 * All utilities have a help page. Just pass `-h` as the only argument.
+
+## Build: OSX, Linux
+
+* Install nim: `brew install nim` (OSX) or from apt/source (Linux). Make sure
+  it's at least 0.16.
+
+* Then follow the Windows instructions; but run `build.sh` instead.
 
 ## Debugging
 

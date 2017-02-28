@@ -10,8 +10,8 @@ import neverwinter.util, neverwinter.resman,
 # Should clean this up at some point and let the utils deal with it.
 export util, resman, resref, key, resfile, resmemfile, resdir, erf, gff, gffjson
 
-import termutil
-export termutil
+import terminal, progressbar
+export progressbar
 
 addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
 

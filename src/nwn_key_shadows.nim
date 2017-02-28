@@ -1,4 +1,4 @@
-import shared
+import shared, terminal
 
 let Args = DOC """
 This utility walks a set of keyfiles and and prints out statistics on how much

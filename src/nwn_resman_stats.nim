@@ -18,7 +18,7 @@ Usage:
 Options:
   -d                          More details.
   -D                          Moaaaaaar details.
-  --shadows-to FILE           Write out a list of shadowed files to FILE.                              one per container.
+  --shadows-to FILE           Write out a list of shadowed files to FILE.
   $OPTRESMAN
 """
 

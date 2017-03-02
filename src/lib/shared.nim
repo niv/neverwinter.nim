@@ -143,9 +143,10 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
   result = resman.newResMan(cacheSize)
 
   if not Args["--no-keys"]:
-    for k in keys.withProgressBar("load key: "): result.loadKey(k)
+    for k in keys: #.withProgressBar("load key: "):
+      result.loadKey(k)
 
-  for e in erfs.withProgressBar("load erf: "):
+  for e in erfs: #.withProgressBar("load erf: "):
     let fs = newFileStream(e)
     if fs != nil:
       let erf = fs.readErf()
@@ -163,7 +164,7 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
     debug "  ", c
     result.add(c)
 
-  for d in dirs.withProgressBar("load resdir: "):
+  for d in dirs: #.withProgressBar("load resdir: "):
     let c = newResDir(d)
     debug "  ", c
     result.add(c)

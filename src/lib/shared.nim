@@ -160,7 +160,7 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
     debug "  ", c
     result.add(c)
   if tryOther and not Args["--no-ovr"]:
-    let c = newResDir(otherLangRoot / "ovr")
+    let c = newResDir(otherLangRoot / "data" / "ovr")
     debug "  ", c
     result.add(c)
 

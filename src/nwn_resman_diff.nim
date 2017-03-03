@@ -61,8 +61,12 @@ let otherOnly = otherContents - baseContents
 var binaryMismatch = initSet[ResRef]()
 
 for it in intersection(baseContents, otherContents).withProgressBar("intersect: "):
-  let lhs = resBase[it].get().readAll()
-  let rhs = resOther[it].get().readAll()
+  let olhs = resBase[it]
+  doAssert(olhs.isSome, $it & " not in lhs")
+  let orhs = resOther[it]
+  doAssert(orhs.isSome, $it & " not in rhs")
+  let lhs = olhs.get().readAll()
+  let rhs = orhs.get().readAll()
 
   if lhs != rhs:
     binaryMismatch.incl(it)

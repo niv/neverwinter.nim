@@ -18,12 +18,6 @@ type
     ## You can only resolve resrefs where the restype is known to resman.
     resExt: string
 
-proc hash*(self: ResRef): Hash =
-  0 !& hash(self.resRef) !& hash(self.resType)
-
-proc `==`*(a, b: ResRef): bool =
-  a.resRef == b.resRef and a.resType == b.resType
-
 proc isValidResRefPart1(s: string): bool = s.len > 0 and s.len <= ResRefMaxLength
 
 proc newResRef*(resRef: string, resType: ResType): ResRef =
@@ -69,3 +63,14 @@ proc `$`*(rr: ResRef): string = rr.resRef & "." & $rr.resType
 proc resRef*(rr: ResRef): string = rr.resRef
 proc resType*(rr: ResRef): ResType = rr.resType
 proc resExt*(rr: ResolvedResRef): string = rr.resExt
+
+proc `cmp`*[T: ResRef](a, b: T): int {.procvar.} =
+  # We compare uppercase resrefs, just like NWN does too.
+  # This matters for sorting things like "_" versus "A".
+  system.cmp(($a).toUpperAscii, ($b).toUpperAscii)
+
+proc hash*(self: ResRef): Hash =
+  0 !& hash(self.resRef) !& hash(self.resType)
+
+proc `==`*(a, b: ResRef): bool =
+  a.resRef == b.resRef and a.resType == b.resType

@@ -44,7 +44,9 @@ Resman:
   --root ROOT                 Override NWN root (autodetected from BDX)
   --no-keys                   Do not load keys into resman (ignore --keys)
   --keys KEYS                 key files to load (from root:data/)
-                              [default: nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch]
+                              [default: autodetect]
+                              Will auto-detect if you are using a 1.69 or 1.8
+                              layout.
   --no-ovr                    Do not load ovr/ in resman
 
   --language LANG             Load language overrides [default: en]
@@ -100,7 +102,31 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
   ## Sets up a resman that defaults to what 1.8 looks like.
   ## Will load an additional language directory, if language is given.
 
-  let keys = ($Args["--keys"]).split(",").mapIt(it.strip).filterIt(it.len > 0)
+  let resolvedLanguage = if language == "": $Args["--language"] else: language
+  let tryOther = resolvedLanguage != "en"
+  let otherLangRoot = root / "lang" / resolvedLanguage
+
+  # 1.6
+  let legacyLayout = fileExists(root / "chitin.key")
+  if legacyLayout: debug("legacy resman layout detected (1.69)")
+  else: debug("new resman layout detected (1.8 w/ nwn_base & _loc)")
+
+  doAssert(not legacyLayout or not tryOther,
+           "legacy layout (1.69) does not support --language")
+
+  doAssert(not tryOther or dirExists(otherLangRoot), "language " & otherLangRoot &
+           " not found")
+
+  # Attempt to auto-detect the resman type we have.
+  let actualKeys =
+    if $Args["--keys"] == "autodetect":
+      # 1.6:
+      if legacyLayout: "chitin,xp1,xp2,xp3,xp2patch"
+      # 1.8:
+      else: "nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch"
+    else: $Args["--keys"]
+
+  let keys =        actualKeys.split(",").mapIt(it.strip).filterIt(it.len > 0)
   let erfs = ($Args["--erfs"]).split(",").mapIt(it.strip).filterIt(it.len > 0)
   let dirs = ($Args["--dirs"]).split(",").mapIt(it.strip).filterIt(it.len > 0)
 
@@ -110,18 +136,12 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
   for d in dirs:
     if not dirExists(d): quit("requested --dirs not found: " & d)
 
-  let resolvedLanguage = if language == "": $Args["--language"] else: language
-
-  let tryOther = resolvedLanguage != "en"
-  let otherLangRoot = root / "lang" / resolvedLanguage
-
-  doAssert(not tryOther or dirExists(otherLangRoot), "language " & otherLangRoot &
-    " not found")
-
   proc loadKey(into: ResMan, key: string) =
-    let fn = if tryOther and fileExists(otherLangRoot / "data" / key & ".key"):
-               otherLangRoot / "data" / key & ".key"
-             else: root / "data" / key & ".key"
+    let keyFile = if legacyLayout: key & ".key"
+                  else: "data" / key & ".key"
+    let fn = if tryOther and fileExists(otherLangRoot / keyFile):
+               otherLangRoot / keyFile
+             else: root / keyFile
 
     let ktfn = newFileStream(fn)
     doAssert(ktfn != nil, "key not found or inaccessible: " & fn)
@@ -155,11 +175,11 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
     else:
       quit("Could not read erf: " & e)
 
-  if not Args["--no-ovr"]:
+  if not legacyLayout and not Args["--no-ovr"]:
     let c = newResDir(root / "ovr")
     debug "  ", c
     result.add(c)
-  if tryOther and not Args["--no-ovr"]:
+  if not legacyLayout and tryOther and not Args["--no-ovr"]:
     let c = newResDir(otherLangRoot / "data" / "ovr")
     debug "  ", c
     result.add(c)

@@ -99,7 +99,7 @@ for it in intersection(baseContents, otherContents).withProgressBar("intersect: 
 let fnBase = "resman_diff_" & filenamePrefix & "_only_left.txt"
 if baseOnly.card > 0:
   let f = open(fnBase, fmWrite)
-  for o in baseOnly:
+  for o in toSeq(baseOnly.items).sorted(shared.cmp[ResRef]):
     let src = $resBase[o].get().origin()
     let resref = $o.resolve().get()
     f.write(resref)
@@ -110,7 +110,7 @@ if baseOnly.card > 0:
 let fnOther = "resman_diff_" & filenamePrefix & "_only_right.txt"
 if otherOnly.card > 0:
   let f2 = open(fnOther, fmWrite)
-  for o in otherOnly:
+  for o in toSeq(otherOnly.items).sorted(shared.cmp[ResRef]):
     let src = $resOther[o].get().origin()
     let resref = $o.resolve().get()
     f2.write(resref)
@@ -121,7 +121,7 @@ if otherOnly.card > 0:
 let fnDiff = "resman_diff_" & filenamePrefix & "_hash_mismatch.txt"
 if binaryMismatch.card > 0:
   let f3 = open(fndiff, fmWrite)
-  for o in binaryMismatch:
+  for o in toSeq(binaryMismatch.items).sorted(shared.cmp[ResRef]):
     let srcLhs = $resBase[o].get().origin()
     let srcRhs = $resOther[o].get().origin()
     let resref = $o.resolve().get()

@@ -45,7 +45,7 @@ proc write*(io: File, self: ProgressBar) =
     let tWidth = terminalWidth()
     var t = $self
     let tmax = min(tWidth, t.high)
-    t = t[0..<tmax] & repeat(" ", tWidth - tmax)
+    t = t[0..tmax] & repeat(" ", tWidth - tmax - 1)
     io.write "\r" & t
     if defined(windows): io.cursorUp()
     io.flushFile()

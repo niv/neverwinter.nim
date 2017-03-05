@@ -1,47 +1,76 @@
 import shared
 
 let args = DOC """
-This utility diffs the base (english) view of resman versus a language
-override one as implemented for 1.8; so the torrent/lang/xx/data path is in code.
+This utility diffs two complete resman views.  We support two modes of operation:
+
+
+Diffing against another language in the same repository:
+
+  Just give the language path component to compare as the only argument (i.e. "de").
+  The lefthand-side language will be "en", unless overriden by --language.
+  Resman-modifying parameters like --keys and --erfs will apply to *both* sides.
+
+  Example:
+    $0 --keys nwn_base lang de  (This should show no differences)
+
+
+Diffing against another install (no other-language support yet):
+
+  The lefthand side will be set up by the builtin resman flags and options,
+  like --keys. The RHS only supports autdetect for now.
+  Hint: Give --verbose to see what exactly gets loaded into either.
+
+  Example:
+    $0 path ../00810            (diff to NWN 1.69, auto-detected)
+
 
 This utility will explicitly ignore .wav files that:
+
 - are binary mismatches
 - are in only one or the other side: This is *expected* as translations were
   never completely complete
-(give --wav to override this)
 
-Files that are present in both, but mismatch in binary, are written to:
-   (cwd)/resman_diff_mismatches/<resref>_<langprefix>.<ext>
-(but only with --write-mismatches)
-Regardless, a list of them is written to a text file.
-
-Resrefs only present in one side or the other are written to text files too.
+Give --wav to override this.
 
 Usage:
-  $0 [options] <otherLanguageKey>
+  $0 [options] lang <lang2>
+  $0 [options] path <path> [keyfiles]
   $USAGE
 
 Options:
-  --write-mismatches          Write out mismatches to a directory.
+  --write-mismatches          Write out mismatches to a directory. Warning:
+                              This will potentially be a LOT of data.
   --wav                       Include wav files in diff considation.
   $OPTRESMAN
 """
 
 # Warning: might spam your disk with a few files.
 let writeOutMismatches = args["--write-mismatches"]
-
 # Do you want to consider missing or mismatching .wav files be an issue?
 let includeWav = args["--wav"]
 
-let root = findNwnRoot() # (if paramCount() > 1: paramStr(2) else: getCurrentDir()) & DirSep
-let otherLang = $args["<otherLanguageKey>"]
+let root = findNwnRoot()
+var resBase: ResMan
+var resOther: ResMan
+# The filename component where data gets written to. for example: lang_en_de
+var filenamePrefix: string
 
-let otherLangRoot = root / "lang" / otherLang
-doAssert(dirExists(otherLangRoot), "dir not found: " & otherLangRoot)
+if args["lang"]:
+  let otherLang = $args["<lang2>"]
 
-let resBase = newBasicResMan(root)
+  let otherLangRoot = root / "lang" / otherLang
+  doAssert(dirExists(otherLangRoot), "dir not found: " & otherLangRoot)
 
-let resOther = newBasicResMan(root, otherLang)
+  resBase = newBasicResMan(root)
+  resOther = newBasicResMan(root, otherLang)
+  filenamePrefix = "lang_en_" & otherLang
+
+elif args["path"]:
+  resBase = newBasicResMan(root)
+  resOther = newBasicResMan($args["<path>"])
+  filenamePrefix = "path"
+
+else: quit("??")
 
 var baseContents = initSet[ResRef]()
 var otherContents = initSet[ResRef]()
@@ -49,12 +78,8 @@ var otherContents = initSet[ResRef]()
 for o in resBase.contents().withProgressBar("filter: "):
   if includeWav or o.resType != 4: baseContents.incl(o)
 
-echo "ResRefs in base: ", baseContents.card
-
 for o in resOther.contents().withProgressBar("filter: "):
   if includeWav or o.resType != 4: otherContents.incl(o)
-
-echo "ResRefs in other: ", otherContents.card
 
 let baseOnly = baseContents - otherContents
 let otherOnly = otherContents - baseContents
@@ -71,45 +96,64 @@ for it in intersection(baseContents, otherContents).withProgressBar("intersect: 
   if lhs != rhs:
     binaryMismatch.incl(it)
 
-if writeOutMismatches:
-  createDir("resman_diff_mismatches_en_" & otherLang)
+let fnBase = "resman_diff_" & filenamePrefix & "_only_left.txt"
+if baseOnly.card > 0:
+  let f = open(fnBase, fmWrite)
+  for o in baseOnly:
+    let src = $resBase[o].get().origin()
+    let resref = $o.resolve().get()
+    f.write(resref)
+    f.write(repeat(" ", 30 - resref.len))
+    f.writeLine(src)
+  close(f)
+
+let fnOther = "resman_diff_" & filenamePrefix & "_only_right.txt"
+if otherOnly.card > 0:
+  let f2 = open(fnOther, fmWrite)
+  for o in otherOnly:
+    let src = $resOther[o].get().origin()
+    let resref = $o.resolve().get()
+    f2.write(resref)
+    f2.write(repeat(" ", 30 - resref.len))
+    f2.writeLine(src)
+  close(f2)
+
+let fnDiff = "resman_diff_" & filenamePrefix & "_hash_mismatch.txt"
+if binaryMismatch.card > 0:
+  let f3 = open(fndiff, fmWrite)
   for o in binaryMismatch:
+    let srcLhs = $resBase[o].get().origin()
+    let srcRhs = $resOther[o].get().origin()
+    let resref = $o.resolve().get()
+    f3.write(resref)
+    f3.write(repeat(" ", 30 - resref.len))
+    f3.writeLine(srcLhs & " <-> " & srcRhs)
+  close(f3)
+
+let fnDiffDir = "resman_diff_" & filenamePrefix & "_hash_mismatches"
+if binaryMismatch.card > 0 and writeOutMismatches:
+  createDir(fnDiffDir)
+  for o in binaryMismatch.withProgressBar("write binarymismatch: "):
     # if $o != "c_a_bat.mdl": continue
     let lhs = resBase[o].get().readAll()
     let rhs = resOther[o].get().readAll()
     # write out the mismatch, but only if it isn't a wav.
     let resolved = o.resolve().get()
-    let prefix = "resman_diff_mismatches" / resolved.resRef()
-    writeFile(prefix & "_en" & "." & resolved.resExt(), lhs)
-    writeFile(prefix & "_" & otherLang &  "." & resolved.resExt(), rhs)
+    let prefix = fnDiffDir / resolved.resRef()
+    writeFile(prefix & "_left" & "." & resolved.resExt(), lhs)
+    writeFile(prefix & "_right" & "." & resolved.resExt(), rhs)
 
-echo "ResRefs only in base: ", baseOnly.card
-let f = open("resman_diff_en_" & otherLang & "_only_in_en.txt", fmWrite)
-for o in baseOnly:
-  let src = $resBase[o].get().origin()
-  let resref = $o.resolve().get()
-  f.write(resref)
-  f.write(repeat(" ", 30 - resref.len))
-  f.writeLine(src)
-close(f)
 
-echo "ResRefs only in other: ", otherOnly.card
-let f2 = open("resman_diff_en_" & otherLang & "_only_in_" & otherLang & ".txt", fmWrite)
-for o in otherOnly:
-  let src = $resOther[o].get().origin()
-  let resref = $o.resolve().get()
-  f.write(resref)
-  f.write(repeat(" ", 30 - resref.len))
-  f.writeLine(src)
-close(f2)
+echo align($baseContents.card, 15), " resRefs in base"
+echo align($otherContents.card, 15), " resRefs in other"
 
-echo "Binary-mismatching content: ", binaryMismatch.card
-let f3 = open("resman_diff_en_" & otherLang & "_binary_mismatches.txt", fmWrite)
-for o in binaryMismatch:
-  let srcLhs = $resBase[o].get().origin()
-  let srcRhs = $resOther[o].get().origin()
-  let resref = $o.resolve().get()
-  f.write(resref)
-  f.write(repeat(" ", 30 - resref.len))
-  f3.writeLine(srcLhs & " <-> " & srcRhs)
-close(f3)
+echo align($baseOnly.card, 15), " resrefs ONLY in base"
+# if baseOnly.card > 0: echo "  written to: ", fnBase
+
+echo align($otherOnly.card, 15), " resrefs ONLY in other"
+# if otherOnly.card > 0: echo "  written to: ", fnOther
+
+echo align($binaryMismatch.card, 15), " resrefs with hash mismatch"
+# if binaryMismatch.card > 0: echo "  written to: ", fndiff
+# if binarymismatch.card > 0 and writeOutMismatches:
+#   echo "  all mismatching files dumped to: ", fnDiffDir

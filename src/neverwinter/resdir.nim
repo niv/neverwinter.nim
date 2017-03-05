@@ -2,7 +2,7 @@
 ## are available live (meaning that adding files makes them available immediately).
 ## This may change in the future.
 
-import streams, strutils, os
+import streams, strutils, os, logging
 
 import resman, util
 
@@ -39,6 +39,8 @@ method contents*(self: ResDir): OrderedSet[ResRef] =
     if (pc.kind == pcFile or pc.kind == pcLinkToFile):
       let rr = tryNewResolvedResRef(pc.path)
       if rr.isSome:
+        if pc.path != pc.path.toLowerAscii:
+          warn self, ": '" & pc.path & "' is not lowercase. This will break on Linux."
         result.incl(rr.get())
 
 method `$`*(self: ResDir): string =

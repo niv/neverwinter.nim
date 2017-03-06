@@ -123,7 +123,8 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
       # 1.6:
       if legacyLayout: "chitin,xp1,xp2,xp3,xp2patch"
       # 1.8:
-      else: "nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch"
+      #else: "nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch"
+      else: "nwn_base,nwn_base_loc"
     else: $Args["--keys"]
 
   let keys =        actualKeys.split(",").mapIt(it.strip).filterIt(it.len > 0)

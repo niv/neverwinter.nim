@@ -95,7 +95,8 @@ proc makeStatsForContainer(cont: ResContainer): StatsForContainer =
   let cntIdx = rm.containers.find(cont) ; doAssert(cntIdx != -1)
 
   result = newStatsForContainer()
-  result.container        = cont
+  result.container = cont
+  result.resCount = cont.contents.len
 
   # echo "mkShSt, ouridx=", cntIdx, " high=", rm.containers.high
   for o in cont.contents.withProgressBar($cont & " shadows: "):

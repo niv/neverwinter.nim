@@ -2,6 +2,10 @@ import streams, strutils, sequtils, tables, times, algorithm, os, logging
 
 import resman, util
 
+# This is advisory only. We will emit a warning on mismatch (so library users
+# get more debug hints), but still attempt to load the file.
+const ValidErfTypes = ["NWM ", "MOD ", "ERF ", "HAK "]
+
 type
   Erf* = ref object of ResContainer
     mtime*: Time
@@ -28,7 +32,7 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
   result.filename = filename
 
   result.fileType = io.readStrOrErr(4)
-  if ["MOD ", "ERF ", "HAK "].find(result.fileType) != -1:
+  if ValidErfTypes.find(result.fileType) == -1:
     warn("Unknown erf file type: '" & repr(result.fileType) &
          "', possibly invalid erf?")
 

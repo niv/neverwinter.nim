@@ -170,7 +170,7 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
   for e in erfs: #.withProgressBar("load erf: "):
     let fs = newFileStream(e)
     if fs != nil:
-      let erf = fs.readErf()
+      let erf = fs.readErf(e)
       debug "  ", erf
       result.add(erf)
     else:

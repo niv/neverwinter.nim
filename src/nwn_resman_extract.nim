@@ -15,7 +15,7 @@ Options:
 
 let rm = newBasicResMan()
 
-let destination = ($args["-d"]).expandFilename
+let destination = ($args["-d"])
 doAssert(dirExists(destination), "destination directory does not exist")
 
 proc toSeqx[T](c: HashSet[T]): seq[T] =

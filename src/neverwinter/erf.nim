@@ -57,8 +57,10 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
     let str = io.readStrOrErr(io.readInt32()).fromNwnEncoding
     result.locStrings[id] = str
 
-  expect(io.getPosition == offsetToLocStr + locStringSz,
-    "read bytes for locstringtable did not match expected size from header")
+  # the locStringSz data field isn't needed to parse, and some distro erfs
+  # have broken headers
+  if io.getPosition != offsetToLocStr + locStringSz:
+    warn "erf header field locStringSize has invalid value (safe to ignore)"
 
   var resList = newSeq[tuple[offset: int, size: int]]()
   io.setPosition(offsetToResourceList)
@@ -73,8 +75,30 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
     let restype = io.readInt16()
     io.setPosition(io.getPosition + 2) # unused NULLs
 
-    let rr = newResRef(resref, restype.ResType)
-    expect(not result.entries.hasKey(rr), "duplicate resref in erf: " & $rr)
+    var rr = newResRef(resref, restype.ResType)
+
+    # Some distro erfs have duplicate resref entries. We skip them if they
+    # point to the same resource.
+    if result.entries.hasKey(rr):
+      if result.entries[rr].ioOffset == resList[i].offset and
+         result.entries[rr].len == resList[i].size:
+        warn "Duplicate resref entry in erf pointing to same data, skipping: ", rr
+        continue
+
+
+      else:
+        let newrr = newResRef("__erfdup__" & $i, restype.ResType)
+
+        warn(("Duplicate resref entry in erf, but differing offset/size: " &
+              "resref=$# offset=$# size=$# (idx=$#) would collide with " &
+              "offset=$# size=$#; renamed to $#"
+              ).format(
+                rr, resList[i].offset, resList[i].size, i,
+                result.entries[rr].ioOffset,
+                result.entries[rr].len,
+                newrr))
+
+        rr = newrr
 
     let resData = resList[i]
     var erfObj = newRes(newResOrigin(result), rr, result.mtime, io,

@@ -13,12 +13,16 @@ export util, resman, resref, key, resfile, resmemfile, resdir, erf, gff, gffjson
 import terminal, progressbar, version
 export progressbar
 
+import sharedio
+export sharedio
+
 addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
 
-hideCursor()
-system.addQuitProc do () -> void {.noconv.}:
-  resetAttributes()
-  showCursor()
+if isatty(stdout):
+  hideCursor()
+  system.addQuitProc do () -> void {.noconv.}:
+    resetAttributes()
+    showCursor()
 
 import docopt as docopt_internal
 export docopt_internal

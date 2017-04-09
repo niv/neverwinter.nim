@@ -18,11 +18,15 @@ proc newResMemFile*(io: StringStream, rr: ResRef, size: int, label = "anon"): Re
   result.label = ""
   result.size = size
 
+proc newResMemFile*(data: string, rr: ResRef, label = "anon"): ResMemFile =
+  newResMemFile(newStringStream(data), rr, data.len, label)
+
 method contains*(self: ResMemFile, rr: ResRef): bool =
   self.resRef == rr
 
 method demand*(self: ResMemFile, rr: ResRef): Res =
-  newRes(newResOrigin(self), rr, self.mtime, self.io, size = self.size)
+  newRes(origin = newResOrigin(self), resref = rr, mtime = self.mtime,
+    io = self.io, size = self.size)
 
 method count*(self: ResMemFile): int = 1
 

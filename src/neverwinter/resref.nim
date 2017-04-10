@@ -24,7 +24,7 @@ proc newResRef*(resRef: string, resType: ResType): ResRef =
   ## Creates a new ResRef. Will raise a ValueError if the given data is invalid.
   expect(resRef.isValidResRefPart1, "'" & resRef & "' is not a valid resref")
   new(result)
-  result.resRef = resRef.toLowerAscii
+  result.resRef = resRef
   result.resType = resType
 
 proc resolve*(rr: ResRef): Option[ResolvedResRef] =
@@ -70,7 +70,8 @@ proc `cmp`*[T: ResRef](a, b: T): int {.procvar.} =
   system.cmp(($a).toUpperAscii, ($b).toUpperAscii)
 
 proc hash*(self: ResRef): Hash =
-  0 !& hash(self.resRef) !& hash(self.resType)
+  0 !& hash(self.resRef.toUpperAscii) !& hash(self.resType)
 
 proc `==`*(a, b: ResRef): bool =
-  a.resRef == b.resRef and a.resType == b.resType
+  a.resRef.toUpperAscii == b.resRef.toUpperAscii and
+    a.resType == b.resType

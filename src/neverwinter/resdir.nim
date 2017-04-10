@@ -39,8 +39,8 @@ method contents*(self: ResDir): OrderedSet[ResRef] =
     if (pc.kind == pcFile or pc.kind == pcLinkToFile):
       let rr = tryNewResolvedResRef(pc.path)
       if rr.isSome:
-        if pc.path != pc.path.toLowerAscii:
-          warn self, ": '" & pc.path & "' is not lowercase. This will break on Linux."
+        # if pc.path != pc.path.toLowerAscii:
+        #   warn self, ": '" & pc.path & "' is not lowercase. This will break on Linux."
         result.incl(rr.get())
 
 method `$`*(self: ResDir): string =

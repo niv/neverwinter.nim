@@ -269,7 +269,7 @@ proc newGffStruct*(id: int32 = -1): GffStruct =
   new(result)
   initGffStruct(result, id)
 
-proc newGffRoot*(f = "GFF ", root: GffStruct = nil): GffRoot =
+proc newGffRoot*(f = "GFF "): GffRoot =
   result = GffRoot()
   initGffStruct(result)
   result.fileVersion = "V3.2"

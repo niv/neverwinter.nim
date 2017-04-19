@@ -30,16 +30,20 @@ const GlobalUsage = """
 """.strip
 
 # Options common to ALL utilities
-const GlobalOpts = """
+let GlobalOpts = """
 
 Logging:
   --verbose                   Turn on debug logging
   --quiet                     Turn off all logging except errors
   --version                   Show program version and licence info
+  --nwn-encoding CHARSET      Sets the nwn encoding [default: """ & getNwnEncoding() & """]
+  --other-encoding CHARSET    Sets the "other" file formats encoding, where
+                              supported; see docs. Defaults to your current
+                              shell/platform charset: [default: """ & getNativeEncoding() & """]  
 """
 
 # Options common to utilities working with a resman.
-const ResmanOpts = """
+let ResmanOpts = """
 
 Resman:
   --root ROOT                 Override NWN root (autodetected from BDX)
@@ -74,6 +78,9 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
   if Args.hasKey("--verbose") and Args["--verbose"]: setLogFilter(lvlDebug)
   elif Args.hasKey("--quiet") and Args["--quiet"]: setLogFilter(lvlError)
   else: setLogFilter(lvlInfo)
+
+  setNwnEncoding($Args["--nwn-encoding"])
+  setNativeEncoding($Args["--other-encoding"])
 
 proc findNwnRoot*(): string =
   if Args["--root"]:

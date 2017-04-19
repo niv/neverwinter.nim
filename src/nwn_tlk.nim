@@ -13,6 +13,7 @@ Convert talk table to/from various formats.
 
 Supported input/output formats: """ & SupportedFormatsSimple.join(", ") & """
 
+Note that .json is *always* read and written as UTF-8, as the spec requires.
 
 Input and output default to stdin/stdout respectively.
 
@@ -42,6 +43,8 @@ let input  = if $args["-i"] == "-": newFileStream(stdin) else: newFileStream($ar
 let output = if $args["-o"] == "-": newFileStream(stdout) else: newFileStream($args["-o"], fmWrite)
 
 proc readJson(fs: Stream): SingleTlk =
+  setNativeEncoding("UTF-8") # json is always utf-8
+
   let j = fs.parseJson("<input>")
   doAssert(j.hasKey("language") and j["language"].kind == JInt, "'language' missing or invalid")
   doAssert(j.hasKey("entries") and j["entries"].kind == JArray, "'entries' missing or invalid")
@@ -66,6 +69,8 @@ proc readJson(fs: Stream): SingleTlk =
     result[e["id"].getNum.StrRef] = entry
 
 proc writeJson(fs: Stream, tlk: SingleTlk) =
+  setNativeEncoding("UTF-8") # json is always utf-8
+
   var j = newJObject()
   j["language"] = %tlk.language.int
   j["entries"] = newJArray()

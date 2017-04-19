@@ -41,23 +41,34 @@ template expect*(cond: bool, msg: string = "") =
 # ----------
 
 var nwnEncoding = "windows-1252"
+var nativeEncoding = getCurrentEncoding()
 
 proc getNwnEncoding*(): string = nwnEncoding
   ## Returns the configured encoding you expect to be used by NWN data files.
   ## The default is windows-1252 for western NWN1.
 
 proc setNwnEncoding*(e: string) = nwnEncoding = e
-  ## Sets the encoding you expect your local data files to be in.
+  ## Sets the encoding you expect your read and written nwn data formats to be in.
+  ## The default is windows-1252 for western NWN1.
+
+proc getNativeEncoding*(): string = nativeEncoding
+  ## Returns the configured native encoding files are read and written as.
+  ##   (This is ALWAYS utf-8 for json.)
+
+proc setNativeEncoding*(e: string) = nativeEncoding = e
+  ## Sets the configured native encoding files are read and written as.
+  ##   (This is ALWAYS utf-8 for json.)
+
 
 template toNwnEncoding*(s: string): string =
   ## Converts a string from the local/os encoding (probably UTF-8) to the
   ## configured NWN encoding.
-  s.convert(nwnEncoding, getCurrentEncoding())
+  s.convert(nwnEncoding, nativeEncoding)
 
 template fromNwnEncoding*(s: string): string =
   ## Converts a string to the local/os encoding (probably UTF-8) from the
   ## configured NWN encoding.
-  s.convert(getCurrentEncoding(), nwnEncoding)
+  s.convert(nativeEncoding, nwnEncoding)
 
 # --------------------------------
 #  Other helpers/stdlib additions

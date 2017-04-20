@@ -1,10 +1,10 @@
-import shared, neverwinter.tlk
+import shared, neverwinter.tlk, parsecsv
 
 const SupportedFormatsSimple = ["tlk", "json", "csv"]
 const SupportedFormats = {
   "json": @["json"],
   "tlk": @["tlk"],
-  # "csv": @["csv"],
+  "csv": @["csv"],
   # "txt": @["txt"]
 }.toTable
 
@@ -29,6 +29,8 @@ Options:
   -k OUTFORMAT                Output format [default: autodetect]
 
   -p, --pretty                Pretty output (json only)
+
+  --csv-separator SEP         What to use as separator for CSV cells [default: ,]
   $OPT
 """
 
@@ -66,7 +68,8 @@ proc readJson(fs: Stream): SingleTlk =
       doAssert(e["soundLen"].getFNum >= 0.0)
       entry.soundLength = e["soundLen"].getFNum
 
-    result[e["id"].getNum.StrRef] = entry
+    if entry.hasValue:
+      result[e["id"].getNum.StrRef] = entry
 
 proc writeJson(fs: Stream, tlk: SingleTlk) =
   setNativeEncoding("UTF-8") # json is always utf-8
@@ -77,7 +80,7 @@ proc writeJson(fs: Stream, tlk: SingleTlk) =
 
   for e in (0..tlk.highest()).withProgressBar():
     let opt = tlk[e.StrRef]
-    if opt.isSome:
+    if opt.isSome and opt.get().hasValue:
       var jj = newJObject()
       jj["id"] = %e
       jj["text"] = %opt.get().text
@@ -87,14 +90,50 @@ proc writeJson(fs: Stream, tlk: SingleTlk) =
 
   fs.write(if args["--pretty"]: j.pretty else: $j)
 
+proc readCsv(s: Stream): SingleTlk =
+  result = newSingleTlk()
+
+  var p: CsvParser
+  p.open(input = s, filename = inputfile, separator = ($args["--csv-separator"])[0])
+  while p.readRow():
+    var e = TlkEntry()
+    let id = p.row[0].parseInt.StrRef
+    e.soundResRef = p.row[1].strip(leading = true, trailing = true, chars = Whitespace)
+    if p.row[2] != "": e.soundLength = p.row[2].parseFloat
+    e.text = p.row[3]
+    if e.hasValue:
+      result[id] = e
+  p.close()
+
+proc writeCsv(s: Stream, tlk: SingleTlk) =
+  proc quote(s: string): string =
+    "\"" & s.replace("\"", "\"\"") & "\""
+
+  proc joinRow(r: seq[string]): string =
+    r.mapIt(it.strip().quote).join(($args["--csv-separator"])[0..0])
+
+  for e in (0..tlk.highest()):
+    let ee = tlk[e.StrRef]
+    if ee.isSome:
+      let eee = ee.get()
+      if eee.hasValue:
+        s.writeLine([
+          $e, # id
+          if eee.soundResRef != "": eee.soundResRef.quote() else: "",
+          if eee.soundLength != 0.0: $eee.soundLength else: "",
+          eee.text.quote()
+        ].join(($args["--csv-separator"])[0..0]))
+
 var state: SingleTlk
 
 case informat:
 of "tlk":    state = input.readSingleTlk()
 of "json":   state = input.readJson()
+of "csv":    state = input.readCsv()
 else: quit("Unsupported informat: " & informat)
 
 case outformat:
 of "tlk":    output.write(state)
 of "json":   output.writeJson(state)
+of "csv":    output.writeCsv(state)
 else: quit("Unsupported outformat: " & outformat)

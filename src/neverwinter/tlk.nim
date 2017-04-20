@@ -35,6 +35,10 @@ const
 
 proc `$`*(self: TlkEntry): string = self.text
 
+proc hasValue*(self: TlkEntry): bool =
+  ## Returns true if this TlkEntry holds a value; i.e. is worth saving.
+  self.text != "" or self.soundResRef != ""
+
 proc `[]`*(self: SingleTlk, str: StrRef): Option[TlkEntry] =
   ## Look up a TLK entry.
 
@@ -131,7 +135,7 @@ proc write*(io: Stream, tlk: SingleTlk) =
   for i in 0..maxId:
     let entry = tlk[i]
 
-    if entry.isSome:
+    if entry.isSome and entry.get().hasValue:
       let e = entry.get()
       var flags = 0
       if entry.isSome: flags += 0x1

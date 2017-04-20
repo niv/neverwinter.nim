@@ -82,6 +82,9 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
   setNwnEncoding($Args["--nwn-encoding"])
   setNativeEncoding($Args["--other-encoding"])
 
+  debug("NWN file encoding: " & getNwnEncoding())
+  debug("Other file encoding: " & getNativeEncoding())
+
 proc findNwnRoot*(): string =
   if Args["--root"]:
     result = $Args["--root"]

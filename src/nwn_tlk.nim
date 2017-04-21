@@ -164,6 +164,8 @@ of "json":   state = input.readJson()
 of "csv":    state = input.readCsv()
 else: quit("Unsupported informat: " & informat)
 
+state.useCache = false
+
 case outformat:
 of "tlk":    output.write(state)
 of "json":   output.writeJson(state)

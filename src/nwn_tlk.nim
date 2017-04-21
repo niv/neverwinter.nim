@@ -125,7 +125,7 @@ proc writeDebug(s: Stream, tlk: SingleTlk) =
   ## Writes a "debug" representation of the file that can be diffed easily.
   input.setPosition(0)
 
-  var dbg = newDebugPrinter(s)
+  var dbg = newDebugPrinter(input, s)
 
   var stringCount: int32 = 0
   var stringEntriesOffset: int32 = 0

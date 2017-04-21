@@ -117,13 +117,15 @@ proc write*(io: Stream, tlk: SingleTlk) =
   io.write("TLK V3.0")
 
   var maxId: StrRef = 0
-  # static entries ..
+  # static entries: This is rather lame, sorry.
   for k in tlk.staticEntries.keys:
     if k > maxId: maxId = k
 
   if tlk.io != nil:
-    maxId = max(tlk.ioEntryCount.StrRef, maxId.StrRef)
+    # if we are backed by a io, figure out their max entry count.
+    maxId = max((tlk.ioEntryCount-1).StrRef, maxId.StrRef)
 
+  # entry count is the max id + 1 (0-><maxId>)
   let entryCount: uint32 = maxId + 1
 
   write[int32](io, tlk.language.int32) # language
@@ -138,8 +140,8 @@ proc write*(io: Stream, tlk: SingleTlk) =
     if entry.isSome and entry.get().hasValue:
       let e = entry.get()
       var flags = 0
-      if entry.isSome: flags += 0x1
-      if entry.isSome and e.soundResRef != nil and e.soundResRef != "": flags += 0x6
+      if e.text != "": flags += 0x1
+      if e.soundResRef != nil and e.soundResRef != "": flags += 0x6
 
       write[int32](hdr, flags.int32)
       var sr = if e.soundResRef != nil: e.soundResRef[0..<16] else: ""

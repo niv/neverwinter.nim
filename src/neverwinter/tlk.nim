@@ -122,7 +122,6 @@ proc readSingleTlk*(io: Stream, useCache = true): SingleTlk =
 
 proc write*(io: Stream, tlk: SingleTlk) =
   ## Writes a SingleTlk to the given output stream.
-  io.write("TLK V3.0")
 
   var maxId: StrRef = 0
   # static entries: This is rather lame, sorry.
@@ -136,12 +135,24 @@ proc write*(io: Stream, tlk: SingleTlk) =
   # entry count is the max id + 1 (0-><maxId>)
   let entryCount: uint32 = maxId + 1
 
-  write[int32](io, tlk.language.int32) # language
-  write[uint32](io, entrycount.uint32) # entrycount
+  # Reserve size for the entries table on the out stream.
+  let entriesTableSize = 40 * entryCount.int
+  let entriesTableOffset = io.getPosition() + 20
+  let stringDataOffset = entriesTableOffset + entriesTableSize
+
+  write(io, "TLK V3.0")
+  write[int32](io, tlk.language.int32) # languageID
+  write[uint32](io, entrycount.uint32) # stringCount
+  write[uint32](io, stringDataOffset.uint32) # stringEntriesOffset
+
+  # Set io pos to where the string data starts, as we write them
+  # out first, then rewind and write the table data. This saves
+  # us some extra string conversion work.
+  io.setPosition(stringDataOffset)
 
   # pack the header in-memory, because we're cheap like that
   var offset: int32 = 0
-  let hdr = newStringStream()
+  let entriesTableStream = newStringStream()
   for i in 0..maxId:
     let entry = tlk[i]
 
@@ -151,44 +162,39 @@ proc write*(io: Stream, tlk: SingleTlk) =
       if e.text != "": flags += 0x1
       if e.soundResRef != nil and e.soundResRef != "": flags += 0x6
 
-      write[int32](hdr, flags.int32)
+      write[int32](entriesTableStream, flags.int32)
       var sr = if e.soundResRef != nil: e.soundResRef[0..<16] else: ""
       sr &= repeat("\x0", 16 - sr.len)
       assert(sr.len == 16)
-      write(hdr, sr) # resref
-      write[int32](hdr, 0) # vol var
-      write[int32](hdr, 0) # pitch var
+      write(entriesTableStream, sr) # resref
+      write[int32](entriesTableStream, 0) # vol var
+      write[int32](entriesTableStream, 0) # pitch var
 
-      let strlen = e.text.toNwnEncoding.replace("\r", "").len.int32
-      write[int32](hdr, offset) # offsetToString
-      write[int32](hdr, strlen)
-      offset += strlen
+      let txt = e.text.replace("\r", "").toNwnEncoding
+      write[int32](entriesTableStream, offset) # offsetToString
+      write[int32](entriesTableStream, int32 txt.len)
+      offset += int32 txt.len
 
-      write[float32](hdr, e.soundLength) # soundLength
+      write[float32](entriesTableStream, e.soundLength) # soundLength
+
+      write(io, txt)
 
     else:
-      write[int32](hdr, 0) # flags
+      write[int32](entriesTableStream, 0) # flags
       const EmptyResRef = repeat("\x0", 16)
-      write(hdr, EmptyResRef) # resref
-      write[int32](hdr, 0) # vol var
-      write[int32](hdr, 0) # pitch var
-      write[int32](hdr, 0) # offsetToString
-      write[int32](hdr, 0) # len
-      write[float32](hdr, 0.0) # soundLength
+      write(entriesTableStream, EmptyResRef) # resref
+      write[int32](entriesTableStream, 0) # vol var
+      write[int32](entriesTableStream, 0) # pitch var
+      write[int32](entriesTableStream, 0) # offsetToString
+      write[int32](entriesTableStream, 0) # len
+      write[float32](entriesTableStream, 0.0) # soundLength
 
-  let hdrsz = hdr.getPosition()
-  hdr.setPosition(0)
+  doAssert(io.getPosition() == entriesTableOffset + entriesTableSize + offset)
+  entriesTableStream.setPosition(0)
 
-  assert(hdrsz.uint32 == entrycount * 40)
-  write[int32](io, (20 + hdrsz).int32)
-
-  write(io, hdr.readAll)
-  assert(io.getPosition == 20 + hdrsz)
-
-  for i in 0..maxId:
-    let entry = tlk[i]
-    if entry.isSome:
-      write(io, entry.get().text.toNwnEncoding.replace("\r", ""))
+  io.setPosition(entriesTableOffset)
+  write(io, entriesTableStream.readAll)
+  doAssert(io.getPosition == entriesTableOffset + entriesTableSize)
 
 proc readSingleTlk*(res: Res): SingleTlk =
   res.seek()

@@ -149,7 +149,7 @@ proc write*(io: Stream, tlk: SingleTlk) =
       write[int32](hdr, 0) # vol var
       write[int32](hdr, 0) # pitch var
 
-      let strlen = e.text.toNwnEncoding.len.int32
+      let strlen = e.text.toNwnEncoding.replace("\r", "").len.int32
       write[int32](hdr, offset) # offsetToString
       write[int32](hdr, strlen)
       offset += strlen
@@ -178,7 +178,7 @@ proc write*(io: Stream, tlk: SingleTlk) =
   for i in 0..maxId:
     let entry = tlk[i]
     if entry.isSome:
-      write(io, entry.get().text.toNwnEncoding)
+      write(io, entry.get().text.toNwnEncoding.replace("\r", ""))
 
 proc readSingleTlk*(res: Res): SingleTlk =
   res.seek()

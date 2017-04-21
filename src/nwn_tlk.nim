@@ -1,11 +1,11 @@
-import shared, neverwinter.tlk, parsecsv
+import shared, debugprinter, neverwinter.tlk, parsecsv
 
-const SupportedFormatsSimple = ["tlk", "json", "csv"]
+const SupportedFormatsSimple = ["tlk", "json", "csv", "debug"]
 const SupportedFormats = {
   "json": @["json"],
   "tlk": @["tlk"],
   "csv": @["csv"],
-  # "txt": @["txt"]
+  "debug": @["debug"]
 }.toTable
 
 let args = DOC """
@@ -109,9 +109,6 @@ proc writeCsv(s: Stream, tlk: SingleTlk) =
   proc quote(s: string): string =
     "\"" & s.replace("\"", "\"\"") & "\""
 
-  proc joinRow(r: seq[string]): string =
-    r.mapIt(it.strip().quote).join(($args["--csv-separator"])[0..0])
-
   for e in (0..tlk.highest()):
     let ee = tlk[e.StrRef]
     if ee.isSome:
@@ -123,6 +120,41 @@ proc writeCsv(s: Stream, tlk: SingleTlk) =
           if eee.soundLength != 0.0: $eee.soundLength else: "",
           eee.text.quote()
         ].join(($args["--csv-separator"])[0..0]))
+
+proc writeDebug(s: Stream, tlk: SingleTlk) =
+  ## Writes a "debug" representation of the file that can be diffed easily.
+  input.setPosition(0)
+
+  var dbg = newDebugPrinter(s)
+
+  var stringCount: int32 = 0
+  var stringEntriesOffset: int32 = 0
+  dbg.nest "Header":
+    dbg.emit "FileType", input.readStr(4)
+    dbg.emit "FileVersion", input.readStr(4)
+    dbg.emit "LanguageID", input.readInt32()
+    stringCount = input.readInt32()
+    stringEntriesOffset = input.readInt32()
+    dbg.emit "StringCount", stringCount
+    dbg.emit "StringEntriesOffset", stringEntriesOffset
+
+  dbg.nest "StringDataTable":
+    for i in 0..<stringCount:
+      dbg.nest $i:
+        let flags = input.readInt32()
+        let resRef = input.readStr(16) # .strip(leading=false,trailing=true,chars={'\0'})
+        let volVar = input.readInt32()
+        let pitchVar = input.readInt32()
+        let offset = input.readInt32()
+        let strSz = input.readInt32()
+        let sndLen = input.readFloat32()
+        dbg.emit "Flags", flags
+        dbg.emit "ResRef", resRef
+        dbg.emit "VolumeVariance", volVar
+        dbg.emit "PitchVariance", pitchVar
+        dbg.emit "Offset", offset
+        dbg.emit "StringSize", strSz
+        dbg.emit "SoundLength", sndLen
 
 var state: SingleTlk
 
@@ -136,4 +168,5 @@ case outformat:
 of "tlk":    output.write(state)
 of "json":   output.writeJson(state)
 of "csv":    output.writeCsv(state)
+of "debug":  output.writeDebug(state)
 else: quit("Unsupported outformat: " & outformat)

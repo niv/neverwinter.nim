@@ -56,7 +56,7 @@ proc readCsv(s: Stream): TwoDA =
 proc writeCsv(s: Stream, tbl: TwoDA) =
   proc joinRow(r: seq[string]): string =
     proc quoteOrStar(s: string): string =
-      if s.find(" ") != -1: ("\"" & s & "\"")
+      if s.find(Whitespace) != -1: ("\"" & s & "\"")
       elif s == "": "****"
       else: s
     r.mapIt(it.strip().quoteOrStar).join(($args["--csv-separator"])[0..0])

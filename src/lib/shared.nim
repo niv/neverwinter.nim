@@ -13,6 +13,9 @@ export util, resman, resref, key, resfile, resmemfile, resdir, erf, gff, gffjson
 import terminal, progressbar, version
 export progressbar
 
+when defined(profiler):
+  import nimprof
+
 addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
 
 if isatty(stdout):

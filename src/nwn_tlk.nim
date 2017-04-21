@@ -30,6 +30,10 @@ Options:
 
   -p, --pretty                Pretty output (json only)
 
+  --language LANG             Override language ID when writing files.
+                              You can specify by enum const ("English"), or
+                              by ID. (see languages.nim)
+
   --csv-separator SEP         What to use as separator for CSV cells [default: ,]
   $OPT
 """
@@ -165,6 +169,15 @@ of "csv":    state = input.readCsv()
 else: quit("Unsupported informat: " & informat)
 
 state.useCache = false
+
+if args["--language"]:
+  let slang = $args["--language"]
+  if slang.isDigit():
+    let id = slang.parseInt
+    state.language = id.Language
+    if state.language.ord != id: raise newException(ValueError, "Not a valid language id (see languages.nim)")
+  else:
+    state.language = parseEnum[Language]($args["--language"])
 
 case outformat:
 of "tlk":    output.write(state)

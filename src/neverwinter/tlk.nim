@@ -23,6 +23,7 @@ type
     ioStartPos: int
     ioEntryCount: int
     ioEntriesOffset: int
+    useCache*: bool
     ioCache*: WeightedLRU[StrRef, TlkEntry]
 
   TlkPair* = tuple[male: SingleTlk, female: SingleTlk]
@@ -39,6 +40,22 @@ proc hasValue*(self: TlkEntry): bool =
   ## Returns true if this TlkEntry holds a value; i.e. is worth saving.
   self.text != "" or self.soundResRef != ""
 
+proc getFromIo(self: SingleTlk, str: StrRef): (Weight, TlkEntry) =
+  new(result[1])
+  self.io.setPosition(HeaderSize + DataElementSize * str.int)
+
+  discard self.io.readInt32() # we dont care about flags atm
+  result[1].soundResRef = self.io.readStrOrErr(16).strip(false, true, {'\0'})
+  discard self.io.readInt32() # volume variance is unused
+  discard self.io.readInt32() # pitch variance is unused
+  let offsetToString = self.io.readInt32()
+  let stringSz = self.io.readInt32()
+  result[1].soundLength = self.io.readFloat32()
+
+  self.io.setPosition(self.ioStartPos + self.ioEntriesOffset + offsetToString)
+  result[1].text = self.io.readStrOrErr(stringSz).fromNwnEncoding
+  result[0] = sizeof(TlkEntry) + result[1].soundResRef.len + result[1].text.len
+
 proc `[]`*(self: SingleTlk, str: StrRef): Option[TlkEntry] =
   ## Look up a TLK entry.
 
@@ -48,23 +65,13 @@ proc `[]`*(self: SingleTlk, str: StrRef): Option[TlkEntry] =
   if self.ioCache != nil:
     if str.int >= self.ioEntryCount: return
 
-    let rs = self.ioCache.getOrPut(str) do (_: StrRef) -> (Weight, TlkEntry):
-      new(result[1])
-      self.io.setPosition(HeaderSize + DataElementSize * str.int)
-
-      discard self.io.readInt32() # we dont care about flags atm
-      result[1].soundResRef = self.io.readStrOrErr(16).strip(false, true, {'\0'})
-      discard self.io.readInt32() # volume variance is unused
-      discard self.io.readInt32() # pitch variance is unused
-      let offsetToString = self.io.readInt32()
-      let stringSz = self.io.readInt32()
-      result[1].soundLength = self.io.readFloat32()
-
-      self.io.setPosition(self.ioStartPos + self.ioEntriesOffset + offsetToString)
-      result[1].text = self.io.readStrOrErr(stringSz).fromNwnEncoding
-      result[0] = sizeof(TlkEntry) + result[1].soundResRef.len + result[1].text.len
-
-    result = some(rs)
+    if self.useCache:
+      let rs = self.ioCache.getOrPut(str) do (_: StrRef) -> (Weight, TlkEntry):
+        result = self.getFromIo(str)
+      result = some(rs)
+    else:
+      let rs = self.getFromIo(str)
+      result = some(rs[1])
 
 proc `[]=`*(self: SingleTlk, str: StrRef, entry: TlkEntry) =
   ## Assigns a str-ref to this tlk. The tlk will auto-expand to contain at least
@@ -96,7 +103,7 @@ proc newSingleTlk*(): SingleTlk =
   result.language = Language.English
   result.staticEntries = initTable[StrRef, TlkEntry]()
 
-proc readSingleTlk*(io: Stream): SingleTlk =
+proc readSingleTlk*(io: Stream, useCache = true): SingleTlk =
   result = newSingleTlk()
   result.io = io
   result.ioStartPos = io.getPosition
@@ -108,6 +115,7 @@ proc readSingleTlk*(io: Stream): SingleTlk =
   result.ioEntryCount = io.readInt32()
   result.ioEntriesOffset = io.readInt32()
 
+  result.useCache = useCache
   # Try to be smart about the cache size: wild guess is 1/3 of entries
   result.ioCache = newWeightedLRU[StrRef, TlkEntry](
     sizeof(TlkEntry) * result.ioEntryCount div 2, 1)

@@ -5,6 +5,7 @@ const SupportedFormats = {
   "json": @["json"],
   "tlk": @["tlk"],
   "csv": @["csv"],
+  "review": @["review"],
   "debug": @["debug"]
 }.toTable
 
@@ -13,9 +14,23 @@ Convert talk table to/from various formats.
 
 Supported input/output formats: """ & SupportedFormatsSimple.join(", ") & """
 
-Note that .json is *always* read and written as UTF-8, as the spec requires.
 
-Input and output default to stdin/stdout respectively.
+The "debug" format dumps a tree-like view of the actual file structure.
+This is useful to diff two files in a more human-readable way than resorting
+to binary diffing.
+
+The "review" format includes a single line for each tlk entry, containing:
+  <strref> <lengthOfSoundResRef> <lengthOfText>
+Only entries with data are dumped; empty entries (no sound, no text) are
+ignored regardless of the FLAGS field set in the tlk.
+
+Notes:
+  * .json is *always* read and written as UTF-8, as the spec requires.
+  * .review is output-only.
+  * .debug is output-only.
+  * Input and output default to stdin/stdout respectively ("-").
+  * You cannot pipe the input file into itself (this will result in a
+    zero-length file).
 
 Usage:
   $0 [options]
@@ -35,8 +50,18 @@ Options:
                               by ID. (see languages.nim)
 
   --csv-separator SEP         What to use as separator for CSV cells [default: ,]
+
+  --review-with-text          Only emit entries containing a text (and optionally sound).
+  --review-only-text          Only emit entries containing a text, not sound or both,
+                              regardless of FLAGS in the tlk.
+  --review-only-sound         Only emit entries containing a sound, not text or both,
+                              regardless of FLAGS in the tlk.
   $OPT
 """
+
+if [args["--review-with-text"], args["--review-only-text"], args["--review-only-sound"]].
+    filterIt(it == true).len > 1:
+  raise newException(ValueError, "review-* options are mutually exclusive")
 
 let inputfile   = $args["-i"]
 let outputfile  = $args["-o"]
@@ -125,6 +150,25 @@ proc writeCsv(s: Stream, tlk: SingleTlk) =
           eee.text.quote()
         ].join(($args["--csv-separator"])[0..0]))
 
+proc writeReview(s: Stream, tlk: SingleTlk) =
+  for e in (0..tlk.highest()):
+    let ee = tlk[e.StrRef]
+    if ee.isSome:
+      let eee = ee.get()
+      if eee.hasValue:
+        let onlyText = args["--review-only-text"]
+        let onlySound = args["--review-only-sound"]
+        let emit = (not onlyText and not onlySound) or
+                   (onlyText and eee.text.len > 0 and eee.soundResRef.len == 0) or
+                   (onlySound and eee.text.len == 0 and eee.soundResRef.len > 0)
+
+        if emit:
+          s.writeLine([
+            $e,
+            $eee.soundResRef.len,
+            $eee.text.len
+          ].join(" "))
+
 proc writeDebug(s: Stream, tlk: SingleTlk) =
   ## Writes a "debug" representation of the file that can be diffed easily.
   input.setPosition(0)
@@ -183,5 +227,6 @@ case outformat:
 of "tlk":    output.write(state)
 of "json":   output.writeJson(state)
 of "csv":    output.writeCsv(state)
+of "review": output.writeReview(state)
 of "debug":  output.writeDebug(state)
 else: quit("Unsupported outformat: " & outformat)

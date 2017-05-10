@@ -23,6 +23,7 @@ platforms and work on all of them equally well.
 * `nwn_resman_stats`: Get data on what is in a resman view.
 * `nwn_resman_grep`: Grep a resman view for data.
 * `nwn_resman_extract`: Pull files from resman into directory.
+* `nwn_resman_cat`: Pull file(s) from resman and pipe them to stdout.
 * `nwn_resman_diff`: Diffs two resman views (for language support).
 
 All utilities write their working output to stdout, and any library- or tool-

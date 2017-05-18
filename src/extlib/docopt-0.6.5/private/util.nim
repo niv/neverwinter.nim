@@ -43,13 +43,8 @@ proc partition*(s, sep: string): tuple[left, sep, right: string] =
 
 proc is_upper*(s: string): bool =
     ## Is the string in uppercase (and there is at least one cased character)?
-    # Backwards compatibility
-    when compiles(unicode.to_upper("")):
-        let upper = unicode.to_upper(s)
-        s == upper and upper != unicode.to_lower(s)
-    else:
-        let upper = strutils.to_upper(s)
-        s == upper and upper != strutils.to_lower(s)
+    let upper = unicode.to_upper(s)
+    s == upper and upper != unicode.to_lower(s)
 
 
 macro gen_class*(body: untyped): untyped =
@@ -58,13 +53,7 @@ macro gen_class*(body: untyped): untyped =
     for typ in body[0].children:
         var meth = "method class(self: $1): string"
         if $typ[2][0][1][0] == "RootObj":
-            meth &= "{.base.}"
+            meth &= "{.base, gcsafe.}"
         meth &= "= \"$1\""
         body.add(parse_stmt(meth.format(typ[0])))
     body
-
-
-# Backwards compatibility
-when not compiles("".split_whitespace()):
-    proc split_whitespace*(s: string): seq[string] =
-        s.split()

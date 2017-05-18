@@ -25,29 +25,29 @@ gen_class:
         m_name: string
         value: Value
         children: seq[Pattern]
-    
+
     ChildPattern = ref object of Pattern
-    
+
     ParentPattern = ref object of Pattern
-    
+
     Argument = ref object of ChildPattern
-    
+
     Command = ref object of Argument
-    
+
     Option = ref object of ChildPattern
         short: string
         long: string
         argcount: int
-    
+
     Required = ref object of ParentPattern
-    
+
     Optional = ref object of ParentPattern
-    
+
     AnyOptions = ref object of Optional
         ## Marker/placeholder for [options] shortcut.
-    
+
     OneOrMore = ref object of ParentPattern
-    
+
     Either = ref object of ParentPattern
 
 
@@ -88,25 +88,32 @@ type
 
 {.warning[LockLevel]: off.}
 
-method str(self: Pattern): string {.base.} =
+method str(self: Pattern): string {.base, gcsafe, nosideeffect.} =
     assert false
 
-method name(self: Pattern): string {.base.} =
+method name(self: Pattern): string {.base, gcsafe.} =
     self.m_name
-method `name=`(self: Pattern, name: string) {.base.} =
+method `name=`(self: Pattern, name: string) {.base, gcsafe.} =
     self.m_name = name
 
-method `==`(self, other: Pattern): bool {.base.} =
-    self.str == other.str
+proc `==`(self, other: Pattern): bool =
+    if self.is_nil and other.is_nil:
+        true
+    elif not self.is_nil and not other.is_nil:
+        self.str == other.str
+    else:
+        # Exactly one of the two is nil
+        false
 
-method flat(self: Pattern, types: varargs[string]): seq[Pattern] {.base.} =
+method flat(self: Pattern,
+            types: varargs[string]): seq[Pattern] {.base, gcsafe.} =
     assert false
 
 method match(self: Pattern, left: seq[Pattern],
-             collected: seq[Pattern] = @[]): MatchResult {.base.} =
+             collected: seq[Pattern] = @[]): MatchResult {.base, gcsafe.} =
     assert false
 
-method fix_identities(self: Pattern, uniq: seq[Pattern]) {.base.} =
+method fix_identities(self: Pattern, uniq: seq[Pattern]) {.base, gcsafe.} =
     ## Make pattern-tree tips point to same object if they are equal.
     if self.children.is_nil:
         return
@@ -117,10 +124,10 @@ method fix_identities(self: Pattern, uniq: seq[Pattern]) {.base.} =
         else:
             child.fix_identities(uniq)
 
-method fix_identities(self: Pattern) {.base.} =
+method fix_identities(self: Pattern) {.base, gcsafe.} =
     self.fix_identities(self.flat().deduplicate())
 
-method either(self: Pattern): Either {.base.} =
+method either(self: Pattern): Either {.base, gcsafe.} =
     ## Transform pattern into an equivalent, with only top-level Either.
     # Currently the pattern will not be equivalent, but more "narrow",
     # although good enough to reason about list arguments.
@@ -150,7 +157,7 @@ method either(self: Pattern): Either {.base.} =
             ret.add children
     either(ret.map_it(Pattern, required(it)))
 
-method fix_repeating_arguments(self: Pattern) {.base.} =
+method fix_repeating_arguments(self: Pattern) {.base, gcsafe.} =
     ## Fix elements that should accumulate/increment values.
     var either: seq[seq[Pattern]] = @[]
     for child in self.either.children:
@@ -169,7 +176,7 @@ method fix_repeating_arguments(self: Pattern) {.base.} =
               e.class == "Option" and Option(e).argcount == 0:
                 e.value = val(0)
 
-method fix(self: Pattern) {.base.} =
+method fix(self: Pattern) {.base, gcsafe.} =
     self.fix_identities()
     self.fix_repeating_arguments()
 
@@ -181,7 +188,7 @@ method flat(self: ChildPattern, types: varargs[string]): seq[Pattern] =
     if types.len == 0 or self.class in types: @[Pattern(self)] else: @[]
 
 method single_match(self: ChildPattern,
-                    left: seq[Pattern]): SingleMatchResult {.base.} =
+                    left: seq[Pattern]): SingleMatchResult {.base, gcsafe.} =
     assert false
 
 method match(self: ChildPattern, left: seq[Pattern],
@@ -294,7 +301,6 @@ method match(self: Optional, left: seq[Pattern],
     for pattern in self.children:
         result = pattern.match(result.left, result.collected)
     result.matched = true
-
 
 method match(self: OneOrMore, left: seq[Pattern],
              collected: seq[Pattern] = @[]): MatchResult =
@@ -426,7 +432,7 @@ proc parse_shorts(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
         result.add o
 
 
-proc parse_expr(tokens: TokenStream, options: var seq[Option]): seq[Pattern]
+proc parse_expr(tokens: TokenStream, options: var seq[Option]): seq[Pattern] {.gcsafe.}
 
 proc parse_pattern(source: string, options: var seq[Option]): Required =
     var tokens = token_stream(
@@ -440,7 +446,7 @@ proc parse_pattern(source: string, options: var seq[Option]): Required =
     required(ret)
 
 
-proc parse_seq(tokens: TokenStream, options: var seq[Option]): seq[Pattern]
+proc parse_seq(tokens: TokenStream, options: var seq[Option]): seq[Pattern] {.gcsafe.}
 
 proc parse_expr(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
     ## expr ::= seq ( '|' seq )* ;
@@ -456,7 +462,7 @@ proc parse_expr(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
 
 
 
-proc parse_atom(tokens: TokenStream, options: var seq[Option]): seq[Pattern]
+proc parse_atom(tokens: TokenStream, options: var seq[Option]): seq[Pattern] {.gcsafe.}
 
 proc parse_seq(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
     ## seq ::= ( atom [ '...' ] )* ;
@@ -574,18 +580,18 @@ proc docopt_exc(doc: string, argv: seq[string], help: bool, version: string,
 
     var docopt_exit = new_exception(DocoptExit, "")
     docopt_exit.usage = printable_usage(doc)
-    
+
     var options = parse_defaults(doc)
     var pattern = parse_pattern(formal_usage(docopt_exit.usage), options)
-    
-    var argvt = parse_argv(token_stream(argv, docopt_exit), options, 
+
+    var argvt = parse_argv(token_stream(argv, docopt_exit), options,
                            options_first)
     var pattern_options = pattern.flat("Option").deduplicate()
     for any_options in pattern.flat("AnyOptions"):
         var doc_options = parse_defaults(doc).deduplicate()
         any_options.children = doc_options.filter_it(
           it notin pattern_options).map_it(Pattern, Pattern(it))
-    
+
     extras(help, version, argvt, doc)
     pattern.fix()
     var (matched, left, collected) = pattern.match(argvt)
@@ -601,7 +607,7 @@ proc docopt_exc(doc: string, argv: seq[string], help: bool, version: string,
 
 proc docopt*(doc: string, argv: seq[string] = nil, help = true,
              version: string = nil, options_first = false, quit = true
-            ): Table[string, Value] =
+            ): Table[string, Value] {.gcsafe.} =
     ## Parse `argv` based on command-line interface described in `doc`.
     ##
     ## `docopt` creates your command-line interface based on its

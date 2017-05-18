@@ -13,7 +13,7 @@ Options:
 
 let rm = newBasicResMan()
 
-let resolved = args["<file>"].mapIt(rm[it])
+let resolved: seq[Option[Res]] = args["<file>"].mapIt(rm[it])
 
 for i, o in resolved:
   doAssert(o.isSome, "not in resman: " & args["<file>"][i])

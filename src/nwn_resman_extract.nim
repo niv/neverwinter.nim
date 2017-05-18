@@ -25,9 +25,9 @@ proc toSeqx[T](c: HashSet[T]): seq[T] =
 
 let scope: seq[ResRef] =
   if args["--all"]: toSeqx[ResRef](rm.contents)
-  else: map(@(args["<file>"])) do (x: string) -> ResRef: newResolvedResRef(x)
+  else: (map(@(args["<file>"])) do (x: string) -> ResRef: newResolvedResRef(x))
 
-let res = scope.mapIt(rm[it])
+let res: seq[Option[Res]] = scope.mapIt(rm[it])
 
 for o in res:
   if not o.isSome: quit("Could not find file in resman: " & $o & ", nothing written")

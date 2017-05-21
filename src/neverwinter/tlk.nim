@@ -135,7 +135,8 @@ proc write*(io: Stream, tlk: SingleTlk) =
   # entry count is the max id + 1 (0-><maxId>)
   let entryCount: uint32 = maxId + 1
 
-  # Reserve size for the entries table on the out stream.
+  # Reserve size for the entries table on the out stream. Not all
+  # entries will write out a text entry.
   let entriesTableSize = 40 * entryCount.int
   let entriesTableOffset = io.getPosition() + 20
   let stringDataOffset = entriesTableOffset + entriesTableSize
@@ -145,10 +146,11 @@ proc write*(io: Stream, tlk: SingleTlk) =
   write[uint32](io, entrycount.uint32) # stringCount
   write[uint32](io, stringDataOffset.uint32) # stringEntriesOffset
 
-  # Set io pos to where the string data starts, as we write them
-  # out first, then rewind and write the table data. This saves
+  # Pad io position to where the string data starts. We'll write
+  # strings first, then rewind and write the table. This saves
   # us some extra string conversion work.
-  io.setPosition(stringDataOffset)
+  io.write(repeat("\x00", stringDataOffset - io.getPosition))
+  doAssert(io.getPosition == stringDataOffset)
 
   # pack the header in-memory, because we're cheap like that
   var offset: int32 = 0

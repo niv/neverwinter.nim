@@ -49,19 +49,25 @@ proc readCsv(s: Stream): TwoDA =
   var p: CsvParser
   p.open(input = s, filename = inputfile, separator = ($args["--csv-separator"])[0])
   p.readHeaderRow()
-  result.headers = p.headers
-  while p.readRow(): result.rows.add(p.row)
+  result.columns = p.headers
+  while p.readRow():
+    result.rows.add(p.row.mapIt(some it))
+
   p.close()
 
 proc writeCsv(s: Stream, tbl: TwoDA) =
-  proc joinRow(r: seq[string]): string =
-    proc quoteOrStar(s: string): string =
-      if s.find(Whitespace) != -1: ("\"" & s & "\"")
-      elif s == "": "****"
-      else: s
-    r.mapIt(it.strip().quoteOrStar).join(($args["--csv-separator"])[0..0])
+  proc joinRow(r: Row): string =
+    proc quoteOrStar(s: Cell): string =
+      if s.isSome:
+        let ss = s.get()
+        if ss.find(Whitespace) != -1: ("\"" & ss & "\"")
+        elif ss == "": "\"\""
+        else: ss
+      else:
+        "****"
+    r.mapIt(it.quoteOrStar).join(($args["--csv-separator"])[0..0])
 
-  s.writeLine(tbl.headers.joinRow())
+  s.writeLine(tbl.columns.mapIt(some it).joinRow())
   for r in tbl.rows: s.writeLine(r.joinRow())
 
 var state: TwoDA

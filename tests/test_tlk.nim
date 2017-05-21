@@ -10,5 +10,5 @@ suite "SingleTlk":
     outstr.setPosition(0)
     let rd = outstr.readAll()
     let offset = rd.find("test")
-    check (offset != -1)
+    check(offset != -1)
     check(rd.substr(offset, offset + 10) == "test\nstring")

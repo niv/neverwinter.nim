@@ -39,7 +39,6 @@ proc getResExt*(resType: ResType): string =
   lookupResExt(resType).get()
 
 proc `$`*(r: ResType): string =
-  proc IntToStr(x: int): string {.magic: "IntToStr", noSideEffect.}
   let ext = lookupResExt(r)
   if ext.isSome: ext.get()
   else: $r.int

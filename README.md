@@ -42,15 +42,12 @@ implementation from neverwinter.nim.  For example, if you want to get statistics
 about a key file, you do not unpack it:  Instead, you use `nwn_resman_stats` and
 tell it to only load the key file you are interested in.
 
-## Build: Windows
+## Build
 
-* Have nim-0.16 or newer on PATH, and a working mingw install (for gcc). You can
-  grab a working one here: https://nim-lang.org/download/mingw32.zip
-
-  tl;dr:
-  * Download nim.zip for windows, unpack to c:\nim-xxx.
-  * Download mingw32, unpack to c:\mingw.
-  * add mingw\bin and nim-xxx\bin to PATH.
+* Install nim 0.16.0 or newer, have it on PATH and working. The best way to do this
+  as of this writing is https://github.com/dom96/choosenim, which will install it
+  for your user on Linux/OSX, and on Windows will even pull in the required compiler
+  and package manager.
 
 * Clone this repository *with submodules*:
   `git clone --recursive https://github.com/niv/neverwinter_utils.nim`
@@ -67,18 +64,11 @@ tell it to only load the key file you are interested in.
 
 * All utilities have a help page. Just pass `-h` as the only argument.
 
-## Build: OSX, Linux
-
-* Install nim: `brew install nim` (OSX) or from apt/source (Linux). Make sure
-  it's at least 0.16.
-
-* Then follow the Windows instructions; but run `build.sh` instead.
-
 ## Debugging
 
 If there's issues, build the binaries in debug mode (build.cmd builds release
-binaries) to help find issues.  If you have trouble and you can't get a hold
-of me otherwise, email me: niv@nwnx.io
+binaries) to help find issues.  If you have trouble, email me: niv@nwnx.io
 
 If debug mode is too slow, add `--lineTrace:on --stackTrace:on` to at least
 get good backtraces.
+

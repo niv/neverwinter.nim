@@ -42,7 +42,7 @@ Logging:
   --nwn-encoding CHARSET      Sets the nwn encoding [default: """ & getNwnEncoding() & """]
   --other-encoding CHARSET    Sets the "other" file formats encoding, where
                               supported; see docs. Defaults to your current
-                              shell/platform charset: [default: """ & getNativeEncoding() & """]  
+                              shell/platform charset: [default: """ & getNativeEncoding() & """]
 """
 
 # Options common to utilities working with a resman.
@@ -93,7 +93,7 @@ proc findNwnRoot*(): string =
     result = $Args["--root"]
   else:
     when defined(macosx):
-      const settingsFile = r"~/Library/Application Support/Beamdog Experience/settings.json".expandTilde
+      const settingsFile = r"~/Library/Application Support/Beamdog Client/settings.json".expandTilde
     elif defined(linux):
       const settingsFile = r"~/.config/Beamdog Client/settings.json".expandTilde
     elif defined(windows):

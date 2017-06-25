@@ -158,8 +158,11 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
                otherLangRoot / keyFile
              else: root / keyFile
 
+    if not fileExists(fn):
+      warn("  key not found, skipping: ", fn)
+      return
     let ktfn = newFileStream(fn)
-    doAssert(ktfn != nil, "key not found or inaccessible: " & fn)
+    doAssert(ktfn != nil, "key inaccessible: " & fn)
 
     debug("  key: ", fn)
 

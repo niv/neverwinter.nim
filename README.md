@@ -25,6 +25,7 @@ platforms and work on all of them equally well.
 * `nwn_resman_extract`: Pull files from resman into directory.
 * `nwn_resman_cat`: Pull file(s) from resman and pipe them to stdout.
 * `nwn_resman_diff`: Diffs two resman views (for language support).
+* `nwn_resman_pkgsrv`: Repackage a resman view suitable for docker deployment.
 * `nwn_net`: A utility providing some network-related helpers, like querying servers.
 
 All utilities write their working output to stdout, and any library- or tool-

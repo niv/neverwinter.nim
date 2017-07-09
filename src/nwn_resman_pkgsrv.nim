@@ -10,11 +10,17 @@ Usage:
 
 Options:
   -d DIRECTORY                Save files to DIRECTORY [default: .]
+  -k KEYNAME                  Key filename [default: nwn_base]
+  -b BIFPREFIX                Bif prefix inside key table [default: data\]
+  -B BIFDIR                   Put bifs into subdirectory [default: ]
   $OPTRESMAN
 """
 
 let rm = newBasicResMan()
 
+let keyName = $args["-k"]
+let bifPrefix = $args["-b"]
+let bifDir = $args["-B"]
 let destination = ($args["-d"])
 doAssert(dirExists(destination), "destination directory does not exist")
 
@@ -36,29 +42,27 @@ const whiteListExt = [
 proc shouldBeIncluded(o: ResolvedResRef): bool =
   whiteListExt.find(($o.resType).toLowerAscii) > -1
 
+let allContent: seq[ResolvedResRef] = rm.contents.mapIt(it.resolve().get()).
+  # Only resrefs matching the predicate
+  filterIt(it.resolve().get().shouldBeIncluded).
+  # Sort entries so the build is reproducible
+  sorted() do (lhs, rhs: ResolvedResRef) -> int:
+    system.cmp[string](lhs.toFile.toUpperAscii, rhs.toFile.toUpperAscii)
+
 # How many files to pack into a single bif at max.
 const FilesPerBif = 5000
-
-# find all the resRefs we want to include.
-var allContent = newSeq[ResolvedResRef]()
-for o in rm.contents.withProgressBar("filter"):
-  let oo = o.resolve().get()
-  if oo.shouldBeIncluded: allContent.add(oo)
-
-# Sort entries so the build is reproducible
-sort(allContent) do (lhs, rhs: ResolvedResRef) -> int:
-  system.cmp[string](lhs.toFile.toUpperAscii, rhs.toFile.toUpperAscii)
-
 let allBifsToWrite = allContent.distribute(1 + allContent.len div FilesPerBif)
 
 info "Including ", allContent.len, " files in shrunk set, split into ", allBifsToWrite.len, " bifs"
 
 let bifs = allBifsToWrite.map() do (idx: int, k: seq[ResolvedResRef]) -> KeyBifEntry:
   result.name = "srvpkg" & $idx
+  result.directory = bifDir
   result.entries = k.mapIt(it.ResRef)
 
-writeKeyAndBif(destDir=destination, keyName="nwn_base", bifPrefix=r"data\\", bifs=bifs) do (r: ResRef, io: Stream):
+writeKeyAndBif(destDir=destination, keyName=keyName, bifPrefix=bifPrefix,
+    bifs=bifs) do (r: ResRef, io: Stream):
   let res = rm[r].get()
   io.write(res.readAll)
 
-info "nwn_base.key written"
+info keyName, ".key written"

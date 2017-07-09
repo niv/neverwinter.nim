@@ -106,12 +106,12 @@ type
     addresses: SizePrefixedSeq[uint16, SLocation]
 
   BMMA* = object
-    header: StaticValue["BMSA"]
+    header: StaticValue["BMMA"]
     port: uint16
     languageId: uint16
 
   BMMB* = object
-    header: StaticValue["BMSB"]
+    header: StaticValue["BMMB"]
     motd: SizePrefixedString[uint16]
 
   BMRA* = object

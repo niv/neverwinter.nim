@@ -18,17 +18,23 @@ let rm = newBasicResMan()
 let destination = ($args["-d"])
 doAssert(dirExists(destination), "destination directory does not exist")
 
-const skipExts = [
-  "tga", "dds", "bmp", "txi", "plt", # servers dont need textures
-  "wav", "mp3", "bmu", # nor audio
-  "nss", "ndb", # no source scripts or debug files
-  "gui", # no gui elements either
-  "mdl" # PROBABLY don't need mdls .. just the walkmeshes, right?
+const whiteListExt = [
+  # walkmeshes: needed to pathfind
+  "wok", "pwk", "dwk",
+  # scripts
+  "ncs",
+  # templates: potentially needed by scripts and other templates
+  "uti", "utc", "utp", "ssf", "uts", "utt", "ute", "utm", "dlg", "utw", "utd",
+  # palette data
+  "itp",
+  # config data
+  "2da",
+  # tileset data
+  "ini", "set"
 ]
 
 proc shouldBeIncluded(o: ResolvedResRef): bool =
-  skipExts.find(($o.resType).toLowerAscii) == -1
-
+  whiteListExt.find(($o.resType).toLowerAscii) > -1
 
 # How many files to pack into a single bif at max.
 const FilesPerBif = 5000

@@ -1,4 +1,4 @@
-import streams, options, sequtils, strutils, tables, times, os, sets
+import streams, options, sequtils, strutils, tables, times, os, sets, math
 
 import resman, util
 
@@ -248,3 +248,118 @@ method `$`*(self: KeyTable): string =
 proc bifs*(self: KeyTable): seq[Bif] =
   ## Returns the bifs this key table references.
   self.bifs
+
+
+# -----------------
+#  Key/Bif Writing
+# -----------------
+
+type KeyBifEntry* = tuple
+  name: string
+  entries: seq[ResRef]
+
+proc writeBif*(ioBif: Stream, entries: seq[ResRef],
+    pleaseWrite: proc(r: ResRef, io: Stream)): int =
+
+  ioBif.write("BIFFV1  ")
+  ioBif.write(uint32 entries.len) # entries
+  ioBif.write(uint32 0) #fixedres
+  ioBif.write(uint32 20) #vartable offset, hardcoded value
+
+  doAssert(ioBif.getPosition == 20)
+
+  var resrefDataSizes = initTable[ResRef, int]()
+  let varTableStart = ioBif.getPosition
+
+  # Pad out initial data which we back-fill later with collected size/offset data
+  for i in 0..<entries.len:
+    ioBif.write(repeat("\x0", 16)) # id, offset, len, type
+
+  # Write out data. This fills in resrefDataSizes so we know
+  # what we need to put into the varResTable
+  for idx, resRef in entries:
+    let pos = ioBif.getPosition
+    pleaseWrite(resRef, ioBif)
+    resrefDataSizes[resRef] = ioBif.getPosition - pos
+
+  # Backfill what we skipped before.
+  var offset: BiggestInt = varTableStart + (entries.len * 16)
+  ioBif.setPosition(varTableStart)
+  for idx, resRef in entries:
+    # let res = rm[resRef].get()
+    # ID = (x << 20) + y
+    #   where x = y for game CDs and x is 0 for patch bifs
+    #   but really, the game does not care
+    let id = (idx.uint32 shl 20u32) + idx.uint32
+    ioBif.write(uint32 id)
+    ioBif.write(uint32 offset)
+    ioBif.write(uint32 resrefDataSizes[resRef])
+    offset += resrefDataSizes[resRef]
+    ioBif.write(uint32 resRef.resType)
+
+  result = ioBif.getPosition
+  ioBif.close
+
+proc writeKeyAndBif*(destDir: string,
+    keyName: string, bifPrefix: string, bifs: seq[KeyBifEntry],
+    pleaseWrite: proc(r: ResRef, io: Stream)) =
+
+  const HeaderStartOfKeyFileData = 64 # key
+
+  let ioFileTable = newStringStream()
+  let ioFilenames = newStringStream()
+
+  for bif in bifs:
+    let fn = destDir / bif.name & ".bif"
+    let ioBif = newFileStream(fn, fmWrite)
+    let writtenSize = writeBif(ioBif, bif.entries, pleaseWrite)
+
+    ioFileTable.write(uint32 writtenSize - 20) # header not included
+    let fnForBif = bifPrefix & bif.name & ".bif"
+    ioFileTable.write(uint32 HeaderStartOfKeyFileData + (bifs.len * 12) + ioFilenames.getPosition)
+    ioFileTable.write(uint16 fnForBif.len)
+    ioFileTable.write(uint16 0) #drives
+    ioFilenames.write(fnForBif & "\x00")
+
+  let ioKey = newFileStream(destDir / keyName & ".key", fmWrite)
+
+  let fileTableSz = ioFileTable.getPosition
+  let filenamesSz = ioFilenames.getPosition
+  let totalResRefCount = sum(bifs.mapIt(it.entries.len))
+
+  ioKey.write("KEY V1  ")
+  ioKey.write(uint32 bifs.len) # bifs.len
+  ioKey.write(uint32 totalResRefCount)
+  ioKey.write(uint32 64) # offset to file table
+  ioKey.write(uint32 64 + fileTableSz + filenamesSz) # offset to key table
+  ioKey.write(uint32 getTime().getGMTime().year - 1900) # build year
+  ioKey.write(uint32 getTime().getGMTime().yearday) # build day
+  ioKey.write(repeat("\x00", 32)) # reserved
+
+  # file table+names offset
+  doAssert(ioKey.getPosition == HeaderStartOfKeyFileData)
+
+  ioFileTable.setPosition(0)
+  ioFilenames.setPosition(0)
+  ioKey.write(ioFileTable.readAll)
+  ioKey.write(ioFilenames.readAll)
+
+  # keyTable offset
+  doAssert(ioKey.getPosition == HeaderStartOfKeyFileData + fileTableSz + filenamesSz)
+
+  for bifIdx, bif in bifs:
+    for resIdx, resRef in bif.entries:
+      doAssert(resref.resRef.len > 0)
+      doAssert(resRef.resRef.len <= 16, resRef.resRef)
+      ioKey.write(resRef.resRef & repeat("\x0", 16 - resRef.resRef.len))
+      ioKey.write(uint16 resRef.resType)
+      # ID = (x << 20) + y
+      # x = index into bif file table
+      # y = index into variable table inside of bif
+      let id: uint32 = (bifIdx.uint32 shl 20u32) + resIdx.uint32
+      ioKey.write(uint32 id)
+
+  doAssert(ioKey.getPosition == HeaderStartOfKeyFileData + fileTableSz + filenamesSz +
+    totalResRefCount * (16+2+4))
+
+  ioKey.close

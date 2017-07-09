@@ -255,6 +255,7 @@ proc bifs*(self: KeyTable): seq[Bif] =
 # -----------------
 
 type KeyBifEntry* = tuple
+  directory: string
   name: string
   entries: seq[ResRef]
 
@@ -310,7 +311,8 @@ proc writeKeyAndBif*(destDir: string,
   let ioFilenames = newStringStream()
 
   for bif in bifs:
-    let fn = destDir / bif.name & ".bif"
+    createDir(destDir / bif.directory)
+    let fn = destDir / bif.directory / bif.name & ".bif"
     let ioBif = newFileStream(fn, fmWrite)
     let writtenSize = writeBif(ioBif, bif.entries, pleaseWrite)
 

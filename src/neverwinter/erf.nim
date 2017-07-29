@@ -107,14 +107,12 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
 
 proc writeErf*(io: Stream,
                fileType: string,
-               entries: Table[ResRef, string], # resref to local file.
                locStrings: Table[int, string] = initTable[int, string](),
                strRef = 0,
-               progress: proc(r: ResRef): void = nil
-               # not supported yet:
-               # entries: seq[ResRef],
-               # resolver: proc(r: ResRef): tuple[s: Stream, sz: int]) =
-              ) =
+               entries: seq[ResRef],
+               # This is called when we want you to write the binary data
+               # of r:ResRef to io.
+               writer: proc(r: ResRef, io: Stream): void) =
 
   ## Writes a new ERF.
   ## `entries` maps resrefs to filenames on the local system.
@@ -148,7 +146,7 @@ proc writeErf*(io: Stream,
 
   # We save out entries sorted alphabetically for now. This ensures a reproducible
   # build.
-  let keysToWrite = toSeq(entries.keys).sorted() do (a, b: ResRef) -> int:
+  let keysToWrite = entries.sorted() do (a, b: ResRef) -> int:
     system.cmp(a.resRef.toUpperAscii, b.resRef.toUpperAscii)
 
   # locstr list
@@ -166,20 +164,29 @@ proc writeErf*(io: Stream,
     io.write("\x0\x0")
     id += 1
 
-  # res list
-  var currentOffset = 0
-  for rr in keysToWrite:
-    let sz = getFileSize(entries[rr]).int32
-    # let (rrio, sz) = resolver(rr) #  self.entries[rr]
-    io.write(int32 currentOffset)
-    io.write(int32 sz)
-    currentOffset += sz
+  var sizes = initTable[ResRef, BiggestInt]()
+  let resListOffset = io.getPosition
 
-  # res data
+  # res list: pad out first and revisit when data was written and we
+  # have the sizes
+  io.write(repeat("\x00", 8 * keysToWrite.len))
+
+  # res data: write data and keep track of sizes written
   for rr in keysToWrite:
-    let fn = entries[rr]
-    if progress != nil: progress(rr)
-    io.write(readFile(fn))
+    let pos = io.getPosition
+    writer(rr, io)
+    sizes[rr] = io.getPosition - pos
+
+  let eofOffset = io.getPosition
+
+  io.setPosition(resListOffset)
+  var currentOffset: BiggestInt = 0
+  for rr in keysToWrite:
+    io.write(uint32 currentOffset)
+    io.write(uint32 sizes[rr])
+    currentOffset += sizes[rr]
+
+  io.setPosition(eofOffset)
 
 method contains*(self: Erf, rr: ResRef): bool =
   self.entries.hasKey(rr)

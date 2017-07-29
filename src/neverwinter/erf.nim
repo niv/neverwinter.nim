@@ -171,6 +171,8 @@ proc writeErf*(io: Stream,
   # have the sizes
   io.write(repeat("\x00", 8 * keysToWrite.len))
 
+  let resDataOffset = io.getPosition
+
   # res data: write data and keep track of sizes written
   for rr in keysToWrite:
     let pos = io.getPosition
@@ -180,7 +182,7 @@ proc writeErf*(io: Stream,
   let eofOffset = io.getPosition
 
   io.setPosition(resListOffset)
-  var currentOffset: BiggestInt = 0
+  var currentOffset: BiggestInt = resDataOffset
   for rr in keysToWrite:
     io.write(uint32 currentOffset)
     io.write(uint32 sizes[rr])

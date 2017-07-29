@@ -22,21 +22,26 @@ Options:
 
 let filename = $args["-f"]
 
-proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string]) =
+proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string],
+    outSeq: var seq[ResRef]) =
   if fileExists(path):
     # Fail for explicitly listed filenames.
     let rr = newResolvedResRef(path.extractFilename)
-    if outTbl.hasKey(rr): error("duplicate resef " & path); quit(1)
-    else: outTbl[rr] = path
+    if outSeq.find(rr) != -1:
+      error("duplicate resef " & path)
+      quit(1)
+    else:
+      outSeq.add(rr)
+      outTbl[rr] = path
 
   elif dirExists(path):
     for wd in walkDir(path):
       if wd.kind == pcDir:
-        pathToResRefMapping(wd.path, outTbl)
+        pathToResRefMapping(wd.path, outTbl, outSeq)
 
       elif wd.kind == pcFile:
         let r = tryNewResolvedResRef(wd.path.extractFilename)
-        if r.isSome: pathToResRefMapping(wd.path, outTbl)
+        if r.isSome: pathToResRefMapping(wd.path, outTbl, outSeq)
         else: warn(wd.path & " is not a valid resref")
 
   else: quit("No idea what to do about: " & path)
@@ -48,16 +53,20 @@ proc openErf(): Erf =
 if args["-c"]:
   var resrefToFile = initTable[ResRef, string]() # rr -> path to local file.
 
+  var entries = newSeq[ResRef]()
+
   for fi in @(args["<entry>"]):
-    pathToResRefMapping(fi, resrefToFile)
+    pathToResRefMapping(fi, resrefToFile, entries)
 
   let outfile = if filename == "-": newFileStream(stdout)
                 else: newFileStream(filename, fmWrite)
   doAssert(outfile != nil, "Could not open " & filename & " for writing")
 
-  writeErf(outfile, $args["--erf-type"], resrefToFile,
-           initTable[int, string](), 0) do (r: ResRef) -> void:
-    debug("Writing: ", r)
+  writeErf(outFile, fileType = $args["--erf-type"], locStrings = initTable[int, string](),
+      strRef = 0, entries = entries) do (r: ResRef, io: Stream):
+
+    let data = readFile(resRefToFile[r])
+    io.write(data)
 
 elif args["-t"]:
   let erf = openErf()

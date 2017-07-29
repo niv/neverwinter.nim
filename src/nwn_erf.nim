@@ -48,6 +48,7 @@ proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string],
 
 proc openErf(): Erf =
   let infile = if filename == "-": newFileStream(stdin) else: newFileStream(filename)
+  doAssert(infile != nil, "Coult not open " & filename & " for reading")
   result = infile.readErf()
 
 if args["-c"]:

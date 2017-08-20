@@ -303,6 +303,7 @@ proc writeBif*(ioBif: Stream, entries: seq[ResRef],
 
 proc writeKeyAndBif*(destDir: string,
     keyName: string, bifPrefix: string, bifs: seq[KeyBifEntry],
+    buildYear, buildDay: uint32,
     pleaseWrite: proc(r: ResRef, io: Stream)) =
 
   const HeaderStartOfKeyFileData = 64 # key
@@ -334,8 +335,8 @@ proc writeKeyAndBif*(destDir: string,
   ioKey.write(uint32 totalResRefCount)
   ioKey.write(uint32 64) # offset to file table
   ioKey.write(uint32 64 + fileTableSz + filenamesSz) # offset to key table
-  ioKey.write(uint32 getTime().getGMTime().year - 1900) # build year
-  ioKey.write(uint32 getTime().getGMTime().yearday) # build day
+  ioKey.write(uint32 buildYear - 1900) # build year
+  ioKey.write(uint32 buildDay) # build day
   ioKey.write(repeat("\x00", 32)) # reserved
 
   # file table+names offset
@@ -365,3 +366,11 @@ proc writeKeyAndBif*(destDir: string,
     totalResRefCount * (16+2+4))
 
   ioKey.close
+
+proc writeKeyAndBif*(destDir: string,
+    keyName: string, bifPrefix: string, bifs: seq[KeyBifEntry],
+    pleaseWrite: proc(r: ResRef, io: Stream)) =
+  writeKeyAndBif(destDir, keyName, bifPrefix, bifs,
+    uint32 getTime().getGMTime().year,
+    uint32 getTime().getGMTime().yearday,
+    pleaseWrite)

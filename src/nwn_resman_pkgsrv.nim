@@ -13,6 +13,8 @@ Options:
   -k KEYNAME                  Key filename [default: nwn_base]
   -b BIFPREFIX                Bif prefix inside key table [default: data\]
   -B BIFDIR                   Put bifs into subdirectory [default: ]
+  --year YEAR                 Override embedded build year [default: """ & $getTime().getGMTime().year & """]
+  --doy DOY                   Override embedded day of year [default: """ & $getTime().getGMTime().yearday & """]
   $OPTRESMAN
 """
 
@@ -22,7 +24,10 @@ let keyName = $args["-k"]
 let bifPrefix = $args["-b"]
 let bifDir = $args["-B"]
 let destination = ($args["-d"])
+let (year, doy) = (($args["--year"]).parseInt.uint32, ($args["--doy"]).parseInt.uint32)
 doAssert(dirExists(destination), "destination directory does not exist")
+doAssert(year >= 1900u32, "year needs to be >= 1900")
+doAssert(doy <= 365u32, "doy is out of range (0-365)")
 
 const whiteListExt = [
   # walkmeshes: needed to pathfind
@@ -61,7 +66,7 @@ let bifs = allBifsToWrite.map() do (idx: int, k: seq[ResolvedResRef]) -> KeyBifE
   result.entries = k.mapIt(it.ResRef)
 
 writeKeyAndBif(destDir=destination, keyName=keyName, bifPrefix=bifPrefix,
-    bifs=bifs) do (r: ResRef, io: Stream):
+    bifs=bifs, year, doy) do (r: ResRef, io: Stream):
   let res = rm[r].get()
   io.write(res.readAll)
 

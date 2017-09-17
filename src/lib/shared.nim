@@ -93,11 +93,11 @@ proc findNwnRoot*(): string =
     result = $Args["--root"]
   else:
     when defined(macosx):
-      const settingsFile = r"~/Library/Application Support/Beamdog Client/settings.json".expandTilde
+      let settingsFile = r"~/Library/Application Support/Beamdog Client/settings.json".expandTilde
     elif defined(linux):
-      const settingsFile = r"~/.config/Beamdog Client/settings.json".expandTilde
+      let settingsFile = r"~/.config/Beamdog Client/settings.json".expandTilde
     elif defined(windows):
-      const settingsFile = getHomeDir() / r"AppData\Roaming\Beamdog Client\settings.json"
+      let settingsFile = getHomeDir() / r"AppData\Roaming\Beamdog Client\settings.json"
     else: {.fatal: "Unsupported os for findNwnRoot"}
 
     let data = readFile(settingsFile)

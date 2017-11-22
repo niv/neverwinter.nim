@@ -91,6 +91,8 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
 proc findNwnRoot*(): string =
   if Args["--root"]:
     result = $Args["--root"]
+  elif getEnv("NWN_ROOT") != "":
+    result = getEnv("NWN_ROOT")
   else:
     when defined(macosx):
       let settingsFile = r"~/Library/Application Support/Beamdog Client/settings.json".expandTilde
@@ -104,9 +106,21 @@ proc findNwnRoot*(): string =
     let j = data.parseJson
     doAssert(j.hasKey("folders"))
     doAssert(j["folders"].kind == JArray)
-    var fo = j["folders"].mapIt(it.str / "00785")
-    fo.keepItIf(dirExists(it))
-    if fo.len > 0: result = fo[0]
+
+    # Which NWN release do we want? So many questions. We pick the first one available, in order:
+    # 00840: Digital Deluxe Beta (Head Start)
+    # 00829: Normal Beta (Head Start)
+    # TODO:
+    #   00839: Digital Deluxe
+    #   00832: Nightly
+    const releases = ["00840", "00829"]
+    for torrentId in releases:
+      var fo = j["folders"].mapIt(it.str / torrentId)
+
+      fo.keepItIf(dirExists(it))
+      if fo.len > 0:
+        result = fo[0]
+        break
 
   if result == "" or not dirExists(result): raise newException(ValueError,
     "Could not locate NWN; try --root")

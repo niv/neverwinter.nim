@@ -55,7 +55,7 @@ proc newStatsForContainer(): StatsForContainer =
   result.resShadowedSizes = newTable[ResType, int64]()
   result.resShadowedByContIdx = newCountTable[int]()
 
-proc `+`(a, b: StatsForContainer): StatsForContainer =
+proc `+`(a, b: StatsForContainer): StatsForContainer {.noSideEffect.} =
   result = newStatsForContainer()
 
   if a.resTypes != nil: result.resTypes.merge(a.resTypes)

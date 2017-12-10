@@ -103,6 +103,7 @@ proc runner*() {.async.} =
     var playerCount = 0
     response = list
     response["_list"] = newJArray()
+    var responseList = newSeq[JsonNode]()
     for idx, loc in addresses:
       let fut = futures[idx]
       var p = newJObject()
@@ -114,7 +115,18 @@ proc runner*() {.async.} =
         p["_failure"] = %fut.error.msg.split("\L")[0]
       p["host"] = %loc[0]
       p["port"] = %loc[1].int
-      response["_list"].add(p)
+      responseList.add(p)
+
+    if args["--bnxi"]:
+      sort(responseList) do (a, b: JsonNode) -> int:
+        let hasA = a.hasKey("_bnxr") and a["_bnxr"].hasKey("currentPlayers")
+        let hasB = b.hasKey("_bnxr") and b["_bnxr"].hasKey("currentPlayers")
+        if hasA and hasB: cmp(b["_bnxr"]["currentPlayers"].getNum, a["_bnxr"]["currentPlayers"].getNum)
+        elif hasA: -1
+        elif hasB: 1
+        else: 0
+
+    response["_list"] = %responseList
 
     if args["--bnxi"]:
       response["_playercount"] = %playerCount

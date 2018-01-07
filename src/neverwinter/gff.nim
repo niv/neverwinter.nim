@@ -470,7 +470,7 @@ proc resolve(self: GffField): GffField =
     let offsetStart = offset + 1 # 1 = skip list size we just read above
     let offsetEnd = offsetStart + listSz
 
-    expect(offsetStart >= 0 and offsetStart < loader.listIndices.len)
+    expect(offsetStart >= 0 and offsetStart <= loader.listIndices.len)
     expect(offsetEnd >= offsetStart and offsetEnd <= loader.listIndices.len)
 
     let list = loader.listIndices[offsetStart..<offsetEnd]

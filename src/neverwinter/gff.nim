@@ -223,7 +223,7 @@ proc getValue*[T: GffFieldType](self: GffField, t: typedesc[T]): T =
   elif T is GffShort: cast[int16](self.dataOrOffset)
   elif T is GffDword: cast[uint32](self.dataOrOffset)
   elif T is GffInt: cast[int32](self.dataOrOffset)
-  elif T is GffFloat: cast[float](self.dataOrOffset)
+  elif T is GffFloat: cast[float32](self.dataOrOffset)
 
   elif T is GffDword64: self.gffDword64
   elif T is GffInt64: self.gffInt64

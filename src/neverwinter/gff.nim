@@ -160,6 +160,7 @@ proc typeDescToKind*[T : GffFieldType](ofType: typedesc[T]): GffFieldKind {.inli
   elif ofType is GffDouble: result = GffFieldKind.Double
   elif ofType is GffCExoString: result = GffFieldKind.CExoString
   elif ofType is GffResRef: result = GffFieldKind.ResRef
+  elif ofType is GFFVoid: result = GffFieldKind.Void
   elif ofType is GffCExoLocString: result = GffFieldKind.CExoLocString
   elif ofType is GffList: result = GffFieldKind.List
   elif ofType is GffStruct: result = GffFieldKind.Struct

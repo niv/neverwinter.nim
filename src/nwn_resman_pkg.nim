@@ -1,8 +1,24 @@
 import shared
 
+const ServerPackageExtensions = [
+  # walkmeshes: needed to pathfind
+  "wok", "pwk", "dwk",
+  # scripts
+  "ncs",
+  # templates: potentially needed by scripts and other templates
+  "uti", "utc", "utp", "ssf", "uts", "utt", "ute", "utm", "dlg", "utw", "utd",
+  # palette data
+  "itp",
+  # config data
+  "2da",
+  # tileset data
+  "ini", "set"
+]
+
+
 let args = DOC """
 Packages a resman view into a slimmed-down variant suitable for
-docker deployment.
+limited-set deployments, like docker or script compilers.
 
 Usage:
   $0 [options]
@@ -15,6 +31,7 @@ Options:
   -B BIFDIR                   Put bifs into subdirectory [default: ]
   --year YEAR                 Override embedded build year [default: """ & $getTime().getGMTime().year & """]
   --doy DOY                   Override embedded day of year [default: """ & $getTime().getGMTime().yearday & """]
+  --extensions LIST           Comma-separated list of extensions to pack [default: """ & ServerPackageExtensions.join(",") & """]
   $OPTRESMAN
 """
 
@@ -29,20 +46,7 @@ doAssert(dirExists(destination), "destination directory does not exist")
 doAssert(year >= 1900u32, "year needs to be >= 1900")
 doAssert(doy <= 365u32, "doy is out of range (0-365)")
 
-const whiteListExt = [
-  # walkmeshes: needed to pathfind
-  "wok", "pwk", "dwk",
-  # scripts
-  "ncs",
-  # templates: potentially needed by scripts and other templates
-  "uti", "utc", "utp", "ssf", "uts", "utt", "ute", "utm", "dlg", "utw", "utd",
-  # palette data
-  "itp",
-  # config data
-  "2da",
-  # tileset data
-  "ini", "set"
-]
+let whitelistExt = ($args["--extensions"]).split(",")
 
 proc shouldBeIncluded(o: ResolvedResRef): bool =
   whiteListExt.find(($o.resType).toLowerAscii) > -1
@@ -61,7 +65,7 @@ let allBifsToWrite = allContent.distribute(1 + allContent.len div FilesPerBif)
 info "Including ", allContent.len, " files in shrunk set, split into ", allBifsToWrite.len, " bifs"
 
 let bifs = allBifsToWrite.map() do (idx: int, k: seq[ResolvedResRef]) -> KeyBifEntry:
-  result.name = "srvpkg" & $idx
+  result.name = "pkg" & $idx
   result.directory = bifDir
   result.entries = k.mapIt(it.ResRef)
 

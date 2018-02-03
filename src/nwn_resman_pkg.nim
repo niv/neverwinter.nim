@@ -12,7 +12,9 @@ const ServerPackageExtensions = [
   # config data
   "2da",
   # tileset data
-  "ini", "set"
+  "ini", "set",
+  # CNWNameGen
+  "ltr"
 ]
 
 

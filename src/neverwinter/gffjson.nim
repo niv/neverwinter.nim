@@ -92,6 +92,9 @@ proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
     of "resref":
       expect(v["value"].kind == JString, $v)
       result[k, GffResRef] = v["value"].str.GffResRef
+    of "void":
+      expect(v["value"].kind == JString, $v)
+      result[k, GffVoid] = v["value"].str.GffVoid
 
     of "struct":
       expect(v["value"].kind == JObject, $v)

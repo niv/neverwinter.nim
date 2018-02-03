@@ -160,6 +160,7 @@ proc typeDescToKind*[T : GffFieldType](ofType: typedesc[T]): GffFieldKind {.inli
   elif ofType is GffDouble: result = GffFieldKind.Double
   elif ofType is GffCExoString: result = GffFieldKind.CExoString
   elif ofType is GffResRef: result = GffFieldKind.ResRef
+  elif ofType is GFFVoid: result = GffFieldKind.Void
   elif ofType is GffCExoLocString: result = GffFieldKind.CExoLocString
   elif ofType is GffList: result = GffFieldKind.List
   elif ofType is GffStruct: result = GffFieldKind.Struct
@@ -222,7 +223,7 @@ proc getValue*[T: GffFieldType](self: GffField, t: typedesc[T]): T =
   elif T is GffShort: cast[int16](self.dataOrOffset)
   elif T is GffDword: cast[uint32](self.dataOrOffset)
   elif T is GffInt: cast[int32](self.dataOrOffset)
-  elif T is GffFloat: cast[float](self.dataOrOffset)
+  elif T is GffFloat: cast[float32](self.dataOrOffset)
 
   elif T is GffDword64: self.gffDword64
   elif T is GffInt64: self.gffInt64

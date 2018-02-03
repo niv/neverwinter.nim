@@ -5,6 +5,8 @@ const ServerPackageExtensions = [
   "wok", "pwk", "dwk",
   # scripts
   "ncs",
+  # script sources: because people want to use this pkg for compilation
+  "nss",
   # templates: potentially needed by scripts and other templates
   "uti", "utc", "utp", "ssf", "uts", "utt", "ute", "utm", "dlg", "utw", "utd",
   # palette data

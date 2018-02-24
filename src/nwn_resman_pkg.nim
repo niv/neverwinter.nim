@@ -19,6 +19,9 @@ const ServerPackageExtensions = [
   "ltr"
 ]
 
+const ServerPackageStubExtensions = [
+  "dds", "tga", "mdl"
+]
 
 let args = DOC """
 Packages a resman view into a slimmed-down variant suitable for
@@ -36,6 +39,7 @@ Options:
   --year YEAR                 Override embedded build year [default: """ & $getTime().getGMTime().year & """]
   --doy DOY                   Override embedded day of year [default: """ & $getTime().getGMTime().yearday & """]
   --extensions LIST           Comma-separated list of extensions to pack [default: """ & ServerPackageExtensions.join(",") & """]
+  --stubext LIST              Comma-separated list of extensions to pack as zero-byte stub files [default: """ & ServerPackageStubExtensions.join(",") & """]
   $OPTRESMAN
 """
 
@@ -51,16 +55,21 @@ doAssert(year >= 1900u32, "year needs to be >= 1900")
 doAssert(doy <= 365u32, "doy is out of range (0-365)")
 
 let whitelistExt = ($args["--extensions"]).split(",")
+let stublistExt  = ($args["--stubext"]).split(",")
 
-proc shouldBeIncluded(o: ResolvedResRef): bool =
+proc shouldBePackaged(o: ResRef): bool =
+  let r = ($o.resType).toLowerAscii
+  whitelistExt.find(r) > -1 or stublistExt.find(r) > -1
+
+proc shouldHaveData(o: ResRef): bool =
   whiteListExt.find(($o.resType).toLowerAscii) > -1
 
-let allContent: seq[ResolvedResRef] = rm.contents.mapIt(it.resolve().get()).
-  # Only resrefs matching the predicate
-  filterIt(it.resolve().get().shouldBeIncluded).
-  # Sort entries so the build is reproducible
-  sorted() do (lhs, rhs: ResolvedResRef) -> int:
-    system.cmp[string](lhs.toFile.toUpperAscii, rhs.toFile.toUpperAscii)
+let allContent =
+  toSeq(rm.contents.items).
+    filterIt(it.shouldBePackaged).
+    # Sort entries so the build is reproducible
+    sorted() do (lhs, rhs: ResRef) -> int:
+      system.cmp[string](($lhs).toUpperAscii, ($rhs).toUpperAscii)
 
 # How many files to pack into a single bif at max.
 const FilesPerBif = 5000
@@ -68,14 +77,16 @@ let allBifsToWrite = allContent.distribute(1 + allContent.len div FilesPerBif)
 
 info "Including ", allContent.len, " files in shrunk set, split into ", allBifsToWrite.len, " bifs"
 
-let bifs = allBifsToWrite.map() do (idx: int, k: seq[ResolvedResRef]) -> KeyBifEntry:
+let bifs = allBifsToWrite.map() do (idx: int, k: seq[ResRef]) -> KeyBifEntry:
   result.name = "pkg" & $idx
   result.directory = bifDir
-  result.entries = k.mapIt(it.ResRef)
+  result.entries = k.mapIt(it)
 
 writeKeyAndBif(destDir=destination, keyName=keyName, bifPrefix=bifPrefix,
     bifs=bifs, year, doy) do (r: ResRef, io: Stream):
-  let res = rm[r].get()
-  io.write(res.readAll)
+
+  if shouldHaveData(r):
+    let res = rm[r].get()
+    io.write(res.readAll)
 
 info keyName, ".key written"

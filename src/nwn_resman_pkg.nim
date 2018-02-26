@@ -20,7 +20,7 @@ const ServerPackageExtensions = [
 ]
 
 const ServerPackageStubExtensions = [
-  "dds", "tga", "mdl"
+  "dds", "tga", "mdl", "plt"
 ]
 
 let args = DOC """

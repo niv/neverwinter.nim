@@ -45,7 +45,7 @@ tell it to only load the key file you are interested in.
 
 ## Build
 
-* Install nim 0.17.2, have it on PATH and working. The best way to do this
+* Install nim 0.18.0, have it on PATH and working. The best way to do this
   as of this writing is https://github.com/dom96/choosenim, which will install it
   for your user on Linux/OSX, and on Windows will even pull in the required compiler
   and package manager.

@@ -55,7 +55,7 @@ proc newStatsForContainer(): StatsForContainer =
   result.resShadowedSizes = newTable[ResType, int64]()
   result.resShadowedByContIdx = newCountTable[int]()
 
-proc `+`(a, b: StatsForContainer): StatsForContainer {.noSideEffect.} =
+proc `+`(a, b: StatsForContainer): StatsForContainer =
   result = newStatsForContainer()
 
   if a.resTypes != nil: result.resTypes.merge(a.resTypes)
@@ -76,7 +76,7 @@ proc `+`(a, b: StatsForContainer): StatsForContainer {.noSideEffect.} =
   if a.resSizes != nil:
     for k, v in a.resSizes:
       if not result.resSizes.hasKey(k): result.resSizes[k] = 0
-      result.resSizes[k] += v
+      result.resSizes[k] = result.resSizes[k] + v
 
   if b.resSizes != nil:
     for k, v in b.resSizes:
@@ -183,5 +183,6 @@ for entry in stats:
 
 if detailLevel > 1:
   echo "Totals:"
-  let st = stats.sum
+  var st: StatsForContainer
+  for i in items(stats): st = st + i
   printStats(st)

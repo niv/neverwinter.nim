@@ -147,7 +147,5 @@ proc runner*() {.async.} =
   else: quit("wat")
 
   echo response.pretty
-  quit()
 
-asyncCheck runner()
-runForever()
+waitFor runner()

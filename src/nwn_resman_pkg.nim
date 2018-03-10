@@ -36,8 +36,8 @@ Options:
   -k KEYNAME                  Key filename [default: nwn_base]
   -b BIFPREFIX                Bif prefix inside key table [default: data\]
   -B BIFDIR                   Put bifs into subdirectory [default: ]
-  --year YEAR                 Override embedded build year [default: """ & $getTime().getGMTime().year & """]
-  --doy DOY                   Override embedded day of year [default: """ & $getTime().getGMTime().yearday & """]
+  --year YEAR                 Override embedded build year [default: """ & $getTime().utc.year & """]
+  --doy DOY                   Override embedded day of year [default: """ & $getTime().utc.yearday & """]
   --extensions LIST           Comma-separated list of extensions to pack [default: """ & ServerPackageExtensions.join(",") & """]
   --stubext LIST              Comma-separated list of extensions to pack as zero-byte stub files [default: """ & ServerPackageStubExtensions.join(",") & """]
   $OPTRESMAN

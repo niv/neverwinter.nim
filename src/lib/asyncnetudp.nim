@@ -74,4 +74,4 @@ proc sendTo*(sock: AsyncSocket, address: string, port: Port, data: string,
 
     it = it.ai_next
 
-  dealloc(aiList)
+  freeAddrInfo(aiList)

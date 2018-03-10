@@ -389,7 +389,11 @@ proc readStructInto(loader: GffLazyLoader, idx: int, into: GffStruct) =
 
     # always resolve direct types; we already have the data, since that's really
     # just casts.
-    if not isC or not loader.lazy: discard fld.resolve()
+    if not isC or not loader.lazy:
+      try: discard fld.resolve()
+      except IOError: raise newException(IOError, getCurrentExceptionMsg() &
+        " while immediate-loading field " & lbl & " of type " & $fld.fieldKind &
+        " on struct " & $into.id)
 
     into.fields[lbl] = fld
 

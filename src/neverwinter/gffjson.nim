@@ -108,6 +108,8 @@ proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
       for kk, vv in pairs(v["value"].getFields):
         exo.entries[kk.parseInt] = vv.str
       result[k, GffCExoLocString] = exo
+      if v.hasKey("id"):
+        exo.strRef = v["id"].getInt.GffInt
 
     of "list":
       expect(v["value"].kind == JArray, $v)

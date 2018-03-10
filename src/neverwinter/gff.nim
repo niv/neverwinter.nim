@@ -621,7 +621,10 @@ proc write*(io: Stream, root: GffRoot) =
             m.write(lang.int32)
             m.write(str2.len.int32)
             m.write(str2)
-          fieldData.write(m.getPosition.int32) # totalsz
+          # +8: A CExoLocString begins with a single DWORD (4-byte unsigned integer)
+          #     which stores the total number of bytes in the CExoLocString,
+          #     not including the first 4 size bytes.
+          fieldData.write((m.getPosition + 8).int32) # totalsz
           fieldData.write(s.strref.int32)
           fieldData.write(s.entries.len.int32) #strcount
           m.setPosition(0)

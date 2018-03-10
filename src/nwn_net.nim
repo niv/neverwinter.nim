@@ -90,8 +90,8 @@ proc runner*() {.async.} =
     let list = await ask[BMSA, BMSB](BMSA())
 
     let addresses = list["addresses"].getElems().map() do (loc: JsonNode) -> (string, Port):
-      let actualIp = loc["ipv4"].getNum.uint32.int2ip
-      let actua0 = loc["port"].getNum.Port
+      let actualIp = loc["ipv4"].getInt.uint32.int2ip
+      let actua0 = loc["port"].getInt.Port
       (actualIp, actua0)
 
     let futures = addresses.map() do (loc: (string, Port)) -> Future[JsonNode]:
@@ -110,7 +110,7 @@ proc runner*() {.async.} =
       if not fut.failed:
         p = fut.read
         if p.hasKey("_bnxr") and p["_bnxr"].hasKey("currentPlayers"):
-          playerCount += p["_bnxr"]["currentPlayers"].getNum.int
+          playerCount += p["_bnxr"]["currentPlayers"].getInt.int
       else:
         p["_failure"] = %fut.error.msg.split("\L")[0]
       p["host"] = %loc[0]
@@ -121,7 +121,7 @@ proc runner*() {.async.} =
       sort(responseList) do (a, b: JsonNode) -> int:
         let hasA = a.hasKey("_bnxr") and a["_bnxr"].hasKey("currentPlayers")
         let hasB = b.hasKey("_bnxr") and b["_bnxr"].hasKey("currentPlayers")
-        if hasA and hasB: cmp(b["_bnxr"]["currentPlayers"].getNum, a["_bnxr"]["currentPlayers"].getNum)
+        if hasA and hasB: cmp(b["_bnxr"]["currentPlayers"].getInt, a["_bnxr"]["currentPlayers"].getInt)
         elif hasA: -1
         elif hasB: 1
         else: 0

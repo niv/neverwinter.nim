@@ -87,7 +87,7 @@ type
 
   FloatType = float | float32 | float64
 
-  Nilable = seq|ref|string|ptr|pointer|cstring
+  # Nilable = seq|ref|string|ptr|pointer|cstring
 
 
 # support for all native json types included by default
@@ -99,7 +99,7 @@ proc toJson*[T: bool](t: T, flags = DefaultSerializerFlags): JsonNode =
 
 proc fromJson*[T: bool](t: var T, j: JsonNode, flags = DefaultDeserializerFlags): void =
   if j.kind != JBool: raise newException(DeserializeError, $j & " not bool")
-  t = j.getBVal
+  t = j.getBool
 
 # string
 
@@ -117,7 +117,7 @@ proc toJson*[T: IntType](t: T, flags = DefaultSerializerFlags): JsonNode =
 
 proc fromJson*[T: IntType](t: var T, j: JsonNode, flags = DefaultDeserializerFlags): void =
   if j.kind != JInt: raise newException(DeserializeError, $j & " not integer")
-  t = cast[T](j.getNum)
+  t = cast[T](j.getBiggestInt)
 
 # float
 
@@ -126,7 +126,7 @@ proc toJson*[T: FloatType](t: T, flags = DefaultSerializerFlags): JsonNode =
 
 proc fromJson*[T: FloatType](t: var T, j: JsonNode, flags = DefaultDeserializerFlags): void =
   if j.kind != JFloat: raise newException(DeserializeError, $j & " not floating point")
-  t = j.getFNum
+  t = j.getFloat
 
 # enum
 
@@ -135,7 +135,7 @@ proc toJson*[T: enum](t: T, flags = DefaultSerializerFlags): JsonNode =
 
 proc fromJson*[T: enum](t: var T, j: JsonNode, flags = DefaultDeserializerFlags): void =
   if j.kind != JInt: raise newException(DeserializeError, $j & " not int (enumeration)")
-  t = cast[T](j.getNum)
+  t = cast[T](j.getBiggestInt)
 
 # tuple
 

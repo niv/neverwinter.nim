@@ -82,7 +82,7 @@ proc readJson(fs: Stream): SingleTlk =
 
   result = newSingleTlk()
 
-  result.language = j["language"].getNum.Language
+  result.language = j["language"].getInt.Language
 
   for e in j["entries"].getElems.withProgressBar():
     doAssert(e.hasKey("id") and e["id"].kind == JInt)
@@ -94,11 +94,11 @@ proc readJson(fs: Stream): SingleTlk =
     entry.text = e["text"].str
     if e.hasKey("sound"): entry.soundResRef = e["sound"].str
     if e.hasKey("soundLen"):
-      doAssert(e["soundLen"].getFNum >= 0.0)
-      entry.soundLength = e["soundLen"].getFNum
+      doAssert(e["soundLen"].getFloat >= 0.0)
+      entry.soundLength = e["soundLen"].getFloat
 
     if entry.hasValue:
-      result[e["id"].getNum.StrRef] = entry
+      result[e["id"].getInt.StrRef] = entry
 
 proc writeJson(fs: Stream, tlk: SingleTlk) =
   setNativeEncoding("UTF-8") # json is always utf-8

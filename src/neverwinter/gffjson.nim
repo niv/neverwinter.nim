@@ -50,7 +50,7 @@ proc toJson*(s: GffStruct): JSONNode =
 proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
   if j.hasKey("__struct_id"):
     expect(j["__struct_id"].kind == JInt)
-    result.id = j["__struct_id"].getNum.int32
+    result.id = j["__struct_id"].getInt.int32
 
   for k, v in pairs(j):
     if k.startswith("__"): continue
@@ -58,34 +58,34 @@ proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
     case v["type"].str:
     of "byte":
       expect(v["value"].kind == JInt, $v)
-      result[k, GffByte] = v["value"].getNum.GffByte
+      result[k, GffByte] = v["value"].getInt.GffByte
     of "char":
       expect(v["value"].kind == JInt, $v)
-      result[k, GffChar] = v["value"].getNum.GffChar
+      result[k, GffChar] = v["value"].getInt.GffChar
     of "word":
       expect(v["value"].kind == JInt, $v)
-      result[k, GffWord] = v["value"].getNum.GffWord
+      result[k, GffWord] = v["value"].getInt.GffWord
     of "short":
       expect(v["value"].kind == JInt, $v)
-      result[k, GffShort] = v["value"].getNum.GffShort
+      result[k, GffShort] = v["value"].getInt.GffShort
     of "dword":
       expect(v["value"].kind == JInt, $v)
-      result[k, GffDword] = v["value"].getNum.GffDword
+      result[k, GffDword] = v["value"].getInt.GffDword
     of "int":
       expect(v["value"].kind == JInt, $v)
-      result[k, GffInt] = v["value"].getNum.GffInt
+      result[k, GffInt] = v["value"].getInt.GffInt
     of "float":
       expect(v["value"].kind == JFloat, $v)
-      result[k, GffFloat] = v["value"].getFNum.GffFloat
+      result[k, GffFloat] = v["value"].getFloat.GffFloat
     of "dword64":
       expect(v["value"].kind == JInt, $v)
-      result[k, GffDword64] = v["value"].getNum.GffDword64
+      result[k, GffDword64] = v["value"].getInt.GffDword64
     of "int64":
       expect(v["value"].kind == JInt, $v)
-      result[k, GffInt64] = v["value"].getNum.GffInt64
+      result[k, GffInt64] = v["value"].getInt.GffInt64
     of "double":
       expect(v["value"].kind == JFloat, $v)
-      result[k, GffDouble] = v["value"].getFNum.GffDouble
+      result[k, GffDouble] = v["value"].getFloat.GffDouble
     of "cexostring":
       expect(v["value"].kind == JString, $v)
       result[k, GffCExoString] = v["value"].str.GffCExoString

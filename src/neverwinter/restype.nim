@@ -118,6 +118,8 @@ registerResType(ResType 2067, "bak");
 registerResType(ResType 2068, "dat");
 registerResType(ResType 2069, "shd");
 registerResType(ResType 2070, "xbc");
+registerResType(ResType 2071, "wbm");
+registerResType(ResType 2072, "mtr");
 registerResType(ResType 9996, "ids");
 registerResType(ResType 9997, "erf");
 registerResType(ResType 9998, "bif");

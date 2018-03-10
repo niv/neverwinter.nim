@@ -127,8 +127,8 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
   ioKey.write(uint32 totalcount)
   ioKey.write(uint32 HeaderStartOfFileData) # offset to file table
   ioKey.write(uint32 HeaderStartOfFileData + fileTableSz + filenamesSz) # offset to key table
-  ioKey.write(uint32 getTime().getGMTime().year - 1900) # build year
-  ioKey.write(uint32 getTime().getGMTime().yearday) # build day
+  ioKey.write(uint32 getTime().utc.year - 1900) # build year
+  ioKey.write(uint32 getTime().utc.yearday) # build day
   ioKey.write(repeat("\x00", 32)) # reserved
 
   # debug "Offset to fn table: ", HeaderStartOfFileData + fileTableSz

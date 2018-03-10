@@ -1,4 +1,4 @@
-import shared, securehash, md5
+import shared, std/sha1, md5
 
 let args = DOC """
 Find files in resman

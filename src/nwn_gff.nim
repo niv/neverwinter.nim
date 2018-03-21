@@ -2,8 +2,8 @@ import shared
 
 const GffExtensions = @[
   "utc", "utd", "ute", "uti", "utm", "utp", "uts", "utt", "utw",
-  "git", "are", "gic", "mod", "ifo", "fac", "ssf", "dlg", "itp",
-  "bic", "jrl", "gff", "gui"
+  "git", "are", "gic", "mod", "ifo", "fac", "dlg", "itp", "bic",
+  "jrl", "gff", "gui"
 ]
 
 const SupportedFormatsSimple = ["gff", "json"]

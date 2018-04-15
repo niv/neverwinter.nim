@@ -75,7 +75,13 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
     let restype = io.readInt16()
     io.setPosition(io.getPosition + 2) # unused NULLs
 
-    var rr = newResRef(resref, restype.ResType)
+    var rr =
+      try:
+        newResRef(resref, restype.ResType)
+      except:
+        warn "erf file contains entry with invalid resref at index ", i, ": ",
+          getCurrentExceptionMsg(), "; rewritten to 'invalid_", i, ".", restype.ResType, "'"
+        newResRef("invalid_" & $i, restype.ResType)
 
     # Some distro erfs have duplicate resref entries. We skip them if they
     # point to the same resource.

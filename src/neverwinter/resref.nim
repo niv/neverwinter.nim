@@ -22,7 +22,7 @@ proc isValidResRefPart1(s: string): bool = s.len > 0 and s.len <= ResRefMaxLengt
 
 proc newResRef*(resRef: string, resType: ResType): ResRef =
   ## Creates a new ResRef. Will raise a ValueError if the given data is invalid.
-  expect(resRef.isValidResRefPart1, "'" & resRef & "' is not a valid resref")
+  expect(resRef.isValidResRefPart1, "'" & resRef & "." & $resType & "' is not a valid resref")
   new(result)
   result.resRef = resRef
   result.resType = resType

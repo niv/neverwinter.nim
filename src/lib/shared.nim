@@ -1,5 +1,5 @@
-import strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets
-export strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets
+import strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
+export strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
 
 import neverwinter.util, neverwinter.resman,
   neverwinter.resref, neverwinter.key,
@@ -39,10 +39,15 @@ Logging:
   --verbose                   Turn on debug logging
   --quiet                     Turn off all logging except errors
   --version                   Show program version and licence info
+
+Encoding:
   --nwn-encoding CHARSET      Sets the nwn encoding [default: """ & getNwnEncoding() & """]
   --other-encoding CHARSET    Sets the "other" file formats encoding, where
                               supported; see docs. Defaults to your current
                               shell/platform charset: [default: """ & getNativeEncoding() & """]
+Resources:
+  --add-restypes TUPLES       Add a restype. TUPLES is a is a comma-separated list of colon-separated restypes.
+                              Example: txt:10,mdl:2002
 """
 
 # Options common to utilities working with a resman.
@@ -87,6 +92,21 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
 
   debug("NWN file encoding: " & getNwnEncoding())
   debug("Other file encoding: " & getNativeEncoding())
+
+  if Args.hasKey("--add-restypes") and Args["--add-restypes"]:
+    let types = ($Args["--add-restypes"]).split(",").mapIt(it.split(":"))
+    for ty in types:
+      if ty.len != 2:
+        raise newException(ValueError,
+          "Could not parse --add-restypes: '" & ($Args["--add-restypes"]) & "'")
+
+      let (rt, ext) = (ty[1].parseInt, ty[0])
+
+      if rt < low(uint16).int or rt > high(uint16).int:
+        raise newException(ValueError, "Integer " & $rt & " out of range for ResType")
+
+      registerResType(ResType rt, ext)
+      debug "Registering custom ResType ", ext, " -> ", rt
 
 proc findNwnRoot*(): string =
   if Args["--root"]:

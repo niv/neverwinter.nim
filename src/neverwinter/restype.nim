@@ -2,13 +2,15 @@
 ## extension.
 ##
 ## There are a few builtins (all that NWN1 knows about); and if that makes you
-## unhappy, you can add these global procs to add more at runtime.
+## unhappy, you can call the global proc registerResType to add more at runtime.
 
 import tables, strutils, options
 
 import util
 
 type ResType* = distinct uint16
+
+const ValidResTypeCharacters = {'A'..'Z', '0'..'9'}
 
 proc `==`*(x, y: ResType): bool {.borrow.}
 
@@ -19,7 +21,11 @@ proc resTypeRegistered*(resType: ResType): bool = types.hasKey(resType)
 proc resExtRegistered*(resExt: string): bool = rtypes.hasKey(resExt)
 
 proc registerResType*(resType: ResType, extension: string) =
-  expect(extension.len > 0) #  and extension.len <= 3)
+  expect(extension.len > 0 and extension.len <= 3)
+
+  if extension.count({'a'..'z', '0'..'9'}) != 3:
+    raise newException(ValueError, "ResType '" & extension.escape &
+      "' contains invalid characters")
 
   types[resType] = extension.toLowerAscii
   rtypes[extension.toLowerAscii] = resType

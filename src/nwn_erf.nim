@@ -16,14 +16,20 @@ Options:
   -x                          Unpack files into current directory
   -t                          List files in archive
 
+  -r NUM                      Recurse at most N directories when finding entries to pack [default: 1]
+
   -e, --erf-type TYPE         Set erf header type [default: ERF]
   $OPT
 """
 
 let filename = $args["-f"]
+let maxRecurseLevel = parseInt($args["-r"])
 
 proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string],
-    outSeq: var seq[ResRef]) =
+    outSeq: var seq[ResRef], recurseLevel: int) =
+
+  if recurseLevel > maxRecurseLevel: return
+
   if fileExists(path):
     # Fail for explicitly listed filenames.
     let rr = newResolvedResRef(path.extractFilename)
@@ -37,11 +43,11 @@ proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string],
   elif dirExists(path):
     for wd in walkDir(path):
       if wd.kind == pcDir:
-        pathToResRefMapping(wd.path, outTbl, outSeq)
+        pathToResRefMapping(wd.path, outTbl, outSeq, recurseLevel + 1)
 
       elif wd.kind == pcFile:
         let r = tryNewResolvedResRef(wd.path.extractFilename)
-        if r.isSome: pathToResRefMapping(wd.path, outTbl, outSeq)
+        if r.isSome: pathToResRefMapping(wd.path, outTbl, outSeq, recurseLevel)
         else: warn(wd.path & " is not a valid resref")
 
   else: quit("No idea what to do about: " & path)
@@ -57,7 +63,7 @@ if args["-c"]:
   var entries = newSeq[ResRef]()
 
   for fi in @(args["<entry>"]):
-    pathToResRefMapping(fi, resrefToFile, entries)
+    pathToResRefMapping(fi, resrefToFile, entries, 1)
 
   let outfile = if filename == "-": newFileStream(stdout)
                 else: newFileStream(filename, fmWrite)

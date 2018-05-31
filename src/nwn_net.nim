@@ -23,6 +23,7 @@ Usage:
   $0 [options] <server> bmsa
   $0 [options] <server> bmma
   $0 [options] <server> bmra
+  $0 [options] <server> bsst
   $0 [options] <server> list [--bnes] [--bnxi] [--bnds]
   $USAGE
 
@@ -143,6 +144,9 @@ proc runner*() {.async.} =
 
   elif args["bnlm"]:
     response = await ask[BNLM, BNLR](BNLM(messageNo: 3, sessionId: 90))
+
+  elif args["bsst"]:
+    response = await ask[BSST, BSSR](BSST())
 
   else: quit("wat")
 

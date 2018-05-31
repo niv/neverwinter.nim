@@ -123,6 +123,12 @@ type
     header: StaticValue["BMRB"]
     version: SizePrefixedString[uint16]
 
+  BSST* = object
+    header: StaticValue["BSST"]
+
+  BSSR* = object
+    header: StaticValue["BSSR"]
+
 proc int2ip*(ip: uint32): string =
   $(ip shr 24).uint8 & "." & $(ip shr 16 and 0xff).uint8 & "." &
     $(ip shr 8 and 0xff).uint8 & "." & $(ip and 0xff).uint8

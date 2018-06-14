@@ -8,9 +8,12 @@ Usage:
   $USAGE
 
 Options:
+  --no-symlinks               Don't follow symlinks
   -f --force                  Force pack even if target directory has stuff in it.
   $OPT
 """
+
+let noLinks = args["--no-symlinks"]
 
 type Bif = tuple
   fname: string
@@ -30,7 +33,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
     var sz: BiggestInt = 0
     var entries = newSeq[ResolvedResRef]()
     for f in walkDir(sourceDir / dir, true):
-      if f.kind == pcFile:
+      if f.kind == pcFile or (not noLinks and f.kind == pcLinkToFile):
         # this will exception if the res doesnt have a good type
         entries.add(newResolvedResRef(f.path))
         let fullFn = sourceDir / dir / f.path

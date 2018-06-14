@@ -17,6 +17,7 @@ Options:
   -t                          List files in archive
 
   -r NUM                      Recurse at most N directories when finding entries to pack [default: 1]
+  --no-symlinks               Don't follow symlinks
 
   -e, --erf-type TYPE         Set erf header type [default: ERF]
   $OPT
@@ -24,6 +25,7 @@ Options:
 
 let filename = $args["-f"]
 let maxRecurseLevel = parseInt($args["-r"])
+let noLinks = args["--no-symlinks"]
 
 proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string],
     outSeq: var seq[ResRef], recurseLevel: int) =
@@ -42,10 +44,10 @@ proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string],
 
   elif dirExists(path):
     for wd in walkDir(path):
-      if wd.kind == pcDir:
+      if wd.kind == pcDir or (not noLinks and wd.kind == pcLinkToDir):
         pathToResRefMapping(wd.path, outTbl, outSeq, recurseLevel + 1)
 
-      elif wd.kind == pcFile:
+      elif wd.kind == pcFile or (not noLinks and wd.kind == pcLinkToFile):
         let r = tryNewResolvedResRef(wd.path.extractFilename)
         if r.isSome: pathToResRefMapping(wd.path, outTbl, outSeq, recurseLevel)
         else: warn(wd.path & " is not a valid resref")

@@ -165,7 +165,7 @@ proc write*(io: Stream, tlk: SingleTlk) =
       if e.soundResRef != nil and e.soundResRef != "": flags += 0x6
 
       write[int32](entriesTableStream, flags.int32)
-      var sr = if e.soundResRef != nil: e.soundResRef[0..<16] else: ""
+      var sr = if e.soundResRef != nil: e.soundResRef[0..<min(16, e.soundResRef.len)] else: ""
       sr &= repeat("\x0", 16 - sr.len)
       assert(sr.len == 16)
       write(entriesTableStream, sr) # resref

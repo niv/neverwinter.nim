@@ -46,8 +46,8 @@ Options:
   -p, --pretty                Pretty output (json only)
 
   --language LANG             Override language ID when writing files.
-                              You can specify by enum const ("English"), or
-                              by ID. (see languages.nim)
+                              You can specify by enum const ("English"),
+                              shortcode ("de"), or by ID. (see languages.nim)
 
   --csv-separator SEP         What to use as separator for CSV cells [default: ,]
 
@@ -214,14 +214,30 @@ else: quit("Unsupported informat: " & informat)
 
 state.useCache = false
 
+var
+  LanguageShortCodes* = initTable[string, Language]()
+LanguageShortCodes["en"] = Language.English
+LanguageShortCodes["fr"] = Language.French
+LanguageShortCodes["de"] = Language.German
+LanguageShortCodes["it"] = Language.Italian
+LanguageShortCodes["es"] = Language.Spanish
+LanguageShortCodes["pl"] = Language.Polish
+
 if args["--language"]:
   let slang = $args["--language"]
-  if slang.isDigit():
-    let id = slang.parseInt
-    state.language = id.Language
-    if state.language.ord != id: raise newException(ValueError, "Not a valid language id (see languages.nim)")
-  else:
-    state.language = parseEnum[Language]($args["--language"])
+  try:
+    if slang.isDigit():
+      let id = slang.parseInt
+      state.language = id.Language
+    elif slang.len == 2:
+      if not LanguageShortCodes.hasKey(slang): raise newException(ValueError, "no such shortcode")
+      state.language = LanguageShortCodes[slang]
+    else:
+      state.language = parseEnum[Language](slang)
+  except:
+    raise newException(ValueError, slang & ": Not a valid language (" & getCurrentExceptionMsg() & ")")
+
+  debug "Overridden language: ", state.language
 
 case outformat:
 of "tlk":    output.write(state)

@@ -4,37 +4,32 @@ let args = DOC """
 Extract file(s) from resman into a directory.
 
 Usage:
-  $0 [options] <file>...
-  $0 [options] --all
+  $0 [options]
   $USAGE
 
 Options:
+  --all                       Match all files.
+  -p, --pattern PATTERN       Match only files where the name contains PATTERN.
+                              Wildcards are not supported at this time.
+  -b, --binary BINARY         Match only files where the data contains BINARY.
+  -v, --invert-match          Invert matching rules.
+
   -d DIRECTORY                Save files to DIRECTORY [default: .]
   $OPTRESMAN
 """
+
+if not args["--pattern"] and not args["--binary"] and not args["--all"]:
+  quit("Give at least one of --pattern, --binary or --all")
 
 let rm = newBasicResMan()
 
 let destination = ($args["-d"])
 doAssert(dirExists(destination), "destination directory does not exist")
 
-proc toSeqx[T](c: HashSet[T]): seq[T] =
-  # Grrr, stdlib.
-  result = newSeq[T]()
-  for cc in c: result.add(cc)
+let invert       = args["--invert-match"]
+let patternMatch = if args["--pattern"]: $args["--pattern"] else: ""
+let binaryMatch  = if args["--binary"]: $args["--binary"] else: ""
 
-let scope: seq[ResRef] =
-  if args["--all"]: toSeqx[ResRef](rm.contents)
-  else: (map(@(args["<file>"])) do (x: string) -> ResRef: newResolvedResRef(x))
-
-let res: seq[Option[Res]] = scope.mapIt(rm[it])
-
-for o in res:
-  if not o.isSome: quit("Could not find file in resman: " & $o & ", nothing written")
-
-var rr = newSeq[Res]()
-for o in res.withProgressBar("resolve: "):
-  rr.add(o.get())
-
-for resolved in rr.withProgressBar("write: "):
+for resolved in filterByMatch(rm, patternMatch, binaryMatch, invert):
+  if args["--verbose"]: echo $resolved.resRef
   writeFile(destination / $resolved.resRef, resolved.readAll())

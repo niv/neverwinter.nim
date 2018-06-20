@@ -15,38 +15,28 @@ Usage:
   $USAGE
 
 Options:
-  --all                       List all files.
-  -p, --pattern PATTERN       List files where the name contains PATTERN.
+  --all                       Match all files.
+  -p, --pattern PATTERN       Match only files where the name contains PATTERN.
                               Wildcards are not supported at this time.
-  -b, --binary BINARY         List files where the data contains BINARY.
-  -v, --invert-match          List non-matching files.
+  -b, --binary BINARY         Match only files where the data contains BINARY.
+  -v, --invert-match          Invert matching rules.
+
   -d, --details               Show more details.
   --md5                       Generate md5 checksums of files.
   --sha1                      Generate sha1 checksums of files.
   $OPTRESMAN
 """
 
-if not args["--binary"] and not args["--pattern"] and not args["--all"]:
-  quit("Give one of -b, -p or --all")
+if not args["--pattern"] and not args["--binary"] and not args["--all"]:
+  quit("Give at least one of --pattern, --binary or --all")
 
 let rm = newBasicResMan()
 
-let invert = args["--invert-match"]
+let invert       = args["--invert-match"]
+let patternMatch = if args["--pattern"]: $args["--pattern"] else: ""
+let binaryMatch  = if args["--binary"]: $args["--binary"] else: ""
 
-var filtered = newSeq[Res]()
-for o in rm.contents.withProgressBar("filter: "):
-  let str = $o
-  let res = rm[o].get()
-
-  let match = args["--all"] or (
-               (args["--pattern"] and str.find($args["--pattern"]) != -1) or
-               (args["--binary"] and res.readAll().find($args["--binary"]) != -1)
-              )
-
-  if (match and not invert) or (not match and invert):
-    filtered.add(res)
-
-for res in filtered:
+for res in filterByMatch(rm, patternMatch, binaryMatch, invert):
   let str = $res.resRef
   stdout.write(str)
 

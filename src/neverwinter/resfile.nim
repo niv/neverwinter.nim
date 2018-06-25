@@ -13,13 +13,15 @@ type
 proc newResFile*(filename: string): ResFile =
   new(result)
   result.filename = filename
-  result.resRef = newResolvedResRef(filename)
+  result.resRef = newResolvedResRef(extractFilename(filename))
 
-proc resRefToFullPath(self: ResFile, rr: ResolvedResRef): string = rr.toFile
+proc resRefToFullPath(self: ResFile, rr: ResolvedResRef): string =
+  self.filename
 
 method contains*(self: ResFile, rr: ResRef): bool =
   let r = rr.resolve()
-  result = r.isSome and fileExists(self.resRefToFullPath(r.get()))
+  result = rr == self.resRef and r.isSome and
+    fileExists(self.resRefToFullPath(r.get()))
 
 method demand*(self: ResFile, rr: ResRef): Res =
   let fp = self.resRefToFullPath(rr.resolve().get())

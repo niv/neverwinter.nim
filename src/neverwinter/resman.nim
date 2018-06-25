@@ -155,10 +155,10 @@ proc origin*(self: Res): ResOrigin =
   ## label the reader attached to it (if any).
   self.origin
 
-method readAll*(self: Res): string {.base.} =
+method readAll*(self: Res, useCache: bool = true): string {.base.} =
   ## Reads the full data of this res. The value is cached, as long as it
   ## fits inside MemoryCacheThreshold.
-  if self.cached:
+  if useCache and self.cached:
     result = self.cache
 
   else:
@@ -170,7 +170,7 @@ method readAll*(self: Res): string {.base.} =
     else:
       result = self.io.readStrOrErr(self.size)
 
-    if self.size < MemoryCacheThreshold:
+    if useCache and self.size < MemoryCacheThreshold:
       self.cached = true
       self.cache = result
       if self.ioOwned: self.io.close()

@@ -36,7 +36,9 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
     warn("Unknown erf file type: '" & repr(result.fileType) &
          "', possibly invalid erf?")
 
-  expect(io.readStrOrErr(4) == "V1.0", "unsupported erf version")
+  let modv = io.readStrOrErr(4)
+  if  modv != "V1.0":
+    warn "unsupported erf version: ", modv, "; erf might fail to load"
 
   let locStrCount = io.readInt32()
   let locStringSz = io.readInt32()

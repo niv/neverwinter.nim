@@ -1,4 +1,4 @@
-import streams, strutils, options, sequtils, tables
+import streams, strutils, options, sequtils, tables, math
 
 import util, lru, resman, resref, languages
 export languages
@@ -55,7 +55,7 @@ proc getFromIo(self: SingleTlk, str: StrRef): (Weight, TlkEntry) =
   discard self.io.readInt32() # pitch variance is unused
   let offsetToString = self.io.readInt32()
   let stringSz = self.io.readInt32()
-  result[1].soundLength = self.io.readFloat32()
+  result[1].soundLength = max(round(self.io.readFloat32(), 4), 0)
 
   self.io.setPosition(self.ioStartPos + self.ioEntriesOffset + offsetToString)
   result[1].text = self.io.readStrOrErr(stringSz).fromNwnEncoding

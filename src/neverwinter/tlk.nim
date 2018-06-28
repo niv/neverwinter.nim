@@ -45,7 +45,12 @@ proc getFromIo(self: SingleTlk, str: StrRef): (Weight, TlkEntry) =
   self.io.setPosition(HeaderSize + DataElementSize * str.int)
 
   discard self.io.readInt32() # we dont care about flags atm
-  result[1].soundResRef = self.io.readStrOrErr(16).strip(false, true, {'\0'})
+
+  # - Some translation house tlks contain this invalid gizmo: 0xcx0;
+  #   presumably a leftover from some old editor.
+  # - Also strip whitespace while we're here.
+  result[1].soundResRef = self.io.readStrOrErr(16).strip(true, true, {'\0', '\xc0'} + Whitespace)
+
   discard self.io.readInt32() # volume variance is unused
   discard self.io.readInt32() # pitch variance is unused
   let offsetToString = self.io.readInt32()

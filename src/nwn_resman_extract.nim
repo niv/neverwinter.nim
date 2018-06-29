@@ -4,6 +4,7 @@ let args = DOC """
 Extract file(s) from resman into a directory.
 
 Usage:
+  $0 [options] <file>...
   $0 [options]
   $USAGE
 
@@ -18,18 +19,24 @@ Options:
   $OPTRESMAN
 """
 
-if not args["--pattern"] and not args["--binary"] and not args["--all"]:
-  quit("Give at least one of --pattern, --binary or --all")
+if not (args["<file>"] xor (args["--pattern"] or args["--binary"] or args["--all"])):
+  quit("Give <file> OR any of (--pattern, --binary, --all); try -h to see all options")
 
 let rm = newBasicResMan()
 
 let destination = ($args["-d"])
 doAssert(dirExists(destination), "destination directory does not exist")
 
-let invert       = args["--invert-match"]
-let patternMatch = if args["--pattern"]: $args["--pattern"] else: ""
-let binaryMatch  = if args["--binary"]: $args["--binary"] else: ""
+if args["<file>"]:
+  let res = args["<file>"].mapIt(newResolvedResRef(it)).mapIt(rm[it].get())
+  for f in res:
+    writeFile(destination / $f.resRef, f.readAll())
 
-for resolved in filterByMatch(rm, patternMatch, binaryMatch, invert):
-  if args["--verbose"]: echo $resolved.resRef
-  writeFile(destination / $resolved.resRef, resolved.readAll())
+else:
+  let invert       = args["--invert-match"]
+  let patternMatch = if args["--pattern"]: $args["--pattern"] else: ""
+  let binaryMatch  = if args["--binary"]: $args["--binary"] else: ""
+
+  for resolved in filterByMatch(rm, patternMatch, binaryMatch, invert):
+    if args["--verbose"]: echo $resolved.resRef
+    writeFile(destination / $resolved.resRef, resolved.readAll())

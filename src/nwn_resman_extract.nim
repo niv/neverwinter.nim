@@ -30,7 +30,14 @@ doAssert(dirExists(destination), "destination directory does not exist")
 if args["<file>"]:
   let res = args["<file>"].mapIt(newResolvedResRef(it)).mapIt(rm[it].get())
   for f in res:
+    if args["--verbose"]: echo $f.resRef
     writeFile(destination / $f.resRef, f.readAll())
+
+elif args["--all"]:
+  for rr in rm.contents:
+    let resolved = rm[rr].get()
+    if args["--verbose"]: echo $resolved.resRef
+    writeFile(destination / $resolved.resRef, resolved.readAll())
 
 else:
   let invert       = args["--invert-match"]

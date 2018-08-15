@@ -16,6 +16,12 @@ export progressbar
 when defined(profiler):
   import nimprof
 
+const GffExtensions* = @[
+  "utc", "utd", "ute", "uti", "utm", "utp", "uts", "utt", "utw",
+  "git", "are", "gic", "mod", "ifo", "fac", "dlg", "itp", "bic",
+  "jrl", "gff", "gui"
+]
+
 addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
 
 if isatty(stdout):

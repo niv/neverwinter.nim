@@ -18,15 +18,15 @@ type
     buildDay*: int
 
     strRef*: int
-    locStrings: TableRef[int, string]
+    locStrings: Table[int, string]
     entries: OrderedTableRef[ResRef, Res]
 
-proc locStrings*(self: Erf): TableRef[int, string] =
+proc locStrings*(self: Erf): var Table[int, string] =
   self.locStrings
 
 proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
   new(result)
-  result.locStrings = newTable[int, string]()
+  result.locStrings = initTable[int, string]()
   result.entries = newOrderedTable[ResRef, Res]()
   result.mtime = getTime()
   result.filename = filename

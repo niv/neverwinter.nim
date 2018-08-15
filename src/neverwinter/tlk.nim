@@ -99,9 +99,10 @@ proc `[]`*(self: Tlk, str: StrRef, gender = Gender.Male): Option[TlkEntry] =
       let queried = pair.male[str]
       if queried.isSome: return queried
 
-proc highest*(self: SingleTlk): int = max(self.ioEntryCount, self.staticEntriesHighest)
-  ## Returns the highest entry in this SingleTlk.  Note: entries might not be
-  ## continuous.
+proc highest*(self: SingleTlk): int =
+  ## Returns the highest entry in this SingleTlk.
+  ## Note: entries might not be continuous.
+  max(self.ioEntryCount - 1, self.staticEntriesHighest)
 
 proc newSingleTlk*(): SingleTlk =
   new(result)

@@ -90,6 +90,14 @@ method contents*(self: ResContainer): OrderedSet[ResRef] {.base.} =
   ## This can be a potentially *expensive operation*.
   raise newException(ValueError, "Implement me!")
 
+proc `[]`*(self: ResContainer, rr: ResolvedResRef): Option[Res] =
+  ## Alias for contains + demand.
+  if self.contains(rr): result = some(self.demand(rr))
+
+proc `[]`*(self: ResContainer, rr: ResRef): Option[Res] =
+  ## Alias for contains + demand.
+  if self.contains(rr): result = some(self.demand(rr))
+
 
 
 # -----------

@@ -62,13 +62,27 @@ proc tlkify(gin: var GffStruct) =
 
     elif val.fieldKind == GffFieldKind.CExoLocString:
       var exolocstr = val.getValue(GffCExoLocString)
+
+      var textsToIgnore = newSeq[string]()
+      # Don't translate fields that are just repeats of tags or resrefs.
+      if gin.hasField("Tag", GffCExoString): textsToIgnore.add($gin["Tag", GffCExoString])
+      if gin.hasField("TemplateResRef", GffResRef): textsToIgnore.add($gin["TemplateResRef", GffResRef])
+      if gin.hasField("ResRef", GffResRef): textsToIgnore.add($gin["ResRef", GffResRef])
+
+      # Don't translate strings the user can't see:
+
+      # static/unused placeables
+      if gin.hasField("Useable", GffByte) and gin["Useable", GffByte] == 0 or
+         gin.hasField("Static", GffByte) and gin["Static", GffByte] == 1:
+        continue
+
       if exolocstr.strRef == -1 and exolocstr.entries.len > 0:
         doAssert(exolocstr.entries.len == 1) # we can only do english, sorry.
         doAssert(exolocstr.entries.hasKey(0))
         doAssert(StrRef(exolocstr.strRef) == BadStrRef)
         let str = exolocstr.entries[0]
 
-        if str.len > 0:
+        if str.len > 0 and not textsToIgnore.contains(str):
           let rewriteStrRef = translate(str) + 16777216
           doAssert(rewriteStrRef != BadStrRef)
           exolocstr.entries.clear
@@ -92,7 +106,7 @@ proc tlkify(ein: Erf, outFile: string) =
         # hack up tlk entry.
         let existingTlk = root["Mod_CustomTlk", GffCExoString]
         if existingTlk != "":
-          doAssert(existingTlk == tlkBaseFn, "Module alreadyt has a tlk name, but it mismatches to the one you gave us. This is not what you want.")
+          doAssert(existingTlk == tlkBaseFn, "Module already has a tlk name of a different name: " & existingTlk)
         else:
           info "Setting TLK to ", tlkBaseFn
           root["Mod_CustomTlk", GffCExoString] = tlkBaseFn
@@ -103,7 +117,7 @@ proc tlkify(ein: Erf, outFile: string) =
       io.write(root)
 
     else:
-      debug "Writing out non-gff ", rr
+      debug "Writing out non-gff: ", rr
       io.write(ff.readAll())
     discard
 

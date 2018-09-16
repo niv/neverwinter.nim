@@ -318,7 +318,7 @@ proc del*(self: GffStruct, label: string) =
 
 proc hasField*[T: GffFieldType](self: GffStruct, label: string, t: typedesc[T]): bool =
   ## Returns true if self has a label of the given type.
-  result = self.fields.hasKey(label) and self.fields[label].hasTypeOf(t)
+  result = self.fields.hasKey(label) and self.fields[label].fieldKind.hasTypeOf(t)
 
 proc fields*(self: GffStruct): TableRef[string, GffField] =
   ## Gives you a ref to the table holding all the GffField instannces.

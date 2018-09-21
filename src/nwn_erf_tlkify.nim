@@ -35,6 +35,15 @@ var translations: CritBitTree[StrRef]
 var newTranslations = 0
 var latestStrref = StrRef 0
 
+# Strings we skipped. We track them so we don't log them twice.
+var skippedTranslations: CritBitTree[void]
+
+proc trackSkipped(str: string): void =
+  let strl = str.toLowerAscii
+  if not skippedTranslations.contains(strl):
+    skippedTranslations.incl(strl)
+    info "SKIP: ", str
+
 proc translate(str: string): StrRef =
   if str.len > 0:
     if not translations.hasKey(str):
@@ -77,18 +86,24 @@ proc tlkify(gin: var GffStruct) =
         continue
 
       if exolocstr.strRef == -1 and exolocstr.entries.len > 0:
-        doAssert(exolocstr.entries.len == 1) # we can only do english, sorry.
-        doAssert(exolocstr.entries.hasKey(0))
-        doAssert(StrRef(exolocstr.strRef) == BadStrRef)
+        doAssert(exolocstr.entries.len == 1,
+          "exolocstring has multiple languages, but we can only do one language")
+        doAssert(exolocstr.entries.hasKey(0),
+          "exolocstring has non-english language string")
+        doAssert(StrRef(exolocstr.strRef) == BadStrRef,
+          "exolocstring already has a strref AND english override data")
         let str = exolocstr.entries[0]
 
         if str.len > 0 and not textsToIgnore.contains(str):
           let rewriteStrRef = translate(str) + 16777216
-          doAssert(rewriteStrRef != BadStrRef)
+          doAssert(rewriteStrRef != BadStrRef, "failed to assign strref")
           exolocstr.entries.clear
           exolocstr.strRef = int rewriteStrRef
 
           assert(val.getValue(GffCExoLocString).strRef == exolocstr.strRef)
+
+        elif str.len > 0:
+          trackSkipped(str)
 
 proc tlkify(ein: Erf, outFile: string) =
   writeErf(newFileStream(outFile, fmWrite),

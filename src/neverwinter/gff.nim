@@ -261,6 +261,7 @@ proc newGffList*(): GffList = newSeq[GffStruct]()
 proc newCExoLocString*(): GffCExoLocString =
   new(result)
   result.entries = newTable[int, string]()
+  result.strRef = -1
 
 proc initGffStruct(self: GffStruct, id: int32 = -1) =
   self.fields = newTable[string, GffField]()

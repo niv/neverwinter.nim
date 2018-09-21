@@ -46,10 +46,19 @@ of "gff":    state = input.readGffRoot(false)
 of "json":   state = input.parseJson(inputfile).gffRootFromJson()
 else: quit("Unsupported informat: " & informat)
 
+proc postProcessJson(j: JsonNode) =
+  ## Post-process json before emitting: We make sure to re-sort.
+  if j.kind == JObject:
+    for k, v in j.fields: postProcessJson(v)
+    j.fields.sort do (a, b: auto) -> int: cmpIgnoreCase(a[0], b[0])
+  elif j.kind == JArray:
+    for e in j.elems: postProcessJson(e)
+
 case outformat:
 of "gff":    output.write(state)
 of "json":
              let j = state.toJson()
+             postProcessJson(j)
              output.write(if args["--pretty"]: j.pretty() else: $j)
              output.write("\c\L")
 else: quit("Unsupported outformat: " & outformat)

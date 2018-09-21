@@ -236,7 +236,7 @@ proc getValue*[T: GffFieldType](self: GffField, t: typedesc[T]): T =
   elif T is GffVoid: self.gffVoid
   else: {.fatal: "You added a gff type but didn't make it resolvable in getValue()"}
 
-proc assignValue[T: GffFieldType](self: GffField, v: T) =
+proc assignValue*[T: GffFieldType](self: GffField, v: T) =
   when T is GffByte: self.dataOrOffset = cast[int32](v)
   elif T is GffChar: self.dataOrOffset = cast[int32](v)
   elif T is GffWord: self.dataOrOffset = cast[int32](v)

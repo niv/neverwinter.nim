@@ -161,7 +161,7 @@ if newTranslations > 0:
 
   for str, strref in translations:
     newTlk[StrRef strref] = str
-  newFileStream(tlkFn, fmWrite).write(newTlk)
+  writeTlk(newFileStream(tlkFn, fmWrite), newTlk)
 
 else:
   info "erf did not generate new translations, not touching tlk"

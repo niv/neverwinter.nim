@@ -51,6 +51,9 @@ tell it to only load the key file you are interested in.
   for your user on Linux/OSX, and on Windows will even pull in the required compiler
   and package manager.
 
+* Note that 0.19.0 works, but you'll have to give --nilseqs:on for now.
+  (i.e. `./build.sh --nilseqs:on`)
+
 * Clone this repository *with submodules*:
   `git clone --recursive https://github.com/niv/neverwinter_utils.nim`
 

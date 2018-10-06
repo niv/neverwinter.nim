@@ -1,4 +1,4 @@
-import shared, debugprinter, neverwinter.tlk, parsecsv
+import shared, debugprinter, neverwinter/tlk, parsecsv
 
 const SupportedFormatsSimple = ["tlk", "json", "csv", "debug"]
 const SupportedFormats = {
@@ -67,8 +67,6 @@ let inputfile   = $args["-i"]
 let outputfile  = $args["-o"]
 let informat    = ensureValidFormat($args["-l"], inputfile, SupportedFormats)
 let outformat   = ensureValidFormat($args["-k"], outputfile, SupportedFormats)
-
-import neverwinter.tlk
 
 let input  = if $args["-i"] == "-": newFileStream(stdin) else: newFileStream($args["-i"])
 let output = if $args["-o"] == "-": newFileStream(stdout) else: newFileStream($args["-o"], fmWrite)
@@ -240,7 +238,7 @@ if args["--language"]:
   debug "Overridden language: ", state.language
 
 case outformat:
-of "tlk":    output.write(state)
+of "tlk":    output.writeTlk(state)
 of "json":   output.writeJson(state)
 of "csv":    output.writeCsv(state)
 of "review": output.writeReview(state)

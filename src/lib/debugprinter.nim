@@ -30,7 +30,10 @@ template emitPadded[T](p: DebugPrinter, t: typedesc[T], k, v: string) =
     repeat(" ", 30 - k.len), " ", v,
     " (", name(t), ")"
 
-proc emit*[T:SomeReal](p: DebugPrinter, k: string, v: T) =
+when not compiles(SomeFloat): # 0.18->0.19 shim
+  type SomeFloat* = SomeReal
+
+proc emit*[T:SomeFloat](p: DebugPrinter, k: string, v: T) =
   emitPadded p, type(T), k, $v
 
 proc emit*[T:string](p: DebugPrinter, k: string, v: T) =

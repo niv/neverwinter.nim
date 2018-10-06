@@ -1,4 +1,4 @@
-import shared, neverwinter.twoda, parsecsv
+import shared, neverwinter/twoda, parsecsv
 
 const SupportedFormats = {
   "2da": @["2da"],
@@ -78,6 +78,6 @@ of "csv":    state = input.readCsv()
 else: quit("Unsupported informat: " & informat)
 
 case outformat:
-of "2da":    output.write(state)
+of "2da":    output.writeTwoDA(state)
 of "csv":   output.writeCsv(state)
 else: quit("Unsupported outformat: " & outformat)

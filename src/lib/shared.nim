@@ -1,10 +1,10 @@
 import strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
 export strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
 
-import neverwinter.util, neverwinter.resman,
-  neverwinter.resref, neverwinter.key,
-  neverwinter.resfile, neverwinter.resmemfile, neverwinter.resdir,
-  neverwinter.erf, neverwinter.gff, neverwinter.gffjson
+import neverwinter/util, neverwinter/resman,
+  neverwinter/resref, neverwinter/key,
+  neverwinter/resfile, neverwinter/resmemfile, neverwinter/resdir,
+  neverwinter/erf, neverwinter/gff, neverwinter/gffjson
 
 # The things we do to cut down import hassle in tools.
 # Should clean this up at some point and let the utils deal with it.
@@ -100,7 +100,7 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
   debug("Other file encoding: " & getNativeEncoding())
 
   if Args.hasKey("--add-restypes") and Args["--add-restypes"]:
-    let types = ($Args["--add-restypes"]).split(",").mapIt(it.split(":"))
+    let types = ($Args["--add-restypes"]).split(",").mapIt(seq[string], it.split(":"))
     for ty in types:
       if ty.len != 2:
         raise newException(ValueError,
@@ -269,7 +269,7 @@ iterator filterByMatch*(rm: ResMan, patternMatch: string, binaryMatch: string, i
     let res = rm[o].get()
 
     let match = (patternMatch != "" and str.find(patternMatch) != -1) or
-                (binaryMatch  != "" and res.readAll().find(binaryMatch) != -1)
+                (binaryMatch != "" and res.readAll().find(binaryMatch) != -1)
 
     if (match and not invert) or (not match and invert):
       yield(res)

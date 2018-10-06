@@ -181,7 +181,7 @@ proc escapeField*(field: Cell): string =
     else:
       fd
 
-proc write*(io: Stream, self: TwoDA) =
+proc writeTwoDA*(io: Stream, self: TwoDA) =
   ## Writes a twoda to the stream. Attempts to format the twoda to look pretty.
 
   if self.headers.len == 0:

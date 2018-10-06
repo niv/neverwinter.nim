@@ -130,7 +130,7 @@ proc readSingleTlk*(io: Stream, useCache = true): SingleTlk =
   result.ioCache = newWeightedLRU[StrRef, TlkEntry](
     sizeof(TlkEntry) * result.ioEntryCount div 2, 1)
 
-proc write*(io: Stream, tlk: SingleTlk) =
+proc writeTlk*(io: Stream, tlk: SingleTlk) =
   ## Writes a SingleTlk to the given output stream.
 
   var maxId: StrRef = 0

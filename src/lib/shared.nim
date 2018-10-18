@@ -52,7 +52,10 @@ Encoding:
                               supported; see docs. Defaults to your current
                               shell/platform charset: [default: """ & getNativeEncoding() & """]
 Resources:
-  --add-restypes TUPLES       Add a restype. TUPLES is a is a comma-separated list of colon-separated restypes.
+  --add-restypes TUPLES       Add a restype. TUPLES is a comma-separated list
+                              of colon-separated restypes. You do not need to do this
+                              unless you want to handle files NWN does not know about
+                              yet.
                               Example: txt:10,mdl:2002
 """
 

@@ -222,19 +222,7 @@ LanguageShortCodes["es"] = Language.Spanish
 LanguageShortCodes["pl"] = Language.Polish
 
 if args["--language"]:
-  let slang = $args["--language"]
-  try:
-    if slang.isDigit():
-      let id = slang.parseInt
-      state.language = id.Language
-    elif slang.len == 2:
-      if not LanguageShortCodes.hasKey(slang): raise newException(ValueError, "no such shortcode")
-      state.language = LanguageShortCodes[slang]
-    else:
-      state.language = parseEnum[Language](slang)
-  except:
-    raise newException(ValueError, slang & ": Not a valid language (" & getCurrentExceptionMsg() & ")")
-
+  state.language = resolveLanguage($args["--language"])
   debug "Overridden language: ", state.language
 
 case outformat:

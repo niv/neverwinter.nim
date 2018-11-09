@@ -14,6 +14,10 @@ Usage:
   $0 [options] <tlk> <erf> <out>
   $USAGE
 
+Options:
+  --language N                Use language N, discard all others [default: English]
+                              You can specify by enum const ("English"),
+                              shortcode ("de"), or by ID. (see languages.nim)
   $OPT
 """
 
@@ -22,6 +26,8 @@ doAssert(fileExists(erfFn))
 let outFn = $ARGS["<out>"]
 let tlkFn = $ARGS["<tlk>"]
 let tlkBaseFn = splitFile(tlkFn).name.toLowerAscii
+
+let selectedLanguage = resolveLanguage($ARGS["--language"])
 
 info "Base TLK name: ", tlkBaseFn
 
@@ -86,13 +92,11 @@ proc tlkify(gin: var GffStruct) =
         continue
 
       if exolocstr.strRef == -1 and exolocstr.entries.len > 0:
-        doAssert(exolocstr.entries.len == 1,
-          "exolocstring has multiple languages, but we can only do one language")
-        doAssert(exolocstr.entries.hasKey(0),
-          "exolocstring has non-english language string")
+        doAssert(exolocstr.entries.hasKey(selectedLanguage.int) and exolocstr.entries.len > 1,
+          "exolocstring has other language strings but not the selected language")
         doAssert(StrRef(exolocstr.strRef) == BadStrRef,
-          "exolocstring already has a strref AND english override data")
-        let str = exolocstr.entries[0]
+          "exolocstring already has a strref AND selected language override data")
+        let str = exolocstr.entries[selectedLanguage.int]
 
         if str.len > 0 and not textsToIgnore.contains(str):
           let rewriteStrRef = translate(str) + 16777216
@@ -140,6 +144,9 @@ var newTlk: SingleTlk
 
 if fileExists(tlkFn):
   newTlk = readSingleTlk(newFileStream(tlkFn))
+  doAssert(newTlk.language == selectedLanguage,
+    "existing TLK has mismatching language from selected")
+
   latestStrref = StrRef newTlk.highest
   info "Building translations from given tlk: ", latestStrref
   for strref in 0..latestStrref:
@@ -149,7 +156,7 @@ if fileExists(tlkFn):
 else:
   info "Translations: starting from scratch"
   newTlk = newSingleTlk()
-  newTlk.language = Language.English
+  newTlk.language = selectedLanguage
 
 info "Reading: ", erfFn
 let module = readErf(newFileStream(erfFn))

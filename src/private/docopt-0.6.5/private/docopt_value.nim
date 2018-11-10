@@ -3,7 +3,7 @@
 
 
 import strutils
-import util
+import docopt_util
 
 
 type

@@ -2,14 +2,15 @@
 # Copyright (C) 2015 Oleh Prypin <blaxpirit@gmail.com>
 # Licensed under terms of MIT license (see LICENSE)
 
+import strutils, unicode, macros
 
 import nre, options, os, tables
 from sequtils import deduplicate, delete, filter_it
-import private/util
+import private/docopt_util
 
 export tables
 
-include private/value
+include private/docopt_value
 
 
 type
@@ -505,7 +506,7 @@ proc parse_atom(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
     elif (token.starts_with "-") and token notin ["-", "--"]:
         parse_shorts(tokens, options)
     elif (token.starts_with "<") and (token.ends_with ">") or
-      util.is_upper(token):
+      docopt_util.is_upper(token):
         @[Pattern(argument(tokens.move()))]
     else:
         @[Pattern(command(tokens.move()))]

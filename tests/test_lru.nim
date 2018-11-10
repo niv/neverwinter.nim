@@ -1,3 +1,5 @@
+import unittest
+
 include neverwinter.lru
 
 suite "WeightedLRU":

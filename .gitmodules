@@ -1,3 +1,0 @@
-[submodule "src/extlib/neverwinter.nim"]
-	path = src/extlib/neverwinter.nim
-	url = https://github.com/niv/neverwinter.nim

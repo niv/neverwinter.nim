@@ -34,6 +34,9 @@ type
     ioStart: int
     label: string
 
+    buildYear: int
+    buildDay: int
+
     bifs: seq[Bif]
     resrefIdLookup: OrderedTable[ResRef, ResId]
 
@@ -77,6 +80,8 @@ proc readBif(io: Stream, owner: KeyTable, filename: string, expectIdx: int): Bif
     let offset = io.readInt32()
     let fileSize = io.readInt32()
     let resType = io.readInt32()
+    discard resType # This is unused because we later on map the actual
+                    # resref to this VA
 
     let r = VariableResource(
       id: fullId.ResId,
@@ -149,8 +154,8 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
   let keyCount = io.readInt32()
   let offsetToFileTable = io.readInt32()
   let offsetToKeyTable = io.readInt32()
-  let buildYear = io.readInt32()
-  let buildDay = io.readInt32()
+  result.buildYear = io.readInt32()
+  result.buildDay = io.readInt32()
   io.setPosition(io.getPosition + 32) # reserved bytes
 
   const HeaderSize = 64

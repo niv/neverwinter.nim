@@ -437,7 +437,8 @@ proc resolve(self: GffField): GffField =
   of GffFieldKind.CExoLocString:
     # self.gffCExoLocString = extractField(GffCExoLocString, tmp, fie)
     self.gffCExoLocString = newCExoLocString()
-    let totalSz = loader.io.readInt32() #todo: verify
+    let totalSz = loader.io.readInt32()
+    let previousIoPosition = loader.io.getPosition
     self.gffCExoLocString.strRef = loader.io.readInt32()
     let count = loader.io.readInt32()
     for i in 0..<count:
@@ -445,6 +446,7 @@ proc resolve(self: GffField): GffField =
       let strSz = loader.io.readInt32()
       self.gffCExoLocString.entries[exoId] =
         loader.io.readStrOrErr(strSz).fromNwnEncoding
+    doAssert(totalSz == loader.io.getPosition - previousIoPosition)
 
 
   of GffFieldKind.Dword64: self.gffDword64 = cast[uint64](loader.io.readInt64())
@@ -665,6 +667,7 @@ proc write*(io: Stream, root: GffRoot) =
     structs[result] = thisStruct
 
   let rootStructIdx = collector(root)
+  doAssert(rootStructIdx == 0, "the gff root struct should always be 0")
 
   let ioPosStart = io.getPosition
 

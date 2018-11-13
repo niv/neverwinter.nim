@@ -10,8 +10,6 @@ import util
 
 type ResType* = distinct uint16
 
-const ValidResTypeCharacters = {'A'..'Z', '0'..'9'}
-
 proc `==`*(x, y: ResType): bool {.borrow.}
 
 var types  = initTable[ResType, string]()

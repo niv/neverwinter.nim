@@ -371,6 +371,6 @@ proc writeKeyAndBif*(destDir: string,
     keyName: string, bifPrefix: string, bifs: seq[KeyBifEntry],
     pleaseWrite: proc(r: ResRef, io: Stream)) =
   writeKeyAndBif(destDir, keyName, bifPrefix, bifs,
-    uint32 getTime().getGMTime().year,
-    uint32 getTime().getGMTime().yearday,
+    uint32 getTime().utc.year,
+    uint32 getTime().utc.yearday,
     pleaseWrite)

@@ -1,17 +1,180 @@
-# Copyright (C) 2012-2014 Vladimir Keleshev <vladimir@keleshev.com>
+## This is a squashed copy/pasta version of docopt 0.6.5 with
+## local fixes as needed to make it work.
+
 # Copyright (C) 2015 Oleh Prypin <blaxpirit@gmail.com>
 # Licensed under terms of MIT license (see LICENSE)
 
+
+### EMBEDDED: docopt/util
+import strutils, unicode, macros
+
+template any_it(lst: typed, pred: untyped): bool =
+    ## Does `pred` return true for any of the `it`s of `lst`?
+    var result {.gensym.} = false
+    for it {.inject.} in lst:
+        if pred:
+            result = true
+            break
+    result
+
+template map_it(lst, typ: typed, op: untyped): untyped =
+    ## Returns `seq[typ]` that contains `op` applied to each `it` of `lst`
+    var result {.gensym.}: seq[typ] = @[]
+    for it {.inject.} in items(lst):
+        result.add(op)
+    result
+
+
+proc count[T](s: openarray[T], it: T): int =
+    ## How many times this item appears in an array
+    result = 0
+    for x in s:
+        if x == it:
+            result += 1
+
+
+proc partition(s, sep: string): tuple[left, sep, right: string] =
+    ## "a+b".partition("+") == ("a", "+", "b")
+    ## "a+b".partition("-") == ("a+b", "", "")
+    assert sep != nil and sep != ""
+    let pos = s.find(sep)
+    if pos < 0:
+        (s, "", "")
+    else:
+        (s.substr(0, pred(pos)), s.substr(pos, pred(pos)+sep.len), s.substr(pos+sep.len))
+
+
+proc is_upper(s: string): bool =
+    ## Is the string in uppercase (and there is at least one cased character)?
+    let upper = unicode.to_upper(s)
+    s == upper and upper != unicode.to_lower(s)
+
+
+macro gen_class(body: untyped): untyped =
+    ## When applied to a type block, this will generate methods
+    ## that return each type's name as a string.
+    for typ in body[0].children:
+        var meth = "method class(self: $1): string"
+        if $typ[2][0][1][0] == "RootObj":
+            meth &= "{.base, gcsafe.}"
+        meth &= "= \"$1\""
+        body.add(parse_stmt(meth.format(typ[0])))
+    body
+
+
+### EMBEDDED: docopt/value
+import strutils
+
+type
+    ValueKind* = enum
+        vkNone, ## No value
+        vkBool, ## A boolean
+        vkInt,  ## An integer
+        vkStr,  ## A string
+        vkList  ## A list of strings
+    Value* = object  ## docopt variant type
+        case kind*: ValueKind
+          of vkNone:
+            nil
+          of vkBool:
+            bool_v: bool
+          of vkInt:
+            int_v: int
+          of vkStr:
+            str_v: string
+          of vkList:
+            list_v: seq[string]
+
+
+converter to_bool*(v: Value): bool =
+    ## Convert a Value to bool, depending on its kind:
+    ## - vkNone: false
+    ## - vkBool: boolean value itself
+    ## - vkInt: true if integer is not zero
+    ## - vkStr: true if string is not empty
+    ## - vkList: true if sequence is not empty
+    case v.kind
+        of vkNone: false
+        of vkBool: v.bool_v
+        of vkInt: v.int_v != 0
+        of vkStr: v.str_v != nil and v.str_v.len > 0
+        of vkList: not v.list_v.is_nil and v.list_v.len > 0
+
+proc len*(v: Value): int =
+    ## Return the integer of a vkInt Value
+    ## or the length of the seq of a vkList value.
+    ## It is an error to use it on other kinds of Values.
+    if v.kind == vkInt: v.int_v
+    else: v.list_v.len
+
+proc `@`*(v: Value): seq[string] =
+    ## Return the seq of a vkList Value.
+    ## It is an error to use it on other kinds of Values.
+    v.list_v
+
+proc `[]`*(v: Value, i: int): string =
+    ## Return the i-th item of the seq of a vkList Value.
+    ## It is an error to use it on other kinds of Values.
+    v.list_v[i]
+
+iterator items*(v: Value): string =
+    ## Iterate over the seq of a vkList Value.
+    ## It is an error to use it on other kinds of Values.
+    for val in v.list_v:
+        yield val
+
+iterator pairs*(v: Value): tuple[key: int, val: string] =
+    ## Iterate over the seq of a vkList Value, yielding ``(index, v[index])``
+    ## pairs.
+    ## It is an error to use it on other kinds of Values.
+    for key, val in v.list_v:
+        yield (key: key, val: val)
+
+proc str(s: string): string =
+    if s.is_nil: "nil"
+    else: "\"" & s.replace("\"", "\\\"") & "\""
+
+proc str[T](s: seq[T]): string =
+    if s.is_nil: "nil"
+    else: "[" & s.map_it(string, it.str).join(", ") & "]"
+
+proc str(v: Value): string =
+    case v.kind
+        of vkNone: "nil"
+        of vkStr: v.str_v.str
+        of vkInt: $v.int_v
+        of vkBool: $v.bool_v
+        of vkList: v.list_v.str
+
+proc `$`*(v: Value): string =
+    ## Return the string of a vkStr Value,
+    ## or the item of a vkList Value, if there is exactly one,
+    ## or a string representation of any other kind of Value.
+    if v.kind == vkStr:
+        v.str_v
+    elif v.kind == vkList and
+      not v.list_v.is_nil and v.list_v.len == 1:
+        v.list_v[0]
+    else: v.str
+
+proc `==`*(a, b: Value): bool {.gcsafe.} =
+    a.kind == b.kind and a.str == b.str
+
+
+proc val(): Value = Value(kind: vkNone)
+proc val(v: bool): Value = Value(kind: vkBool, bool_v: v)
+proc val(v: int): Value = Value(kind: vkInt, int_v: v)
+proc val(v: string): Value = Value(kind: vkStr, str_v: v)
+proc val(v: seq[string]): Value = Value(kind: vkList, list_v: v)
+
+
+### EMBEDDED: docopt
 import strutils, unicode, macros
 
 import nre, options, os, tables
 from sequtils import deduplicate, delete, filter_it
-import private/docopt_util
 
 export tables
-
-include private/docopt_value
-
 
 type
     DocoptLanguageError* = object of Exception
@@ -506,7 +669,7 @@ proc parse_atom(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
     elif (token.starts_with "-") and token notin ["-", "--"]:
         parse_shorts(tokens, options)
     elif (token.starts_with "<") and (token.ends_with ">") or
-      docopt_util.is_upper(token):
+      is_upper(token):
         @[Pattern(argument(tokens.move()))]
     else:
         @[Pattern(command(tokens.move()))]

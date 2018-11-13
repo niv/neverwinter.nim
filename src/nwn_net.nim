@@ -9,22 +9,15 @@ Generic NWN1 game server query tool.
 packets are meant to go to game servers; the BM* packets are for
 masterserver communication, so target them at a masterserver!
 
-"list" isn't actually a network packet; instead it builds a full
-json tree of all servers including their metadata.  This will fail
-terribly on bad networks thanks to UDP.  If you need this fixed,
-let me know.
-
 Usage:
   $0 [options] <server> bnes
   $0 [options] <server> bnds
   $0 [options] <server> bnxi
   $0 [options] <server> bnlm
   $0 [options] <server> bmst
-  $0 [options] <server> bmsa
   $0 [options] <server> bmma
   $0 [options] <server> bmra
   $0 [options] <server> bsst
-  $0 [options] <server> list [--bnes] [--bnxi] [--bnds]
   $USAGE
 
 Options:
@@ -78,60 +71,11 @@ proc runner*() {.async.} =
   if args["bmst"]:
     response = await ask[BMST, BMSR](BMST())
 
-  elif args["bmsa"]:
-    response = await ask[BMSA, BMSB](BMSA())
-
   elif args["bmma"]:
     response = await ask[BMMA, BMMB](BMMA())
 
   elif args["bmra"]:
     response = await ask[BMRA, BMRB](BMRA())
-
-  elif args["list"]:
-    let list = await ask[BMSA, BMSB](BMSA())
-
-    let addresses = list["addresses"].getElems().map() do (loc: JsonNode) -> (string, Port):
-      let actualIp = loc["ipv4"].getInt.uint32.int2ip
-      let actua0 = loc["port"].getInt.Port
-      (actualIp, actua0)
-
-    let futures = addresses.map() do (loc: (string, Port)) -> Future[JsonNode]:
-      getServerDetails(loc[0], loc[1], args["--bnes"], args["--bnxi"], args["--bnds"])
-
-
-    for x in futures: yield(x)
-
-    var playerCount = 0
-    response = list
-    response["_list"] = newJArray()
-    var responseList = newSeq[JsonNode]()
-    for idx, loc in addresses:
-      let fut = futures[idx]
-      var p = newJObject()
-      if not fut.failed:
-        p = fut.read
-        if p.hasKey("_bnxr") and p["_bnxr"].hasKey("currentPlayers"):
-          playerCount += p["_bnxr"]["currentPlayers"].getInt.int
-      else:
-        p["_failure"] = %fut.error.msg.split("\L")[0]
-      p["host"] = %loc[0]
-      p["port"] = %loc[1].int
-      responseList.add(p)
-
-    if args["--bnxi"]:
-      sort(responseList) do (a, b: JsonNode) -> int:
-        let hasA = a.hasKey("_bnxr") and a["_bnxr"].hasKey("currentPlayers")
-        let hasB = b.hasKey("_bnxr") and b["_bnxr"].hasKey("currentPlayers")
-        if hasA and hasB: cmp(b["_bnxr"]["currentPlayers"].getInt, a["_bnxr"]["currentPlayers"].getInt)
-        elif hasA: -1
-        elif hasB: 1
-        else: 0
-
-    response["_list"] = %responseList
-
-    if args["--bnxi"]:
-      response["_playercount"] = %playerCount
-    response["_servercount"] = %addresses.len
 
   elif args["bnes"]:
     response = await ask[BNES, BNER](BNES())

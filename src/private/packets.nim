@@ -1,7 +1,9 @@
 import arpie, hashes
 
 type
-  # Protocol {.pure.} = enum IPX = 'I', UDP = 'U'
+  SLocation* = object
+    ipv4: uint32
+    port: uint16
 
   BNES* = object
     header: StaticValue["BNES"]
@@ -30,12 +32,6 @@ type
   BNXI* = object
     header: StaticValue["BNXI"]
     port: uint16
-
-  # PvPMode {.pure.} = enum
-  #   None = 0u8
-  #   Party = 1u8
-  #   Full = 2u8
-  #   Default = 3u8
 
   BNXR* = object
     header: StaticValue["BNXR"]
@@ -74,36 +70,6 @@ type
   BMSR* = object
     header: StaticValue["BMSR"]
     status: int16
-
-  BMSU* = object
-    header: StaticValue["BMSU"]
-    hostType: uint8
-    gameType: uint8
-    build: uint32
-    postGame: uint8
-    languageId: uint8
-    gameId: uint8
-
-  BMHB* = object
-    header: StaticValue["BMHB"]
-    port: uint16
-
-  BMDC* = object
-    header: StaticValue["BMDC"]
-    playerCount: int16
-    # keys
-
-  BMSA* = object
-    header: StaticValue["BMSA"]
-    port: uint16
-
-  SLocation* = object
-    ipv4: uint32
-    port: uint16
-
-  BMSB* = object
-    header: StaticValue["BMSB"]
-    addresses: SizePrefixedSeq[uint16, SLocation]
 
   BMMA* = object
     header: StaticValue["BMMA"]

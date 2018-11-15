@@ -75,7 +75,8 @@ not need to install anything else.
 
 * Clone this repository: `git clone https://github.com/niv/neverwinter.nim`
 
-* Switch to it and run `nimble build` This will build release binaries into `bin`.
+* Switch to it and run `nimble build  -d:release`.
+  This will build release binaries into `bin`.
 
 * To update the whole package, run `git pull --tags` and build again.
 

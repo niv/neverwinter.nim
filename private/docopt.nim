@@ -4,9 +4,16 @@
 # Copyright (C) 2015 Oleh Prypin <blaxpirit@gmail.com>
 # Licensed under terms of MIT license (see LICENSE)
 
+import strutils, macros
+
+import nre, options, os, tables
+from sequtils import deduplicate, delete, filter_it
+
+export tables
+
+from unicode import to_upper, to_lower
 
 ### EMBEDDED: docopt/util
-import strutils, unicode, macros
 
 template any_it(lst: typed, pred: untyped): bool =
     ## Does `pred` return true for any of the `it`s of `lst`?
@@ -63,7 +70,6 @@ macro gen_class(body: untyped): untyped =
 
 
 ### EMBEDDED: docopt/value
-import strutils
 
 type
     ValueKind* = enum
@@ -169,12 +175,6 @@ proc val(v: seq[string]): Value = Value(kind: vkList, list_v: v)
 
 
 ### EMBEDDED: docopt
-import strutils, unicode, macros
-
-import nre, options, os, tables
-from sequtils import deduplicate, delete, filter_it
-
-export tables
 
 type
     DocoptLanguageError* = object of Exception

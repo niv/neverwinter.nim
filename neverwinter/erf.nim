@@ -149,7 +149,7 @@ proc writeErf*(io: Stream,
   io.write(int32 getTime().utc.year - 1900) # self.buildYear.int32)
   io.write(int32 getTime().utc.yearday) # self.buildDay.int32)
   io.write(int32 strRef)
-  io.write(repeat("\x0", 116))
+  io.write(repeat("\x00", 116))
   assert(io.getPosition == ioStart + 160)
 
   # We save out entries sorted alphabetically for now. This ensures a reproducible
@@ -166,10 +166,10 @@ proc writeErf*(io: Stream,
   # key list
   var id = 0
   for rr in keysToWrite:
-    io.write(rr.resRef & repeat("\x0", 16 - rr.resRef.len))
+    io.write(rr.resRef & repeat("\x00", 16 - rr.resRef.len))
     io.write(id.int32)
     io.write(rr.resType.int16)
-    io.write("\x0\x0")
+    io.write("\x00\x00")
     id += 1
 
   var sizes = initTable[ResRef, BiggestInt]()

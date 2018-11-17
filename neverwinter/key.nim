@@ -279,7 +279,7 @@ proc writeBif*(ioBif: Stream, entries: seq[ResRef],
 
   # Pad out initial data which we back-fill later with collected size/offset data
   for i in 0..<entries.len:
-    ioBif.write(repeat("\x0", 16)) # id, offset, len, type
+    ioBif.write(repeat("\x00", 16)) # id, offset, len, type
 
   # Write out data. This fills in resrefDataSizes so we know
   # what we need to put into the varResTable
@@ -359,7 +359,7 @@ proc writeKeyAndBif*(destDir: string,
     for resIdx, resRef in bif.entries:
       doAssert(resref.resRef.len > 0)
       doAssert(resRef.resRef.len <= 16, resRef.resRef)
-      ioKey.write(resRef.resRef & repeat("\x0", 16 - resRef.resRef.len))
+      ioKey.write(resRef.resRef & repeat("\x00", 16 - resRef.resRef.len))
       ioKey.write(uint16 resRef.resType)
       # ID = (x << 20) + y
       # x = index into bif file table

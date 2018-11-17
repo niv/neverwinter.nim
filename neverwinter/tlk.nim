@@ -53,7 +53,7 @@ proc getFromIo(self: SingleTlk, str: StrRef): (Weight, TlkEntry) =
   # - Some translation house tlks contain this invalid gizmo: 0xcx0;
   #   presumably a leftover from some old editor.
   # - Also strip whitespace while we're here.
-  result[1].soundResRef = self.io.readStrOrErr(16).strip(true, true, {'\0', '\xc0'} + Whitespace)
+  result[1].soundResRef = self.io.readStrOrErr(16).strip(true, true, {'\x00', '\xc0'} + Whitespace)
 
   discard self.io.readInt32() # volume variance is unused
   discard self.io.readInt32() # pitch variance is unused
@@ -176,7 +176,7 @@ proc writeTlk*(io: Stream, tlk: SingleTlk) =
 
       write[int32](entriesTableStream, flags.int32)
       var sr = if e.soundResRef != nil: e.soundResRef[0..<min(16, e.soundResRef.len)] else: ""
-      sr &= repeat("\x0", 16 - sr.len)
+      sr &= repeat("\x00", 16 - sr.len)
       assert(sr.len == 16)
       write(entriesTableStream, sr) # resref
       write[int32](entriesTableStream, 0) # vol var
@@ -193,7 +193,7 @@ proc writeTlk*(io: Stream, tlk: SingleTlk) =
 
     else:
       write[int32](entriesTableStream, 0) # flags
-      const EmptyResRef = repeat("\x0", 16)
+      const EmptyResRef = repeat("\x00", 16)
       write(entriesTableStream, EmptyResRef) # resref
       write[int32](entriesTableStream, 0) # vol var
       write[int32](entriesTableStream, 0) # pitch var

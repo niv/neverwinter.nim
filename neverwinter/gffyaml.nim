@@ -1,4 +1,4 @@
-import yaml/dom, yaml/serialization, yaml/presenter
+import yamlsorteddom, yaml/serialization, yaml/presenter
 import streams, tables, strutils, options, parseutils
 
 proc toDom(v: GffField): YamlNode
@@ -29,7 +29,7 @@ proc lookupType(str: string): Option[GffFieldKind] =
   none(GffFieldKind)
 
 proc toDom(v: GffField): YamlNode =
-  result = YamlNode(kind: yMapping, fields: newTable[YamlNode, YamlNode](), tag: "?")
+  result = YamlNode(kind: yMapping, fields: newOrderedTable[YamlNode, YamlNode](), tag: "?")
   result[newYamlNode "type"] = newYamlNode(typeMap[v.fieldKind])
 
   result[newYamlNode "value"] = case v.fieldKind:
@@ -50,20 +50,21 @@ proc toDom(v: GffField): YamlNode =
   of GffFieldKind.List      : newYamlNode(v.getValue(GffList).mapIt(toDom(it)))
   of GffFieldKind.CExoLocString:
     let id = v.getValue(GffCExoLocString).strRef
-    if id != -1: result[newYamlNode "id"] = newYamlNode $id
-    let f = newTable[YamlNode, YamlNode]()
+    if id != -1: result[newYamlNode("id")] = newYamlNode($id)
+    let f = newOrderedTable[YamlNode, YamlNode]()
     for k, v in v.getValue(GffCExoLocString).entries:
-      if v.len > 0: f[newYamlNode $k] = newYamlNode v
+      if v.len > 0: f[newYamlNode($k)] = newYamlNode v
     YamlNode(kind: yMapping, fields: f, tag: "?")
 
 proc toDom(s: GffStruct): YamlNode =
-  var elems = newTable[YamlNode, YamlNode]()
+  var elems = newOrderedTable[YamlNode, YamlNode]()
 
-  if s.id != -1: elems[newYamlNode "__struct_id"] = newYamlNode($s.id)
   if s of GffRoot: elems[newYamlNode "__data_type"] = newYamlNode(s.GffRoot.fileType)
+  if s.id != -1: elems[newYamlNode "__struct_id"] = newYamlNode($s.id)
 
-  for k, v in s.fields:
-    elems[newYamlNode(k)] = toDom(v)
+  let sortedPairs = sorted(toSeq(pairs(s.fields))) do (a, b: auto) -> int: system.cmp[string](a[0], b[0])
+
+  for pa in sortedPairs: elems[newYamlNode(pa[0])] = toDom(pa[1])
   result = YamlNode(kind: yMapping, fields: elems, tag: "?")
 
 proc gffStructFromDom(dom: YamlNode, into: GffStruct) =

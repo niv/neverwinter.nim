@@ -4,6 +4,7 @@ export strutils, algorithm, os, streams, json, sequtils, logging, times, tables,
 import neverwinter/util, neverwinter/resman,
   neverwinter/resref, neverwinter/key,
   neverwinter/resfile, neverwinter/resmemfile, neverwinter/resdir,
+  neverwinter/resnwsync,
   neverwinter/erf, neverwinter/gff, neverwinter/gffjson,
   neverwinter/languages, neverwinter/compressedbuf,
   neverwinter/exo
@@ -276,6 +277,23 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
     let erf = fs.readErf(e)
     debug "  ", erf
     result.add(erf)
+
+  # find/initialise nwsync only if we actually need it
+  var nwsync: NWSync
+
+  # load manifests
+  let manifestsToRead = if ($Args["--manifests"]).toUpperAscii == "ALL":
+      nwsync = openNWSync(findUserRoot() / "nwsync")
+      nwsync.getAllManifests()
+    else:
+      let v = ($Args["--manifests"]).split(",").filterIt(it.len > 0)
+      if v.len > 0: nwsync = openNWSync(findUserRoot() / "nwsync")
+      v
+
+  for q in manifestsToRead.filterIt(it.len > 0):
+      let c = newResNWSyncManifest(nwsync, q)
+      debug "  ", c
+      result.add(c)
 
   if not legacyLayout and not Args["--no-ovr"]:
     let c = newResDir(root / "ovr")

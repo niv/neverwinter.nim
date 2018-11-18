@@ -148,7 +148,7 @@ proc composeNode(s: var YamlStream, tagLib: TagLibrary,
   try:
     case start.kind
     of yamlStartMap:
-      result.tag = tagLib.uri(start.mapTag)
+      result.tag = if start.mapTag == yTagQuestionMark: "?" elif start.mapTag == yTagExclamationMark: "!" else: tagLib.uri(start.mapTag)
       result.kind = yMapping
       result.fields = newOrderedTable[YamlNode, YamlNode]()
       while s.peek().kind != yamlEndMap:
@@ -161,7 +161,7 @@ proc composeNode(s: var YamlStream, tagLib: TagLibrary,
       discard s.next()
       addAnchor(c, start.mapAnchor)
     of yamlStartSeq:
-      result.tag = tagLib.uri(start.seqTag)
+      result.tag = if start.mapTag == yTagQuestionMark: "?" elif start.mapTag == yTagExclamationMark: "!" else: tagLib.uri(start.mapTag)
       result.kind = ySequence
       result.elems = newSeq[YamlNode]()
       while s.peek().kind != yamlEndSeq:
@@ -169,7 +169,7 @@ proc composeNode(s: var YamlStream, tagLib: TagLibrary,
       addAnchor(c, start.seqAnchor)
       discard s.next()
     of yamlScalar:
-      result.tag = tagLib.uri(start.scalarTag)
+      result.tag = if start.mapTag == yTagQuestionMark: "?" elif start.mapTag == yTagExclamationMark: "!" else: tagLib.uri(start.mapTag)
       result.kind = yScalar
       shallowCopy(result.content, start.scalarContent)
       addAnchor(c, start.scalarAnchor)

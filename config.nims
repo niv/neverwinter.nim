@@ -1,6 +1,5 @@
 hint("Processing", false)
 
-switch("noNimblePath", "")
 switch("path", ".")
 switch("path", "private")
 

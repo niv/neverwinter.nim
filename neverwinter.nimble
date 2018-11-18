@@ -18,5 +18,7 @@ bin = listFiles(".").
   filterIt(NimVersion != "0.19.0" or it != "nwn_net")
 
 task clean, "Remove compiled binaries and temporary data":
-  for b in bin: rmFile(binDir / b)
+  for b in bin:
+    rmFile(binDir / b)
+    rmFile(binDir / b & ".exe")
   rmdir(nimcacheDir())

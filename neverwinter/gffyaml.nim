@@ -1,5 +1,5 @@
 import yamlsorteddom, yaml/serialization, yaml/presenter
-import streams, tables, strutils, options, parseutils
+import streams, tables, strutils, options, parseutils, sequtils
 
 proc toDom(v: GffField): YamlNode
 proc toDom(s: GffStruct): YamlNode
@@ -23,13 +23,10 @@ const typeMap = {
   GffFieldKind.CExoLocString: "cexolocstr"
 }.toTable
 
-proc lookupType(str: string): Option[GffFieldKind] =
-  for k, v in typeMap:
-    if v == str: return some(k)
-  none(GffFieldKind)
+const typeMapReversed = toSeq(pairs(typeMap)).mapIt((it[1], it[0])).toTable
 
 proc toDom(v: GffField): YamlNode =
-  result = YamlNode(kind: yMapping, fields: newOrderedTable[YamlNode, YamlNode](), tag: "?")
+  result = YamlNode(kind: yMapping, fields: newOrderedTable[YamlNode, YamlNode](tables.rightSize(4)), tag: "")
   result[newYamlNode "type"] = newYamlNode(typeMap[v.fieldKind])
 
   result[newYamlNode "value"] = case v.fieldKind:
@@ -54,10 +51,10 @@ proc toDom(v: GffField): YamlNode =
     let f = newOrderedTable[YamlNode, YamlNode]()
     for k, v in v.getValue(GffCExoLocString).entries:
       if v.len > 0: f[newYamlNode($k)] = newYamlNode v
-    YamlNode(kind: yMapping, fields: f, tag: "?")
+    YamlNode(kind: yMapping, fields: f, tag: "")
 
 proc toDom(s: GffStruct): YamlNode =
-  var elems = newOrderedTable[YamlNode, YamlNode]()
+  var elems = newOrderedTable[YamlNode, YamlNode](tables.rightSize(s.fields.len + 2))
 
   if s of GffRoot: elems[newYamlNode "__data_type"] = newYamlNode(s.GffRoot.fileType)
   if s.id != -1: elems[newYamlNode "__struct_id"] = newYamlNode($s.id)
@@ -65,7 +62,7 @@ proc toDom(s: GffStruct): YamlNode =
   let sortedPairs = sorted(toSeq(pairs(s.fields))) do (a, b: auto) -> int: system.cmp[string](a[0], b[0])
 
   for pa in sortedPairs: elems[newYamlNode(pa[0])] = toDom(pa[1])
-  result = YamlNode(kind: yMapping, fields: elems, tag: "?")
+  result = YamlNode(kind: yMapping, fields: elems, tag: "")
 
 proc gffStructFromDom(dom: YamlNode, into: GffStruct) =
   expect(dom.kind == yMapping)
@@ -76,9 +73,11 @@ proc gffStructFromDom(dom: YamlNode, into: GffStruct) =
     if into of GffRoot and lb == "__data_type": into.GffRoot.fileType = v.content
     if lb.startsWith("__"): continue
 
-    let ty = lookupType(v["type"].content)
-    expect(ty.isSome)
-    case ty.unsafeGet():
+    let tyc = v["type"].content
+    expect(typeMapReversed.hasKey(tyc), "Unknown type: " & tyc.escape)
+
+    let ty = typeMapReversed[tyc]
+    case ty:
 
     of GffFieldKind.Byte         : into[lb, GffByte] = v["value"].content.parseUInt.GffByte
     of GffFieldKind.Char         : into[lb, GffChar] = v["value"].content.parseInt.GffChar

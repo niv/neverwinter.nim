@@ -6,7 +6,7 @@ description   = "Neverwinter Nights 1 data accessor library and utilities"
 license       = "MIT"
 
 requires "nim >= 0.18.0"
-requires "yaml >= 0.11.0"
+requires "yaml >= 0.11.0 & < 0.11.1"
 
 installDirs = @["neverwinter"]
 

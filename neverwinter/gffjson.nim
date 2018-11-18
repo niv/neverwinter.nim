@@ -2,8 +2,6 @@
 
 import json, tables, strutils
 
-import gff, util
-
 proc toJson*(s: GffStruct): JSONNode =
   ## Transforms the given GffStruct into a JSONNode.
 

@@ -784,3 +784,6 @@ proc `$`*(x: GffField): string =
     # of GffFieldKind.List: result &= "=" & $x.gffList
 
   result &= ">"
+
+include gffjson
+include gffyaml

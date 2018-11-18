@@ -572,8 +572,8 @@ proc readGffRoot*(fromIO: Stream, lazyLoad: bool = true): GffRoot =
 proc write*(io: Stream, root: GffRoot) =
   # Write a gff root object to a stream!
 
-  expect(root.fileType.len == 4)
-  expect(root.fileVersion.len == 4)
+  expect(root.fileType.len <= 4)
+  expect(root.fileVersion.len <= 4)
   expect(root.id == -1)
 
   var labels = newSeq[string]()
@@ -671,8 +671,8 @@ proc write*(io: Stream, root: GffRoot) =
 
   let ioPosStart = io.getPosition
 
-  io.write(root.fileType)
-  io.write(root.fileVersion)
+  io.write(root.fileType & repeat(' ', 4 - root.fileType.len))
+  io.write(root.fileVersion & repeat(' ', 4 - root.fileVersion.len))
   assert(io.getPosition == 8 + ioPosStart)
 
   var offset = 56

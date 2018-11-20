@@ -10,7 +10,7 @@ requires "nim >= 0.18.0"
 installDirs = @["neverwinter"]
 
 binDir = "bin/"
-bin = listFiles(".").
+bin = listFiles(thisDir()).
   mapIt(it.splitFile.name).
   filterIt(it.startsWith("nwn_")).
   # There appears to be a compiler bug on 0.19.0 that segfaults it when

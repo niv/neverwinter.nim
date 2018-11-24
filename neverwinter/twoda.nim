@@ -147,7 +147,9 @@ proc readTwoDA*(io: Stream): TwoDA =
     result.defaultValue = defaultOrHeaders.substr(8).readFields(1)[0]
     skipEmptyLines()
 
-    try: result.columns = line().readFields(MaxColumns).mapIt(it.get())
+    try:
+      let ln = line()
+      result.columns = ln.readFields(MaxColumns).mapIt(it.get())
     except ValueError: raise newException(ValueError, "Could not parse columns")
   else:
     result.columns = defaultOrHeaders.readFields(MaxColumns).mapIt(it.get())

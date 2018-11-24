@@ -165,7 +165,7 @@ suite "TwoDA writing":
     tda.columns = @["A", "B"]
     tda[0] = @[some "LongValue", some "B"]
     var io = newStringStream()
-    io.write(tda)
+    io.writeTwoDA(tda)
     io.setPosition(0)
     let all = io.readAll
     check(-1 != all.find("LongValue     B"))
@@ -173,21 +173,21 @@ suite "TwoDA writing":
   test "writes out with CRLF":
     var tda = newStringStream(TwodaHeader & "\n\nA B\n0 a b").readTwoDA()
     var io = newStringStream()
-    io.write(tda)
+    io.writeTwoDA(tda)
     io.setPosition(0)
     let str = io.readAll
     check(str.find("\c\L") != -1)
 
   test "fails writing out with no columns configured":
     expect(ValueError):
-      newStringStream().write(newTwoDA())
+      newStringStream().writeTwoDA(newTwoDA())
 
   test "does not write out none default":
     var tda = newTwoDA()
     tda.default = none string
     tda.columns = @["A"]
     var io = newStringStream()
-    io.write(tda)
+    io.writeTwoDA(tda)
     io.setPosition(0)
     let all = io.readAll
     check(all.startsWith TwodaHeader & "\c\L\c\L")
@@ -197,7 +197,7 @@ suite "TwoDA writing":
     tda.default = some ""
     tda.columns = @["A"]
     var io = newStringStream()
-    io.write(tda)
+    io.writeTwoDA(tda)
     io.setPosition(0)
     let all = io.readAll
     check(all.startsWith TwodaHeader & "\c\LDEFAULT: \"\"\c\L")
@@ -206,7 +206,7 @@ suite "TwoDA writing":
     let tda = newStringStream(SampleFile).readTwoDA
     tda.default = some "wobblegobble"
     var io = newStringStream()
-    io.write(tda)
+    io.writeTwoDA(tda)
     io.setPosition(0)
     let tda2 = io.readTwoDA()
     check(tda.columns == tda2.columns)

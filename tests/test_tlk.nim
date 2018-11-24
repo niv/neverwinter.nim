@@ -6,7 +6,7 @@ suite "SingleTlk":
     var outstr = newStringStream()
     var tlk = newSingleTlk()
     tlk[0] = "test\r\nstring"
-    outstr.write(tlk)
+    outstr.writeTlk(tlk)
     outstr.setPosition(0)
     let rd = outstr.readAll()
     let offset = rd.find("test")
@@ -25,7 +25,7 @@ suite "SingleTlk":
     tlk[0] = "a"
     tlk[55] = "b"
     var outstr = newStringStream()
-    outstr.write(tlk)
+    outstr.writeTlk(tlk)
     outstr.setPosition(0)
     let rd = readSingleTlk(outstr)
     check(rd.highest == 55)

@@ -42,7 +42,7 @@ proc `[]=`*(self: TwoDA, row: Natural, data: Row) =
     while self.rows.len < row: self.rows.add(@[])
     self.rows.add(data)
 
-proc `[]`*(self: TwoDA, row: Natural, column: string): Option[string] =
+proc `[]`*(self: TwoDA, row: Natural, column: string): Cell =
   ## Looks up a value on this twoda. Will return a none for missing entries.
   ## Will return the default value (none) if the row index is out of bounds or
   ##   the asked-for row does not contain a value in the given column.
@@ -55,11 +55,24 @@ proc `[]`*(self: TwoDA, row: Natural, column: string): Option[string] =
         result = self.rows[row][colId]
 
 proc `[]`*(self: TwoDA, row: Natural, column: string, default: string): string =
-  ## Looks up a value on this twoda. ill return the given default value for missing entries,
+  ## Looks up a value on this twoda.
+  ## Will return the given default value for missing entries,
   ## overriding the global default value.
   let o = self[row, column]
   if o.isSome: o.get()
   else: default
+
+proc `[]=`*(self: TwoDA, row: Natural, column: string, value: Cell) =
+  ## Sets a single cell value.
+  ## Will raise IndexError if either row or column don't exist.
+  if row >= self.rows.len:
+    raise newException(IndexError, "Row out of bounds")
+
+  let colId = self.headersForLookup.find(column.toLowerAscii)
+  if colId == -1:
+    raise newException(IndexError, "Column not found: " & column)
+
+  self.rows[row][colId] = value
 
 proc low*(self: TwoDA): int = self.rows.low
   ## Returns the first ID (same as seq.low).

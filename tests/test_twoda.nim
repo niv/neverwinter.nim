@@ -36,6 +36,17 @@ suite "TwoDA api":
     check(tda[0, "C"] == some "k")
     tda.default = none string
 
+  test "[row, column] = value for valid columns and rows":
+    tda[0, "A"] = some("b")
+    check tda[0, "A"] == some("b")
+    tda[0, "A"] = some("a")
+
+  test "[row, column] = value for valid columns and invalid rows":
+    expect IndexError: tda[3, "A"] = some("a")
+
+  test "[row, column] = value for invalid columns":
+    expect IndexError: tda[3, "Invalid"] = some("a")
+
   test "headers returns headers":
     check(tda.columns == @["A", "B"])
 

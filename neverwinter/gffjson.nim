@@ -1,8 +1,11 @@
 # json support for gff reading/writing
 
-import json, tables, strutils
+import patched_json, tables, strutils
 
 import gff, util
+
+proc add*(s: var string, data: GffFloat) =
+  s.add(formatFloat(data, ffDecimal, 3, '.'))
 
 proc toJson*(s: GffStruct): JSONNode =
   ## Transforms the given GffStruct into a JSONNode.

@@ -1,4 +1,4 @@
-import shared, debugprinter, neverwinter/tlk, parsecsv
+import shared, debugprinter, neverwinter/tlk, parsecsv, json
 
 const SupportedFormatsSimple = ["tlk", "json", "csv", "debug"]
 const SupportedFormats = {

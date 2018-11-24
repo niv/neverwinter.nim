@@ -27,6 +27,8 @@ Options:
   -o OUT                      Output file [default: -]
   -k OUTFORMAT                Output format [default: autodetect]
 
+  --normalize-floats N        Normalize floating point values to 0 < N <= 32
+                              decimal places (json only) [default: 16].
   -p, --pretty                Pretty output (json only)
   $OPT
 """
@@ -38,6 +40,9 @@ let outformat   = ensureValidFormat($args["-k"], outputfile, SupportedFormats)
 
 let input  = if $args["-i"] == "-": newFileStream(stdin) else: newFileStream($args["-i"])
 let output = if $args["-o"] == "-": newFileStream(stdout) else: newFileStream($args["-o"], fmWrite)
+
+import patched_json
+jsonNormalizeFloatsTo parseInt($args["--normalize-floats"])
 
 var state: GffRoot
 

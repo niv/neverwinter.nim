@@ -302,7 +302,7 @@ proc `[]`*[T: GffFieldType](self: GffStruct, label: string, default: T): T =
   ## Alias for getOrDefault.
   result = getOrDefault(self, label, default)
 
-proc set*[T: GffFieldType](self: GffStruct, label: string, t: typedesc[T], value: T) =
+proc putValue*[T: GffFieldType](self: GffStruct, label: string, t: typedesc[T], value: T) =
   ## Assigns a new gff field to the given struct under label. The old value will
   ## be discarded.
   expect(label.len > 0 and label.len <= 16)
@@ -310,8 +310,8 @@ proc set*[T: GffFieldType](self: GffStruct, label: string, t: typedesc[T], value
   self.fields[label].struct = self
 
 proc `[]=`*[T: GffFieldType](self: GffStruct, label: string, t: typedesc[T], value: T) =
-  ## Alias for set.
-  set(self, label, t, value)
+  ## Alias for putField.
+  putValue(self, label, t, value)
 
 proc del*(self: GffStruct, label: string) =
   ## Removes a label from this struct.

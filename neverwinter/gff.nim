@@ -1,4 +1,4 @@
-import strutils, sequtils, algorithm, streams, future, tables, sets, encodings,
+import strutils, sequtils, algorithm, streams, sugar, tables, sets, encodings,
   typetraits
 
 import util
@@ -26,7 +26,7 @@ type
     strRef*: int
     entries*: TableRef[int, string]
 
-  GffVoid* = distinct string # seq[byte]
+  GffVoid* = distinct string
 
   GffFieldKind* {.pure.} = enum
     Byte = 0

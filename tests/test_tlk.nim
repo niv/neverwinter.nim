@@ -1,5 +1,5 @@
 import unittest, streams
-include neverwinter.tlk
+include neverwinter/tlk
 
 suite "SingleTlk":
   test "never writes out caret returns in strings":

@@ -1,5 +1,5 @@
 import unittest
-include neverwinter.resref
+include neverwinter/resref
 
 suite "ResRef":
   test "compares case-insensitive":

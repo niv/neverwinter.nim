@@ -1,6 +1,6 @@
 import unittest
 
-include neverwinter.lru
+include neverwinter/lru
 
 suite "WeightedLRU":
   var lru: WeightedLRU[string, int]

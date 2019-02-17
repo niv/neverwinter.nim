@@ -1,7 +1,7 @@
 import unittest, streams
 
-import neverwinter.resref, neverwinter.resmemfile,
-  neverwinter.resman
+import neverwinter/resref, neverwinter/resmemfile,
+  neverwinter/resman
 
 suite "ResMan":
   test "resrefs are resolved case-insensitive when given lowercase resref":

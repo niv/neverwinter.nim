@@ -1,5 +1,5 @@
 import unittest, streams
-include neverwinter.twoda
+include neverwinter/twoda
 
 const SampleFile = TwodaHeader & "\n" & "\n" &
     "   A B      \n" &

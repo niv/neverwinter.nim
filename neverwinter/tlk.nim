@@ -172,10 +172,10 @@ proc writeTlk*(io: Stream, tlk: SingleTlk) =
       let e = entry.get()
       var flags = 0
       if e.text != "": flags += 0x1
-      if e.soundResRef != nil and e.soundResRef != "": flags += 0x6
+      if e.soundResRef != "": flags += 0x6
 
       write[int32](entriesTableStream, flags.int32)
-      var sr = if e.soundResRef != nil: e.soundResRef[0..<min(16, e.soundResRef.len)] else: ""
+      var sr = e.soundResRef[0..<min(16, e.soundResRef.len)]
       sr &= repeat("\x00", 16 - sr.len)
       assert(sr.len == 16)
       write(entriesTableStream, sr) # resref

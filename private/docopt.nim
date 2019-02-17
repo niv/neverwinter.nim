@@ -43,7 +43,7 @@ proc count[T](s: openarray[T], it: T): int =
 proc partition(s, sep: string): tuple[left, sep, right: string] =
     ## "a+b".partition("+") == ("a", "+", "b")
     ## "a+b".partition("-") == ("a+b", "", "")
-    assert sep != nil and sep != ""
+    assert sep != ""
     let pos = s.find(sep)
     if pos < 0:
         (s, "", "")
@@ -103,8 +103,8 @@ converter to_bool*(v: Value): bool =
         of vkNone: false
         of vkBool: v.bool_v
         of vkInt: v.int_v != 0
-        of vkStr: v.str_v != nil and v.str_v.len > 0
-        of vkList: not v.list_v.is_nil and v.list_v.len > 0
+        of vkStr: v.str_v.len > 0
+        of vkList: v.list_v.len > 0
 
 proc len*(v: Value): int =
     ## Return the integer of a vkInt Value
@@ -137,12 +137,10 @@ iterator pairs*(v: Value): tuple[key: int, val: string] =
         yield (key: key, val: val)
 
 proc str(s: string): string =
-    if s.is_nil: "nil"
-    else: "\"" & s.replace("\"", "\\\"") & "\""
+    "\"" & s.replace("\"", "\\\"") & "\""
 
 proc str[T](s: seq[T]): string =
-    if s.is_nil: "nil"
-    else: "[" & s.map_it(string, it.str).join(", ") & "]"
+    "[" & s.map_it(string, it.str).join(", ") & "]"
 
 proc str(v: Value): string =
     case v.kind
@@ -158,8 +156,7 @@ proc `$`*(v: Value): string =
     ## or a string representation of any other kind of Value.
     if v.kind == vkStr:
         v.str_v
-    elif v.kind == vkList and
-      not v.list_v.is_nil and v.list_v.len == 1:
+    elif v.kind == vkList and v.list_v.len == 1:
         v.list_v[0]
     else: v.str
 
@@ -221,7 +218,7 @@ proc argument(name: string, value = val()): Argument =
 proc command(name: string, value = val(false)): Command =
     Command(m_name: name, value: value)
 
-proc option(short, long: string = nil, argcount = 0,
+proc option(short, long: string = "", argcount = 0,
             value = val(false)): Option =
     assert argcount in [0, 1]
     result = Option(short: short, long: long,
@@ -279,10 +276,10 @@ method match(self: Pattern, left: seq[Pattern],
 
 method fix_identities(self: Pattern, uniq: seq[Pattern]) {.base, gcsafe.} =
     ## Make pattern-tree tips point to same object if they are equal.
-    if self.children.is_nil:
+    if self.children.len == 0:
         return
     for i, child in self.children:
-        if child.children.is_nil:
+        if child.children.len == 0:
             assert child in uniq
             self.children[i] = uniq[uniq.find(child)]
         else:
@@ -415,7 +412,7 @@ method single_match(self: Command, left: seq[Pattern]): SingleMatchResult =
 proc option_parse[T](
   constructor: proc(short, long: string; argcount: int; value: Value): T,
   option_description: string): T =
-    var short, long: string = nil
+    var short, long: string = ""
     var argcount = 0
     var value = val(false)
     var (options, p, description) = option_description.strip().partition("  ")
@@ -443,7 +440,7 @@ method single_match(self: Option, left: seq[Pattern]): SingleMatchResult =
     raise new_exception(ValueError, "Not found")
 
 method name(self: Option): string =
-    if self.long != nil: self.long else: self.short
+    if self.long != "": self.long else: self.short
 
 method str(self: Option): string =
     "Option($#, $#, $#, $#)".format(self.short.str, self.long.str,
@@ -527,7 +524,7 @@ proc parse_long(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
     var similar = options.filter_it(it.long == long)
     var o: Option
     if tokens.error of DocoptExit and similar.len == 0:  # if no exact match
-        similar = options.filter_it(it.long != nil and
+        similar = options.filter_it(it.long != "" and
                                     it.long.starts_with long)
     if similar.len > 1:  # might be simply specified ambiguously 2+ times?
         tokens.error.msg = "$# is not a unique prefix: $#?".format(
@@ -535,10 +532,10 @@ proc parse_long(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
         raise tokens.error
     elif similar.len < 1:
         let argcount = (if eq == "=": 1 else: 0)
-        o = option(nil, long, argcount)
+        o = option("", long, argcount)
         options.add o
         if tokens.error of DocoptExit:
-            o = option(nil, long, argcount,
+            o = option("", long, argcount,
                        if argcount > 0: value else: val(true))
     else:
         o = option(similar[0].short, similar[0].long,
@@ -549,7 +546,7 @@ proc parse_long(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
                 raise tokens.error
         else:
             if value.kind == vkNone:
-                if tokens.current == nil:
+                if tokens.current == "":
                     tokens.error.msg = "$# requires argument".format(o.long)
                     raise tokens.error
                 value = val(tokens.move())
@@ -574,17 +571,17 @@ proc parse_shorts(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
               short, similar.len)
             raise tokens.error
         elif similar.len < 1:
-            o = option(short, nil, 0)
+            o = option(short, "", 0)
             options.add o
             if tokens.error of DocoptExit:
-                o = option(short, nil, 0, val(true))
+                o = option(short, "", 0, val(true))
         else:  # why copying is necessary here?
             o = option(short, similar[0].long,
                        similar[0].argcount, similar[0].value)
             var value = val()
             if o.argcount != 0:
                 if left == "":
-                    if tokens.current == nil:
+                    if tokens.current == "":
                         tokens.error.msg = "$# requires argument".format(short)
                         raise tokens.error
                     value = val(tokens.move())
@@ -604,7 +601,7 @@ proc parse_pattern(source: string, options: var seq[Option]): Required =
       new_exception(DocoptLanguageError, "")
     )
     let ret = parse_expr(tokens, options)
-    if tokens.current != nil:
+    if tokens.current != "":
         tokens.error.msg = "unexpected ending: '$#'".format(@tokens.join(" "))
         raise tokens.error
     required(ret)
@@ -631,7 +628,7 @@ proc parse_atom(tokens: TokenStream, options: var seq[Option]): seq[Pattern] {.g
 proc parse_seq(tokens: TokenStream, options: var seq[Option]): seq[Pattern] =
     ## seq ::= ( atom [ '...' ] )* ;
     result = @[]
-    while tokens.current notin [nil, "]", ")", "|"]:
+    while tokens.current notin ["", "]", ")", "|"]:
         var atom = parse_atom(tokens, options)
         if tokens.current == "...":
             let oom = one_or_more(atom)
@@ -684,17 +681,17 @@ proc parse_argv(tokens: TokenStream, options: var seq[Option],
     ## else:
     ##     argv ::= [ long | shorts | argument ]* [ '--' [ argument ]* ] ;
     result = @[]
-    while tokens.current != nil:
+    while tokens.current != "":
         if tokens.current == "--":
-            return result & @tokens.map_it(Pattern, argument(nil, val(it)))
+            return result & @tokens.map_it(Pattern, argument("", val(it)))
         elif tokens.current.starts_with "--":
             result.add parse_long(tokens, options)
         elif (tokens.current.starts_with "-") and tokens.current != "-":
             result.add parse_shorts(tokens, options)
         elif options_first:
-            return result & @tokens.map_it(Pattern, argument(nil, val(it)))
+            return result & @tokens.map_it(Pattern, argument("", val(it)))
         else:
-            result.add argument(nil, val(tokens.move()))
+            result.add argument("", val(tokens.move()))
 
 
 proc parse_defaults(doc: string): seq[Option] =
@@ -730,7 +727,7 @@ proc extras(help: bool, version: string, options: seq[Pattern], doc: string) =
     if help and options.any_it((it.name in ["-h", "--help"]) and it.value):
         echo(doc.strip())
         quit()
-    elif version != nil and
+    elif version != "" and
       options.any_it(it.name == "--version" and it.value):
         echo(version)
         quit()
@@ -740,7 +737,7 @@ proc docopt_exc(doc: string, argv: seq[string], help: bool, version: string,
                 options_first = false): Table[string, Value] =
     var doc = doc.replace("\r\l", "\l")
 
-    var argv = (if argv.is_nil: command_line_params() else: argv)
+    var argv = (if argv.len == 0: command_line_params() else: argv)
 
     var docopt_exit = new_exception(DocoptExit, "")
     docopt_exit.usage = printable_usage(doc)
@@ -769,8 +766,8 @@ proc docopt_exc(doc: string, argv: seq[string], help: bool, version: string,
         raise docopt_exit
 
 
-proc docopt*(doc: string, argv: seq[string] = nil, help = true,
-             version: string = nil, options_first = false, quit = true
+proc docopt*(doc: string, argv: seq[string] = @[], help = true,
+             version: string = "", options_first = false, quit = true
             ): Table[string, Value] {.gcsafe.} =
     ## Parse `argv` based on command-line interface described in `doc`.
     ##

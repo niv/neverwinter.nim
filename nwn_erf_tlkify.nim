@@ -1,5 +1,10 @@
 import shared
 
+import critbits, os, osproc, tables, options, sets, sequtils, strutils, logging
+
+import neverwinter/gff, neverwinter/erf, neverwinter/resman,
+  neverwinter/resref, neverwinter/tlk, neverwinter/twoda
+
 let Args = DOC """
 This utility reads a ERF (mod, hak), extracting all strings in
 contained gff files and normalising them into a tlk.
@@ -15,10 +20,15 @@ Usage:
   $USAGE
 
 Options:
-  --language N                Use language N, discard all others [default: English]
+  --languages N               Use language(s) N, discard all others [default: English]
                               You can specify by enum const ("English"),
                               shortcode ("de"), or by ID. (see languages.nim)
-  $OPT
+                              You can specify multiple languages separated by comma.
+                              Only the first one will be used. The written TLK will
+                              be the first in the list. This functionality only exists
+                              to support adopting incorrectly-classified languages in
+                              your module.
+  $OPTRESMAN
 """
 
 let erfFn = $ARGS["<erf>"]
@@ -27,14 +37,14 @@ let outFn = $ARGS["<out>"]
 let tlkFn = $ARGS["<tlk>"]
 let tlkBaseFn = splitFile(tlkFn).name.toLowerAscii
 
-let selectedLanguage = resolveLanguage($ARGS["--language"])
+let selectedLanguages = ($ARGS["--languages"]).split(",").mapIt(it.resolveLanguage)
+doAssert(selectedLanguages.len > 0)
 
 info "Base TLK name: ", tlkBaseFn
-
-import critbits, os, osproc, tables, options, sets, sequtils, strutils, logging
-
-import neverwinter/gff, neverwinter/erf, neverwinter/resman,
-  neverwinter/resref, neverwinter/tlk, neverwinter/twoda
+info "Selected languages: ", $selectedLanguages
+let dialogTlkFn = findNwnRoot() & "/data/dialog.tlk"
+info "Base game dialog TLK at: ", dialogTlkFn
+let dialogTlk = readSingleTlk(openFileStream(dialogTlkFn, fmRead))
 
 # text => strref
 var translations: CritBitTree[StrRef]
@@ -48,7 +58,7 @@ proc trackSkipped(str: string): void =
   let strl = str.toLowerAscii
   if not skippedTranslations.contains(strl):
     skippedTranslations.incl(strl)
-    info "SKIP: ", str
+    info "Skipping string: ", str
 
 proc translate(str: string): StrRef =
   if str.len > 0:
@@ -78,11 +88,15 @@ proc tlkify(gin: var GffStruct) =
     elif val.fieldKind == GffFieldKind.CExoLocString:
       var exolocstr = val.getValue(GffCExoLocString)
 
+      # No entries here. Nothing to do.
+      if exolocstr.entries.len == 0:
+        continue
+
       var textsToIgnore = newSeq[string]()
       # Don't translate fields that are just repeats of tags or resrefs.
-      if gin.hasField("Tag", GffCExoString): textsToIgnore.add($gin["Tag", GffCExoString])
-      if gin.hasField("TemplateResRef", GffResRef): textsToIgnore.add($gin["TemplateResRef", GffResRef])
-      if gin.hasField("ResRef", GffResRef): textsToIgnore.add($gin["ResRef", GffResRef])
+      if gin.hasField("Tag", GffCExoString): textsToIgnore.add(($gin["Tag", GffCExoString]).toLowerAscii)
+      if gin.hasField("TemplateResRef", GffResRef): textsToIgnore.add(($gin["TemplateResRef", GffResRef]).toLowerAscii)
+      if gin.hasField("ResRef", GffResRef): textsToIgnore.add(($gin["ResRef", GffResRef]).toLowerAscii)
 
       # Don't translate strings the user can't see:
 
@@ -91,23 +105,38 @@ proc tlkify(gin: var GffStruct) =
          gin.hasField("Static", GffByte) and gin["Static", GffByte] == 1:
         continue
 
-      if exolocstr.strRef == -1 and exolocstr.entries.len > 0:
-        doAssert(exolocstr.entries.hasKey(selectedLanguage.int) and exolocstr.entries.len > 1,
-          "exolocstring has other language strings but not the selected language")
-        doAssert(StrRef(exolocstr.strRef) == BadStrRef,
-          "exolocstring already has a strref AND selected language override data")
-        let str = exolocstr.entries[selectedLanguage.int]
+      # The user can specify one or more languages. The first language specified
+      # is the one the TLK is written as, and where string are taken from.
+      # If a string ref has more than one (or the wrong one), the first matching
+      # is selected.
+      var foundLanguage: Option[Language]
 
-        if str.len > 0 and not textsToIgnore.contains(str):
-          let rewriteStrRef = translate(str) + 16777216
-          doAssert(rewriteStrRef != BadStrRef, "failed to assign strref")
-          exolocstr.entries.clear
-          exolocstr.strRef = int rewriteStrRef
+      for q in selectedLanguages:
+        if exolocstr.entries.hasKey(q.int):
+          foundLanguage = some(q)
+          break
 
-          assert(val.getValue(GffCExoLocString).strRef == exolocstr.strRef)
+      doAssert(foundLanguage.isSome, "none of your selected languages satisfy string: " & $exolocstr)
 
-        elif str.len > 0:
-          trackSkipped(str)
+      let str = exolocstr.entries[foundLanguage.unsafeGet.int]
+
+      if str.len > 0 and not textsToIgnore.contains(str.toLowerAscii):
+
+        # If a string is already translated AND has local strings, we just overwrite the strref.
+        # This mirrors game behaviour where a toolset-provided string overrides the tlk entry.
+        if StrRef(exolocstr.strRef) != BadStrRef:
+          # If the base game has the key, check it's value. If the string is differing, rewrite.
+          debug "String has strref AND overrides, dropping strref: ", exolocstr
+
+        let rewriteStrRef = translate(str) + 16777216
+        doAssert(rewriteStrRef != BadStrRef, "failed to assign strref")
+        exolocstr.entries.clear
+        exolocstr.strRef = rewriteStrRef
+
+        assert(val.getValue(GffCExoLocString).strRef == exolocstr.strRef)
+
+      elif str.len > 0:
+        trackSkipped(str)
 
 proc tlkify(ein: Erf, outFile: string) =
   writeErf(newFileStream(outFile, fmWrite),
@@ -127,7 +156,7 @@ proc tlkify(ein: Erf, outFile: string) =
         if existingTlk != "":
           doAssert(existingTlk == tlkBaseFn, "Module already has a tlk name of a different name: " & existingTlk)
         else:
-          info "Setting TLK to ", tlkBaseFn
+          info "module.ifo: Setting TLK to ", tlkBaseFn
           root["Mod_CustomTlk", GffCExoString] = tlkBaseFn
 
       tlkify(GffStruct root)
@@ -144,8 +173,8 @@ var newTlk: SingleTlk
 
 if fileExists(tlkFn):
   newTlk = readSingleTlk(newFileStream(tlkFn))
-  doAssert(newTlk.language == selectedLanguage,
-    "existing TLK has mismatching language from selected")
+  doAssert(newTlk.language == selectedLanguages[0],
+    "existing TLK has mismatching language from selected primary " & $selectedLanguages[0])
 
   latestStrref = StrRef newTlk.highest
   info "Building translations from given tlk: ", latestStrref
@@ -154,9 +183,9 @@ if fileExists(tlkFn):
     if ent.text != "":
       translations[ent.text] = StrRef strref
 else:
-  info "Translations: starting from scratch"
+  info "Translations: starting from scratch as language ", selectedLanguages[0]
   newTlk = newSingleTlk()
-  newTlk.language = selectedLanguage
+  newTlk.language = selectedLanguages[0]
 
 info "Reading: ", erfFn
 let module = readErf(newFileStream(erfFn))

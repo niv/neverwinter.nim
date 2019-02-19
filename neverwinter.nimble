@@ -1,8 +1,8 @@
 import sequtils, ospaths, strutils
 
-version       = "1.2.1"
+version       = "1.2.2"
 author        = "Bernhard Stöckner <niv@nwnx.io>"
-description   = "Neverwinter Nights 1 data accessor library and utilities"
+description   = "Neverwinter Nights 1: Enhanced Edition data accessor library and utilities"
 license       = "MIT"
 
 requires "nim >= 0.19.4"

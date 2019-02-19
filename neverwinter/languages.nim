@@ -1,6 +1,12 @@
 import tables, strutils
 
 type
+  StrRef* = uint32
+
+const
+  BadStrRef* = high(StrRef)
+
+type
   Language* {.pure.} = enum
     English = 0
     French = 1

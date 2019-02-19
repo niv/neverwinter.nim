@@ -1,7 +1,8 @@
 import strutils, sequtils, algorithm, streams, sugar, tables, sets, encodings,
   typetraits
 
-import util
+import util, languages
+export languages
 
 type
   GffStruct* = ref object of RootObj
@@ -23,7 +24,7 @@ type
   GffCExoString* = string
   GffResRef* = distinct string
   GffCExoLocString* = ref object
-    strRef*: int
+    strRef*: StrRef
     entries*: TableRef[int, string]
 
   GffVoid* = distinct string
@@ -137,6 +138,9 @@ type
       listIndicesOffset:  int32,
       listIndicesSize:    int32
     ]
+
+proc `$`*(s: GffCExoLocString): string =
+  "[$1]$2" % [$s.strref, $s.entries]
 
 proc isComplexType*(k: GffFieldKind): bool =
   ## Returns true if the given `k` is a complex type (has data at an offset
@@ -261,7 +265,7 @@ proc newGffList*(): GffList = newSeq[GffStruct]()
 proc newCExoLocString*(): GffCExoLocString =
   new(result)
   result.entries = newTable[int, string]()
-  result.strRef = -1
+  result.strRef = BadStrRef
 
 proc initGffStruct(self: GffStruct, id: int32 = -1) =
   self.fields = newTable[string, GffField]()
@@ -439,7 +443,7 @@ proc resolve(self: GffField): GffField =
     self.gffCExoLocString = newCExoLocString()
     let totalSz = loader.io.readInt32()
     let previousIoPosition = loader.io.getPosition
-    self.gffCExoLocString.strRef = loader.io.readInt32()
+    self.gffCExoLocString.strRef = loader.io.readUInt32()
     let count = loader.io.readInt32()
     for i in 0..<count:
       let exoId = loader.io.readInt32()
@@ -632,7 +636,7 @@ proc write*(io: Stream, root: GffRoot) =
           #     which stores the total number of bytes in the CExoLocString,
           #     not including the first 4 size bytes.
           fieldData.write((m.getPosition + 8).int32) # totalsz
-          fieldData.write(s.strref.int32)
+          fieldData.write(s.strref.StrRef)
           fieldData.write(s.entries.len.int32) #strcount
           m.setPosition(0)
           fieldData.write(m.readAll)

@@ -2,7 +2,7 @@
 
 import json, tables, strutils
 
-import gff, util
+import gff, util, languages
 
 proc toJson*(s: GffStruct): JSONNode =
   ## Transforms the given GffStruct into a JSONNode.
@@ -33,7 +33,7 @@ proc toJson*(s: GffStruct): JSONNode =
       let entries = newJObject()
       for kk, vv in pairs(v.getValue(GffCExoLocString).entries): entries[$kk] = %vv
       let id = v.getValue(GffCExoLocString).strRef
-      if id != -1: result[k]["id"] = %id
+      if id != BadStrRef: result[k]["id"] = %(int64 id)
       result[k]["value"] = entries
 
     of GffFieldKind.ResRef: result[k]["value"] = %v.getValue(GffResRef).string
@@ -109,7 +109,7 @@ proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
         exo.entries[kk.parseInt] = vv.str
       result[k, GffCExoLocString] = exo
       if v.hasKey("id"):
-        exo.strRef = v["id"].getInt.GffInt
+        exo.strRef = v["id"].getBiggestInt.StrRef
 
     of "list":
       expect(v["value"].kind == JArray, $v)

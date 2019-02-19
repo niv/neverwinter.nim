@@ -4,12 +4,6 @@ import util, lru, resman, resref, languages
 export languages
 
 type
-  StrRef* = uint32
-
-const
-  BadStrRef* = high(StrRef)
-
-type
   TlkEntry* = ref object
     text*: string
     soundResRef*: string

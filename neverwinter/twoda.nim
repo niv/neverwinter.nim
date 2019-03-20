@@ -119,7 +119,7 @@ proc readFields(line: string, maxcount: Natural, minpad = 0): Row =
     case c:
     of '"':
       quotes = not quotes
-    of ' ':
+    of ' ', '\t':
       if not quotes and currentField != "":
         if addField(result): return
       elif quotes: currentField &= c

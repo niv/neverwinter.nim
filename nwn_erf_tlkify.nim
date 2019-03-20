@@ -139,7 +139,7 @@ proc tlkify(gin: var GffStruct) =
         trackSkipped(str)
 
 proc tlkify(ein: Erf, outFile: string) =
-  writeErf(newFileStream(outFile, fmWrite),
+  writeErf(openFileStream(outFile, fmWrite),
       ein.fileType, ein.locStrings,
       ein.strRef, toSeq(ein.contents.items)) do (r: ResRef, io: Stream):
 
@@ -172,7 +172,7 @@ proc tlkify(ein: Erf, outFile: string) =
 var newTlk: SingleTlk
 
 if fileExists(tlkFn):
-  newTlk = readSingleTlk(newFileStream(tlkFn))
+  newTlk = readSingleTlk(openFileStream(tlkFn))
   doAssert(newTlk.language == selectedLanguages[0],
     "existing TLK has mismatching language from selected primary " & $selectedLanguages[0])
 
@@ -188,7 +188,7 @@ else:
   newTlk.language = selectedLanguages[0]
 
 info "Reading: ", erfFn
-let module = readErf(newFileStream(erfFn))
+let module = readErf(openFileStream(erfFn))
 
 tlkify(module, outFn)
 
@@ -197,7 +197,7 @@ if newTranslations > 0:
 
   for str, strref in translations:
     newTlk[StrRef strref] = str
-  writeTlk(newFileStream(tlkFn, fmWrite), newTlk)
+  writeTlk(openFileStream(tlkFn, fmWrite), newTlk)
 
 else:
   info "erf did not generate new translations, not touching tlk"

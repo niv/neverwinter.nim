@@ -29,20 +29,18 @@ if not args["--force"] and dirExists(dest):
 
 createDir(dest)
 
-let kt = readKeyTable(newFileStream(keyfile)) do (bif: string) -> Stream:
+let kt = readKeyTable(openFileStream(keyfile)) do (bif: string) -> Stream:
   let bifn = keyfileLocation / extractFilename(bif) # eat "data\"
   doAssert(fileExists(bifn), "keyfile attempted to read nonexistant file '" & bif & "'")
   info "Loading bif: ", bifn
-  newFileStream(bifn)
+  openFileStream(bifn)
 
 
-let metaKeyOrder = newFileStream(dest / "key_order.txt", fmWrite)
-doAssert(metaKeyOrder != nil)
+let metaKeyOrder = openFileStream(dest / "key_order.txt", fmWrite)
 for e in kt.contents: metaKeyOrder.writeLine($e)
 metaKeyOrder.close()
 
-let metaBifOrder = newFileStream(dest / "bif_order.txt", fmWrite)
-doAssert(metaBifOrder != nil)
+let metaBifOrder = openFileStream(dest / "bif_order.txt", fmWrite)
 for e in kt.bifs: metaBifOrder.writeLine(e.filename.extractFilename)
 metaBifOrder.close()
 
@@ -54,11 +52,10 @@ for bif in kt.bifs:
 
   createDir(targetDir)
   let metaFn = dest / baseFn & "_order.txt"
-  var metaBifEntriesOrder = newFileStream(metaFn, fmWrite)
-  doAssert(metaBifEntriesOrder != nil, "Could not create meta file: " & metaFn)
+  var metaBifEntriesOrder = openFileStream(metaFn, fmWrite)
 
   for vr in vrs.withProgressBar(bif.filename & ": "):
-    let fs = newFileStream(targetDir / $vr.resref, fmWrite)
+    let fs = openFileStream(targetDir / $vr.resref, fmWrite)
     let str = bif.getStreamForVariableResource(vr.id)
     fs.write(str.readStr(vr.fileSize))
     fs.close()

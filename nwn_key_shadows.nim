@@ -13,14 +13,9 @@ Usage:
 
 # Load keytables in order.
 let keyTables = @(Args["<key>"]).map() do (key: string) -> KeyTable:
-  let fs = newFileStream(key, fmRead)
-  doAssert(fs != nil, "Could not read file: " & key)
-
   let keyRoot = key.expandFilename.splitFile().dir
-
-  result = readKeyTable(fs, key) do (bif: string) -> Stream:
-    result = newFileStream(keyRoot / bif.extractFilename)
-    doAssert(result != nil, "Could not read bif for key: " & bif)
+  result = readKeyTable(openFileStream(key, fmRead), key) do (bif: string) -> Stream:
+    result = openFileStream(keyRoot / bif.extractFilename)
 
 # Holds all resrefs per key table (idx) that are shadowed by later key tables.
 let shadowed = keyTables.map() do (keyIdx: int, key: KeyTable) -> seq[ResRef]:

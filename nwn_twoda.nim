@@ -47,8 +47,8 @@ let informat    = ensureValidFormat($args["-l"], inputfile, SupportedFormats)
 let outformat   = ensureValidFormat($args["-k"], outputfile, SupportedFormats)
 doAssert(($args["--csv-separator"]).len > 0, "--csv-separator too short")
 
-let input  = if $args["-i"] == "-": newFileStream(stdin) else: newFileStream($args["-i"])
-let output = if $args["-o"] == "-": newFileStream(stdout) else: newFileStream($args["-o"], fmWrite)
+let input  = if $args["-i"] == "-": newFileStream(stdin) else: openFileStream($args["-i"])
+let output = if $args["-o"] == "-": newFileStream(stdout) else: openFileStream($args["-o"], fmWrite)
 
 proc readCsv(s: Stream): TwoDA =
   new(result)

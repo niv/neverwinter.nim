@@ -36,8 +36,8 @@ let outputfile  = $args["-o"]
 let informat    = ensureValidFormat($args["-l"], inputfile, SupportedFormats)
 let outformat   = ensureValidFormat($args["-k"], outputfile, SupportedFormats)
 
-let input  = if $args["-i"] == "-": newFileStream(stdin) else: newFileStream($args["-i"])
-let output = if $args["-o"] == "-": newFileStream(stdout) else: newFileStream($args["-o"], fmWrite)
+let input  = if $args["-i"] == "-": newFileStream(stdin) else: openFileStream($args["-i"])
+let output = if $args["-o"] == "-": newFileStream(stdout) else: openFileStream($args["-o"], fmWrite)
 
 var state: GffRoot
 

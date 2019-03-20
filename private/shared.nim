@@ -206,8 +206,7 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
     if not fileExists(fn):
       warn("  key not found, skipping: ", fn)
       return
-    let ktfn = newFileStream(fn)
-    doAssert(ktfn != nil, "key inaccessible: " & fn)
+    let ktfn = openFileStream(fn)
 
     debug("  key: ", fn)
 
@@ -217,8 +216,7 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
                   else: root / fn
 
       debug("    bif: ", bifFn)
-      result = newFileStream(bifFn)
-      doAssert(result != nil, "bif not found or inaccessible: " & bifFn)
+      result = openFileStream(bifFn)
 
     into.add(kt)
 
@@ -230,13 +228,10 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
       result.loadKey(k)
 
   for e in erfs: #.withProgressBar("load erf: "):
-    let fs = newFileStream(e)
-    if fs != nil:
-      let erf = fs.readErf(e)
-      debug "  ", erf
-      result.add(erf)
-    else:
-      quit("Could not read erf: " & e)
+    let fs = openFileStream(e)
+    let erf = fs.readErf(e)
+    debug "  ", erf
+    result.add(erf)
 
   if not legacyLayout and not Args["--no-ovr"]:
     let c = newResDir(root / "ovr")

@@ -26,7 +26,7 @@ method demand*(self: ResDir, rr: ResRef): Res =
   let mtime = getLastModificationTime(fp)
   let sz = getFileSize(fp).int
 
-  let fs = newFileStream(fp, fmRead)
+  let fs = openFileStream(fp, fmRead)
   result = newRes(newResOrigin(self), rr, mtime, fs, size = sz, ioOwned = true)
 
 method count*(self: ResDir): int =

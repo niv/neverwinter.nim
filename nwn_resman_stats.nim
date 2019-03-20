@@ -27,7 +27,7 @@ if Args["--shadows-to"] and fileExists($Args["--shadows-to"]):
   quit("--shadows-to exists, aborting for your own safety.")
 
 let shadowsFileIo: Stream =
-  if Args["--shadows-to"]: newFileStream($Args["--shadows-to"], fmWrite)
+  if Args["--shadows-to"]: openFileStream($Args["--shadows-to"], fmWrite)
   else: nil
 
 let rm = newBasicResMan()

@@ -107,11 +107,11 @@ It has a nice, fluid API to it that transparently maps native data types to GFF 
 import neverwinter.gff
 
 # GffRoot is like a GffStruct
-let root: GffRoot = newFileStream(paramStr(1)).readGffRoot(true)
+let root: GffRoot = openFileStream(paramStr(1)).readGffRoot(true)
 
 echo root["Str", byte]
 root["Str", byte] = 3
-newFileStream("out.gff").write(root)
+openFileStream("out.gff").write(root)
 ```
 
 ## import neverwinter.gffjson
@@ -121,7 +121,7 @@ gff<->json transformation helpers.
 ```nim
 import neverwinter.gff, neverwinter.gffjson
 
-let root: GffRoot = newFileStream(paramStr(1)).readGffRoot(false)
+let root: GffRoot = openFileStream(paramStr(1)).readGffRoot(false)
 let json: JSONNode = someRoot.toJson()
 let root2 = s.gffRootFromJson()
 ```
@@ -144,13 +144,13 @@ import neverwinter.resman, neverwinter.key, neverwinter.resref
 let r = resman.newResMan(100) #100MB of in-memory cache for requests
 
 for f in ["chitin", "xp1", "xp1patch", "xp2", "xp2patch", "xp3"]:
-  let keyTable = newFileStream(f & ".key").readKeyTable(f) do (bifFn: string) -> Stream:
+  let keyTable = openFileStream(f & ".key").readKeyTable(f) do (bifFn: string) -> Stream:
     doAssert(fileExists(bifFn), "key file asks for " & bifFn & ", but not found")
-    newFileStream(bifFn)
+    openFileStream(bifFn)
 
   r.add(keyTable)
 
-r.add(newFileStream("my.erf").readErf())
+r.add(openFileStream("my.erf").readErf())
 
 r.add(resdir.newResDir("./override/"))
 
@@ -169,9 +169,9 @@ A simple twoda parser/writer.
 ```nim
 import neverwinter.twoda
 
-let app = newFileStream("appearance.2da").readTwoDA()
+let app = openFileStream("appearance.2da").readTwoDA()
 echo app[5]["Race"] # lookups are case-insensitive
-newFileStream(stdout).write(app)
+openFileStream(stdout).write(app)
 ```
 
 ## import neverwinter.tlk

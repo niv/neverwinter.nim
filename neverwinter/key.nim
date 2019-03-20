@@ -319,7 +319,7 @@ proc writeKeyAndBif*(destDir: string,
   for bif in bifs:
     createDir(destDir / bif.directory)
     let fn = destDir / bif.directory / bif.name & ".bif"
-    let ioBif = newFileStream(fn, fmWrite)
+    let ioBif = openFileStream(fn, fmWrite)
     let writtenSize = writeBif(ioBif, bif.entries, pleaseWrite)
 
     ioFileTable.write(uint32 writtenSize - 20) # header not included
@@ -329,7 +329,7 @@ proc writeKeyAndBif*(destDir: string,
     ioFileTable.write(uint16 0) #drives
     ioFilenames.write(fnForBif & "\x00")
 
-  let ioKey = newFileStream(destDir / keyName & ".key", fmWrite)
+  let ioKey = openFileStream(destDir / keyName & ".key", fmWrite)
 
   let fileTableSz = ioFileTable.getPosition
   let filenamesSz = ioFilenames.getPosition

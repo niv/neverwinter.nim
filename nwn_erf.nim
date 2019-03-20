@@ -57,7 +57,7 @@ proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string],
   else: quit("No idea what to do about: " & path)
 
 proc openErf(): Erf =
-  let infile = if filename == "-": newFileStream(stdin) else: newFileStream(filename)
+  let infile = if filename == "-": newFileStream(stdin) else: openFileStream(filename)
   doAssert(infile != nil, "Coult not open " & filename & " for reading")
   result = infile.readErf()
 
@@ -70,7 +70,7 @@ if args["-c"]:
     pathToResRefMapping(fi, resrefToFile, entries, 1)
 
   let outfile = if filename == "-": newFileStream(stdout)
-                else: newFileStream(filename, fmWrite)
+                else: openFileStream(filename, fmWrite)
   doAssert(outfile != nil, "Could not open " & filename & " for writing")
 
   writeErf(outFile, fileType = $args["--erf-type"], locStrings = initTable[int, string](),

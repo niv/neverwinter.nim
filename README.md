@@ -37,6 +37,7 @@ platforms and work on all of them equally well.
 * `nwn_resman_pkgsrv`: Repackage a resman view suitable for docker deployment.
 * `nwn_net`: A utility providing some network-related helpers, like querying servers.
 * `nwn_erf_tlkify`: Refactor strings in a erf into a exisiting or new tlk.
+* `nwn_sff`: Convert SSF files to/from csv.
 
 All utilities write their working output to stdout, and any library- or tool-
 related logging goes to stderr.  You can turn on debug logging with `--verbose`,

@@ -22,6 +22,10 @@ proc readStrOrErr*(io: Stream, size: int): TaintedString =
   ## Reads a string of exactly size bytes off io, or error out.
   result = io.readStrChunked(size)
 
+proc readFixedCountSeq*[T](io: Stream, count: int, reader: proc(idx: int): T): seq[T] =
+  result = newSeq[T](count)
+  for idx, e in result: result[idx] = reader(idx)
+
 template expect*(cond: bool, msg: string = "") =
   ## Expect `cond` to be true, otherwise raise a ValueError.
   ## This works analogous to doAssert, except for the error type.

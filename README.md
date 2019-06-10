@@ -63,7 +63,7 @@ not need to install anything else.
 
 ## Install for library use
 
-* Install nim 0.19.4 or greater, have it on PATH and working. The best way to do this
+* Install nim 0.20.0 or greater, have it on PATH and working. The best way to do this
   as of this writing is https://github.com/dom96/choosenim, which will install it
   for your user on Linux/OSX, and on Windows will even pull in the required compiler
   and package manager.

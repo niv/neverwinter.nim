@@ -163,7 +163,7 @@ proc printStats(entry: StatsForContainer) =
            align($k, spacings[0]), "  ",
            align($v, spacings[1]), "  ",
            align(entry.resSizes.getOrDefault(k).formatSize, spacings[2]), "  ",
-           align($entry.resShadowedTypes.getOrDefault(k), spacings[3]), "  ",
+           align($entry.resShadowedTypes.getOrDefault(k, 0), spacings[3]), "  ",
            align(entry.resShadowedSizes.getOrDefault(k).formatSize, spacings[4])
     echo "  ", repeat("-", spacings.sum + spacings.len*2)
 

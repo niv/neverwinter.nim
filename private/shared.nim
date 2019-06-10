@@ -105,7 +105,7 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
   debug("Other file encoding: " & getNativeEncoding())
 
   if Args.hasKey("--add-restypes") and Args["--add-restypes"]:
-    let types = ($Args["--add-restypes"]).split(",").mapIt(seq[string], it.split(":"))
+    let types = ($Args["--add-restypes"]).split(",").mapIt(it.split(":"))
     for ty in types:
       if ty.len != 2:
         raise newException(ValueError,

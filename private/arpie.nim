@@ -48,7 +48,7 @@ proc `==`*[T](a, b: StaticValue[T]): bool = true # im a hack
 # proc `$`*[T](t: StaticValue[T]): string = T.string
 # proc `$`*[T](t: SizePrefixedString[T]): string = t.string
 
-converter staticValue2String*[T](s: StaticValue[T]): string = T.string
+# converter staticValue2String*[T](s: StaticValue[T]): string = T.string
 # converter sizedString2String*[T](s: SizePrefixedString[T]): string = s.string
 # converter string2SizedString*[T](s: string): SizePrefixedString[T] = s.SizePrefixedString
 # converter discardValue2String*[T](s: DiscardValue[T]): string = ""

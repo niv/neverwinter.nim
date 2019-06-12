@@ -20,7 +20,9 @@ Options:
   -r NUM                      Recurse at most N directories when finding entries to pack [default: 1]
   --no-symlinks               Don't follow symlinks
 
-  -e, --erf-type TYPE         Set erf header type [default: ERF]
+  -e, --erf-type TYPE         Override erf header type. Will attempt auto-detection
+                              from outfile name, or "ERF" if stdout (in which case you
+                              need to specify it.)
   $OPT
 """
 
@@ -73,7 +75,15 @@ if args["-c"]:
                 else: openFileStream(filename, fmWrite)
   doAssert(outfile != nil, "Could not open " & filename & " for writing")
 
-  writeErf(outFile, fileType = $args["--erf-type"], locStrings = initTable[int, string](),
+  let fileType =
+    if args["--erf-type"]: $args["--erf-type"]
+    else:
+      let fnext = toUpperAscii(splitFile(filename).ext).substr(1, 4).strip()
+      let fnextd = if fnext == "": "ERF" else: fnext
+      notice "erf: out erf header type set from filename to ", fnextd
+      fnextd
+
+  writeErf(outFile, fileType = fileType, locStrings = initTable[int, string](),
       strRef = 0, entries = entries) do (r: ResRef, io: Stream):
 
     if verbose: echo r

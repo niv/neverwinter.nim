@@ -147,7 +147,7 @@ suite "TwoDA reading":
   test "skips extraneous columns while reading rows":
     check(readFields("a b c", 2) == @[some("a"), some("b")])
 
-  test "fails on invalid columns":
+  test "fails on invalid headers":
     expect(ValueError):
       discard newStringStream(TwodaHeader & "\r\n\r\nA ****\n0 a b").readTwoDA()
 

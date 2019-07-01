@@ -160,12 +160,15 @@ proc readTwoDA*(io: Stream): TwoDA =
     result.defaultValue = defaultOrHeaders.substr(8).readFields(1)[0]
     skipEmptyLines()
 
-    try:
-      let ln = line()
-      result.columns = ln.readFields(MaxColumns).mapIt(it.get())
-    except ValueError: raise newException(ValueError, "Could not parse columns")
+    let ln = line()
+    let fields = ln.readFields(MaxColumns)
+    if fields.anyIt(it.isNone): raise newException(ValueError, "empty header fields not supported")
+    result.columns = fields.mapIt(it.get())
+
   else:
-    result.columns = defaultOrHeaders.readFields(MaxColumns).mapIt(it.get())
+    let fields = defaultOrHeaders.readFields(MaxColumns)
+    if fields.anyIt(it.isNone): raise newException(ValueError, "empty header fields not supported")
+    result.columns = fields.mapIt(it.get())
 
   try: skipEmptyLines()
   except EOFError: return # no row data

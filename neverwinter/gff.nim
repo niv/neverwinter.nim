@@ -168,7 +168,7 @@ proc typeDescToKind*[T : GffFieldType](ofType: typedesc[T]): GffFieldKind {.inli
   elif ofType is GffCExoLocString: result = GffFieldKind.CExoLocString
   elif ofType is GffList: result = GffFieldKind.List
   elif ofType is GffStruct: result = GffFieldKind.Struct
-  else: raise newException(GffError, "type not a valid gff kind: " & name(ofType))
+  else: raise newException(ValueError, "type not a valid gff kind: " & name(ofType))
 
 proc hasTypeOf*[T: GffFieldType](fieldKind: GffFieldKind, ofType: typedesc[T]): bool =
   ## Template to check if if fieldKind is representable by the given typedesc.
@@ -282,8 +282,7 @@ proc newGffRoot*(f = "GFF "): GffRoot =
   result.fileType = f
 
 proc newGffField*[T : GffFieldType](gen: typedesc[T], value: T): GffField =
-  result = GffField(resolved: true)
-  result.fieldKind = typeDescToKind(gen)
+  result = GffField(resolved: true, fieldKind: typeDescToKind(gen))
   result.assignValue(value)
 
 proc get*[T: GffFieldType](self: GffStruct, label: string, t: typedesc[T]): T =

@@ -234,7 +234,7 @@ proc contents*(self: ResMan): HashSet[ResRef] =
   ## Returns the contents of resman. This is a potentially *very expensive
   ## operation*, as it walks the lookup chain and collects the contents
   ## of each container.
-  result = initSet[ResRef]()
+  result = initHashSet[ResRef]()
   for c in self.containers:
     result.incl(c.contents())
 

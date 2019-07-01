@@ -536,8 +536,8 @@ proc readGffRoot*(fromIO: Stream, lazyLoad: bool = true): GffRoot =
 
   # Unpack all labels to their strings so we can reference them.
   fromIO.setPosition(ip + header.labelOffset)
-  result.loader.labelsArray = lc[fromIO.readStrOrErr(16).strip(false, true, {'\0'}) |
-    (idx <- 0..<header.labelCount), string]
+  result.loader.labelsArray = toSeq(countup(0, header.labelCount - 1)).
+    map(_ => fromIO.readStrOrErr(16).strip(false, true, {'\0'}))
 
   # Unpack fields (type, lblidx, dataOrOffset)
   fromIO.setPosition(ip + header.fieldOffset)
@@ -553,19 +553,18 @@ proc readGffRoot*(fromIO: Stream, lazyLoad: bool = true): GffRoot =
 
   # unpack field indices
   fromIO.setPosition(ip + header.fieldIndicesOffset)
-  result.loader.fieldIndices = lc[fromIO.readInt32() |
-    (idx <- 0..<(header.fieldIndicesSize div 4)), int]
+  result.loader.fieldIndices = toSeq(countup(0, header.fieldIndicesSize div 4 - 1)).
+    map(_ => fromIO.readInt32().int)
 
   # list indices
   fromIO.setPosition(ip + header.listIndicesOffset)
-  result.loader.listIndices = lc[fromIO.readInt32() |
-    (idx <- 0..<(header.listIndicesSize div 4)), int]
+  result.loader.listIndices = toSeq(countup(0, header.listIndicesSize div 4 - 1)).
+    map(_ => fromIO.readInt32().int)
 
   # structs (id, dataOrOffset, fieldCount)
   fromIO.setPosition(ip + header.structOffset)
-  result.loader.structs = lc[
-    (fromIO.readInt32().int32, fromIO.readInt32().int, fromIO.readInt32().int, false) |
-    (idx <- 0..<header.structCount), GffRootStructEntry]
+  result.loader.structs = toSeq(countup(0, header.structCount - 1)).
+    map(_ => (fromIO.readInt32(), fromIO.readInt32().int, fromIO.readInt32().int, false).GffRootStructEntry)
 
   readStructInto(result.loader, 0, result)
 

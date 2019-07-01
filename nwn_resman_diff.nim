@@ -72,8 +72,8 @@ elif args["path"]:
 
 else: quit("??")
 
-var baseContents = initSet[ResRef]()
-var otherContents = initSet[ResRef]()
+var baseContents = initHashSet[ResRef]()
+var otherContents = initHashSet[ResRef]()
 
 for o in resBase.contents().withProgressBar("filter: "):
   if includeWav or o.resType != getResType("wav"): baseContents.incl(o)
@@ -83,7 +83,7 @@ for o in resOther.contents().withProgressBar("filter: "):
 
 let baseOnly = baseContents - otherContents
 let otherOnly = otherContents - baseContents
-var binaryMismatch = initSet[ResRef]()
+var binaryMismatch = initHashSet[ResRef]()
 
 for it in intersection(baseContents, otherContents).withProgressBar("intersect: "):
   let olhs = resBase[it]

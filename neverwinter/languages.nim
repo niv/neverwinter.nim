@@ -1,4 +1,4 @@
-import tables, strutils
+import tables, strutils, sequtils
 
 type
   StrRef* = uint32
@@ -39,7 +39,7 @@ proc resolveLanguage*(slang: string): Language =
   ##  - ID ("0")
   ## Raises ValueError if language does not exist.
   try:
-    if slang.isDigit():
+    if slang.count({'0'..'9'}) == slang.len:
       let id = slang.parseInt
       result = id.Language
     elif slang.len == 2:

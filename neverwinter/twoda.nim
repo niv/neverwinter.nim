@@ -225,7 +225,8 @@ proc writeTwoDA*(io: Stream, self: TwoDA) =
   io.write(repeat(" ", idWidth + CellPadding))
   for idx, h in self.headers:
     io.write(h)
-    io.write(repeat(" ", maxColWidth[idx] - h.len + 3 + CellPadding))
+    if idx != self.headers.len - 1:
+      io.write(repeat(" ", maxColWidth[idx] - h.len + 3 + CellPadding))
   io.write("\c\L")
 
   for rowidx, row in self.rows:
@@ -235,7 +236,8 @@ proc writeTwoDA*(io: Stream, self: TwoDA) =
     for cellidx, cell in row:
       let fmt = cell.escapeField
       io.write(fmt.toNwnEncoding)
-      io.write(repeat(" ", maxColWidth[cellidx] - fmt.len + 3 + CellPadding))
+      if cellidx != self.headers.len - 1:
+        io.write(repeat(" ", maxColWidth[cellidx] - fmt.len + 3 + CellPadding))
     io.write("\c\L")
 
 proc as2DA*(self: Res): TwoDA =

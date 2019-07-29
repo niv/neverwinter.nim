@@ -19,6 +19,7 @@ proc readSsf*(s: Stream): SSfRoot =
   expect fileVers == "V1.0"
   let entryCount = int s.readUint32()
   let tableOffset = int s.readUint32()
+  expect tableOffset == 40
   let padding = s.readStrOrErr(24)
   expect padding == repeat("\x00", 24)
   let entries = readFixedCountSeq[int](s, entryCount) do (idx: int) -> int: int s.readUint32()
@@ -30,7 +31,7 @@ proc readSsf*(s: Stream): SSfRoot =
 proc writeSsf*(s: Stream, ssf: SsfRoot) =
   s.write("SSF V1.0")
   s.write(uint32 ssf.entries.len)
-  s.write(uint32 ssf.entries.len)
+  s.write(uint32 40)
   s.write(repeat("\x00", 24))
   for idx, e in ssf.entries:
     let offset = ssf.entries.len * 4 + 40 + idx * 20

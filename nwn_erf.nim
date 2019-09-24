@@ -79,7 +79,10 @@ if args["-c"]:
     if args["--erf-type"]: $args["--erf-type"]
     else:
       let fnext = toUpperAscii(splitFile(filename).ext).substr(1, 4).strip()
-      let fnextd = if fnext == "": "ERF" else: fnext
+      let fnextd = case fnext
+        of "": "ERF"
+        of "NWM": "MOD"
+        else: fnext
       notice "erf: out erf header type set from filename to ", fnextd
       fnextd
 

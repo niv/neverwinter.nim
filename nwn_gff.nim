@@ -1,8 +1,9 @@
-import shared
+import shared, neverwinter/gffnwnt
 
-const SupportedFormatsSimple = ["gff", "json"]
+const SupportedFormatsSimple = ["gff", "json", "nwnt"]
 const SupportedFormats = {
   "json": @["json"],
+  "nwnt": @["nwnt"],
   "gff": GffExtensions
 }.toTable
 
@@ -44,6 +45,7 @@ var state: GffRoot
 case informat:
 of "gff":    state = input.readGffRoot(false)
 of "json":   state = input.parseJson(inputfile).gffRootFromJson()
+of "nwnt":   state = input.gffRootFromNwnt()
 else: quit("Unsupported informat: " & informat)
 
 proc postProcessJson(j: JsonNode) =
@@ -61,4 +63,6 @@ of "json":
              postProcessJson(j)
              output.write(if args["--pretty"]: j.pretty() else: $j)
              output.write("\c\L")
+of "nwnt":
+             output.toNwnt(state)
 else: quit("Unsupported outformat: " & outformat)

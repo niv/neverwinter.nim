@@ -72,7 +72,7 @@ proc toNwnt*(file: FileStream, s: GffStruct) =
   let nwnt = nwntFromGffStruct(s)
 
   for line in nwnt:
-    file.write(line[0] & line[1] & " = " & manageEscapesToText(line[2]) & "\n")
+    file.write(line[0] & line[1] & " = " & manageEscapesToText(line[2]) & "\c\L")
 
 proc gffStructFromNwnt*(file: FileStream, result: GffStruct, namePrefix: char = '\0', nameDepth: int = -1) =
   var line: string

@@ -9,7 +9,7 @@ proc manageEscapesToText(str: string): string =
 proc manageEscapesToGff(str: string): string =
   result = str.multiReplace([("\\n","\n"),("\\r","\r")])
 
-proc nwntFromGffStruct*(s: GffStruct, namePrefix: string = "", nameDepth: int = 0): seq[array[3, string]] =
+proc nwntFromGffStruct*(s: GffStruct, namePrefix: string = ""): seq[array[3, string]] =
   ##Transforms the given GFFStruct into a sequence of nwnt
   if s of GffRoot:
     result.add(["data_type", "", $s.GffRoot.fileType])
@@ -42,25 +42,22 @@ proc nwntFromGffStruct*(s: GffStruct, namePrefix: string = "", nameDepth: int = 
       if id != BadStrRef: value = $id
       else: value = "-1"
       result.add([name, kind, value])
-      let prefix = namePrefix & "-" #CExoLocString Prefix
       for subLable, subValue in pairs(gffValue.getValue(GffCExoLocString).entries):
         value = subValue
-        result.add([prefix, $subLable, value])
+        result.add([name, '[' & $subLable & ']', value])
       fieldHandled = true
-
     of GffFieldKind.Struct:
       let struct = gffValue.getValue(GffStruct)
       result.add([name, kind, $struct.id])
-      let prefix = namePrefix & "+" #Struct Prefix
+      let prefix = name & '.' #Struct Prefix
       let breakdown = nwntFromGffStruct(struct, prefix)
       result.add(breakdown)
       fieldHandled = true
-
     of GffFieldKind.List:
-      #var listCounter = 0
       for i, elem in gffValue.getValue(GffList):
-        result.add([name & '[' & $i & ']', kind, $elem.id])
-        let prefix = namePrefix & ">" #List Prefix
+        let nameIndex = name & '[' & $i & ']'
+        result.add([nameIndex, kind, $elem.id])
+        let prefix = nameIndex & "." #List Prefix
         let breakdown = nwntFromGffStruct(elem, prefix)
         result.add(breakdown)
       fieldHandled = true
@@ -74,7 +71,7 @@ proc toNwnt*(file: FileStream, s: GffStruct) =
   for line in nwnt:
     file.write(line[0] & line[1] & " = " & manageEscapesToText(line[2]) & "\c\L")
 
-proc gffStructFromNwnt*(file: FileStream, result: GffStruct, namePrefix: char = '\0', nameDepth: int = -1) =
+proc gffStructFromNwnt*(file: FileStream, result: GffStruct, listDepth: int = 0) =
   var line: string
   var pos: int
   while(true):
@@ -86,33 +83,36 @@ proc gffStructFromNwnt*(file: FileStream, result: GffStruct, namePrefix: char = 
       valSplit = line.split('=', 1)
       value = valSplit[1][1..^1]
       nameKindSplit = valSplit[0].split('$', 1)
+      name = nameKindSplit[0]
+      prefixLableSplit = name.rsplit('.')
 
-    if nameDepth != -1:
-      if nameKindSplit[0][nameDepth] != namePrefix:
-        setPosition(file, pos)
-        return
+    if prefixLableSplit.len-1 != listDepth:
+      setPosition(file, pos)
+      return
 
     let
-      name = nameKindSplit[0][nameDepth+1..^1]
+      lableandIndex = prefixLableSplit[listDepth][0..^1]
+      lable = lableandIndex.rsplit('[', 1)[0]
       kind = toLowerAscii(nameKindSplit[1][0..^2])
 
+
     case kind:
-    of "byte": result[name, GffByte] = parseInt(value).GffByte
-    of "char": result[name, GffChar] = parseInt(value).GffChar
-    of "word": result[name, GffWord] = parseInt(value).GffWord
-    of "short": result[name, GffShort] = parseInt(value).GffShort
-    of "dword": result[name, GffDword] = parseInt(value).GffDword
-    of "int": result[name, GffInt] = parseInt(value).GffInt
-    of "float": result[name, GffFloat] = parseFloat(value).GffFloat
-    of "dword64": result[name, GffDword64] = parseBiggestInt(value).GffDword64
-    of "int64": result[name, GffInt64] = parseBiggestInt(value).GffInt64
+    of "byte": result[lable, GffByte] = parseInt(value).GffByte
+    of "char": result[lable, GffChar] = parseInt(value).GffChar
+    of "word": result[lable, GffWord] = parseInt(value).GffWord
+    of "short": result[lable, GffShort] = parseInt(value).GffShort
+    of "dword": result[lable, GffDword] = parseInt(value).GffDword
+    of "int": result[lable, GffInt] = parseInt(value).GffInt
+    of "float": result[lable, GffFloat] = parseFloat(value).GffFloat
+    of "dword64": result[lable, GffDword64] = parseBiggestInt(value).GffDword64
+    of "int64": result[lable, GffInt64] = parseBiggestInt(value).GffInt64
     of "double":
       var f64: float64
       discard value.parseBiggestFloat(f64)
-      result[name, GffDouble] = f64.GffDouble
-    of "cexostring": result[name, GffCExoString] = manageEscapesToGff(value).GffCExoString
-    of "resref": result[name, GffResRef] = value.GffResRef
-    of "void": result[name, GffVoid] = value.GffVoid
+      result[lable, GffDouble] = f64.GffDouble
+    of "cexostring": result[lable, GffCExoString] = manageEscapesToGff(value).GffCExoString
+    of "resref": result[lable, GffResRef] = value.GffResRef
+    of "void": result[lable, GffVoid] = value.GffVoid
     of "cexolocstring":
       let exo = newCExoLocString()
       if value != "-1":
@@ -122,35 +122,35 @@ proc gffStructFromNwnt*(file: FileStream, result: GffStruct, namePrefix: char = 
         if not file.readLine(line):
           break
 
-        let
-          subSplit = line.split('=', 1)
-          subValue = subSplit[1][1..^1]
-          subLable = subSplit[0][nameDepth+2..^2]
+        let subSplit = line.split('=', 1)
+        let indexSplit = subSplit[0].rsplit('[', 1)
 
-
-        if subSplit[0][nameDepth+1] != '-':
+        if indexSplit.len == 1 or
+        indexSplit[0] != name:
           setPosition(file, pos)
           break
 
+        let
+          subValue = subSplit[1][1..^1]
+          subLable = indexSplit[1][0..^3]
+
         exo.entries[parseInt(subLable)] = manageEscapesToGff(subValue)
 
-      result[name, GffCExoLocString] = exo
+      result[lable, GffCExoLocString] = exo
     of "struct":
       let st = newGffStruct()
       st.id = parseInt(value).int32
-      gffStructFromNwnt(file, st, '+', nameDepth + 1)
-      result[name, GffStruct] = st
+      gffStructFromNwnt(file, st, listDepth+1)
+      result[lable, GffStruct] = st
     of "list":
       var
         list = newGffList()
         listStructID = parseInt(value).int32
-      let
-        listNameLen = name.len - 3
 
       while(true):
         let st = newGffStruct()
         st.id = listStructID
-        gffStructFromNwnt(file, st, '>', nameDepth + 1)
+        gffStructFromNwnt(file, st, listDepth+1)
         list.add(st)
 
         pos = getPosition(file)
@@ -158,20 +158,21 @@ proc gffStructFromNwnt*(file: FileStream, result: GffStruct, namePrefix: char = 
           break
 
         let listTest = line.split('$', 1)
+        let indexSplit = listTest[0].rsplit('[', 1)
 
-        if listTest[0].len - (nameDepth + 1) < name.len or
-        listTest[0][nameDepth+1..(nameDepth + listNameLen)] != name[0..^4]:
+        if indexSplit.len == 1 or
+        indexSplit[0] != name[0..^4]:
           setPosition(file, pos)
           break
 
         let
           newListIDSplit = line.split('=', 1)
           newListID = newListIDSplit[1][1..^1]
+
         listStructID = parseInt(newListID).int32
 
-      result[name[0..^4], GffList] = list
+      result[lable, GffList] = list
     else: raise newException(ValueError, "unknown field type " & kind)
-
 
 proc gffRootFromNwnt*(file: FileStream): GffRoot =
   ## Attempts to read a GffRoot from nwnt file. Will raise ValueError on any issues.

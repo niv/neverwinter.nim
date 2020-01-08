@@ -82,7 +82,7 @@ proc readJson(fs: Stream): SingleTlk =
 
   result.language = j["language"].getInt.Language
 
-  for e in j["entries"].getElems.withProgressBar():
+  for e in j["entries"].getElems:
     doAssert(e.hasKey("id") and e["id"].kind == JInt)
     doAssert(e.hasKey("text") and e["text"].kind == JString)
     doAssert(not e.hasKey("sound") or e["sound"].kind == JString)
@@ -105,7 +105,7 @@ proc writeJson(fs: Stream, tlk: SingleTlk) =
   j["language"] = %tlk.language.int
   j["entries"] = newJArray()
 
-  for e in (0..tlk.highest()).withProgressBar():
+  for e in (0..tlk.highest()):
     let opt = tlk[e.StrRef]
     if opt.isSome and opt.get().hasValue:
       var jj = newJObject()

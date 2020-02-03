@@ -323,7 +323,7 @@ proc writeKeyAndBif*(destDir: string,
     let writtenSize = writeBif(ioBif, bif.entries, pleaseWrite)
 
     ioFileTable.write(uint32 writtenSize - 20) # header not included
-    let fnForBif = bifPrefix & bif.name & ".bif"
+    let fnForBif = bifPrefix.strip(chars={'/', '\\'}) & "\\" & bif.name & ".bif"
     ioFileTable.write(uint32 HeaderStartOfKeyFileData + (bifs.len * 12) + ioFilenames.getPosition)
     ioFileTable.write(uint16 fnForBif.len)
     ioFileTable.write(uint16 0) #drives

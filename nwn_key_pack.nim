@@ -8,12 +8,14 @@ Usage:
   $USAGE
 
 Options:
+  --no-squash                 Do not squash bif files into same directory as key.
   --no-symlinks               Don't follow symlinks
   -f --force                  Force pack even if target directory has stuff in it.
   $OPT
 """
 
 let noLinks = args["--no-symlinks"]
+let noSquash = args["--no-squash"]
 
 proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
   ## Packs a directory tree into a keyfile, with one bif file per
@@ -41,7 +43,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
     sort(entries) do (lhs, rhs: ResolvedResRef) -> int:
       system.cmp[string](lhs.toFile.toUpperAscii, rhs.toFile.toUpperAscii)
 
-    result = (directory: bifPrefix, name: splitFile(dir).name, entries: entries.mapIt(it.ResRef))
+    result = (directory: if noSquash: bifPrefix else: "", name: splitFile(dir).name, entries: entries.mapIt(it.ResRef))
 
   # First walk: resolve all resrefs, bail on error.
   info "walking tree to resolve all resrefs"

@@ -162,19 +162,14 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
   ## Will load an additional language directory, if language is given.
 
   let resolvedLanguage = if language == "": $Args["--language"] else: language
-  let tryOther = resolvedLanguage != "en"
-  let otherLangRoot = root / "lang" / resolvedLanguage
+  let resolvedLanguageRoot = root / "lang" / resolvedLanguage
 
   # 1.6
   let legacyLayout = fileExists(root / "chitin.key")
   if legacyLayout: debug("legacy resman layout detected (1.69)")
   else: debug("new resman layout detected (1.8 w/ nwn_base & _loc)")
 
-  doAssert(not legacyLayout or not tryOther,
-           "legacy layout (1.69) does not support --language")
-
-  doAssert(not tryOther or dirExists(otherLangRoot), "language " & otherLangRoot &
-           " not found")
+  doAssert(dirExists(resolvedLanguageRoot), "language " & resolvedLanguageRoot & " not found")
 
   # Attempt to auto-detect the resman type we have.
   let actualKeys =
@@ -199,8 +194,8 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
   proc loadKey(into: ResMan, key: string) =
     let keyFile = if legacyLayout: key & ".key"
                   else: "data" / key & ".key"
-    let fn = if tryOther and fileExists(otherLangRoot / keyFile):
-               otherLangRoot / keyFile
+
+    let fn = if fileExists(resolvedLanguageRoot / keyFile): resolvedLanguageRoot / keyFile
              else: root / keyFile
 
     if not fileExists(fn):
@@ -211,8 +206,8 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
     debug("  key: ", fn)
 
     let kt = readKeyTable(ktfn, fn) do (fn: string) -> Stream:
-      let otherBifFn = otherLangRoot / "data" / fn.extractFilename()
-      let bifFn = if tryOther and fileExists(otherBifFn): otherBifFn
+      let otherBifFn = resolvedLanguageRoot / "data" / fn.extractFilename()
+      let bifFn = if fileExists(otherBifFn): otherBifFn
                   else: root / fn
 
       debug("    bif: ", bifFn)
@@ -237,8 +232,8 @@ proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan
     let c = newResDir(root / "ovr")
     debug "  ", c
     result.add(c)
-  if not legacyLayout and tryOther and not Args["--no-ovr"]:
-    let c = newResDir(otherLangRoot / "data" / "ovr")
+  if not legacyLayout and not Args["--no-ovr"]:
+    let c = newResDir(resolvedLanguageRoot / "data" / "ovr")
     debug "  ", c
     result.add(c)
 

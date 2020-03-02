@@ -129,6 +129,7 @@ registerResType(ResType 2074, "ttf");
 registerResType(ResType 2075, "sql");
 registerResType(ResType 2076, "tml");
 registerResType(ResType 2077, "sq3");
+registerResType(ResType 2078, "lod");
 registerResType(ResType 9996, "ids");
 registerResType(ResType 9997, "erf");
 registerResType(ResType 9998, "bif");

@@ -54,8 +54,8 @@ proc nwntFromGffStruct*(s: GffStruct, namePrefix: string = ""): seq[array[3, str
       result.add(breakdown)
       fieldHandled = true
     of GffFieldKind.List:
-      for i, elem in gffValue.getValue(GffList):
-        let nameIndex = name & '[' & $i & ']'
+      for elem in gffValue.getValue(GffList):
+        let nameIndex = name & "[]"
         result.add([nameIndex, kind, $elem.id])
         let prefix = nameIndex & "." #List Prefix
         let breakdown = nwntFromGffStruct(elem, prefix)

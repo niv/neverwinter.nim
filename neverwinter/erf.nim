@@ -1,6 +1,6 @@
 import streams, strutils, sequtils, tables, times, algorithm, os, logging
 
-import resman, util
+import resman, util, resref
 
 # This is advisory only. We will emit a warning on mismatch (so library users
 # get more debug hints), but still attempt to load the file.
@@ -154,8 +154,7 @@ proc writeErf*(io: Stream,
 
   # We save out entries sorted alphabetically for now. This ensures a reproducible
   # build.
-  let keysToWrite = entries.sorted() do (a, b: ResRef) -> int:
-    system.cmp(a.resRef.toUpperAscii, b.resRef.toUpperAscii)
+  let keysToWrite = entries.sorted(resref.cmp)
 
   # locstr list
   for id, str in locStrings:

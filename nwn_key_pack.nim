@@ -51,6 +51,9 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
   var bifs = newSeq[KeyBifEntry]()
   for wd0 in walkDir(sourceDir, true):
     if wd0.kind == pcDir:
+        # If the file is part of any svn or git storage data, skip
+        if [".svn", ".git"].find(wd0.path) != -1:
+          continue
         var bif = indexBif(wd0.path)
         bifs.add(bif)
 

@@ -15,7 +15,7 @@ proc newResMemFile*(io: StringStream, rr: ResRef, size: int, label = "anon"): Re
   result.io = io
   result.resRef = rr
   result.mtime = getTime()
-  result.label = ""
+  result.label = label
   result.size = size
 
 proc newResMemFile*(data: string, rr: ResRef, label = "anon"): ResMemFile =

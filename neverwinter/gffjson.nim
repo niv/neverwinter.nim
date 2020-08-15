@@ -1,6 +1,6 @@
 # json support for gff reading/writing
 
-import json, tables, strutils
+import json, tables, strutils, base64
 
 import gff, util, languages
 
@@ -37,7 +37,7 @@ proc toJson*(s: GffStruct): JSONNode =
       result[k]["value"] = entries
 
     of GffFieldKind.ResRef: result[k]["value"] = %v.getValue(GffResRef).string
-    of GffFieldKind.Void: result[k]["value"] = %v.getValue(GffVoid).string
+    of GffFieldKind.Void: result[k]["value"] = %v.getValue(GffVoid).string.encode()
 
     of GffFieldKind.Struct:
       let s = v.getValue(GffStruct)
@@ -94,7 +94,7 @@ proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
       result[k, GffResRef] = v["value"].str.GffResRef
     of "void":
       expect(v["value"].kind == JString, $v)
-      result[k, GffVoid] = v["value"].str.GffVoid
+      result[k, GffVoid] = v["value"].str.decode().GffVoid
 
     of "struct":
       expect(v["value"].kind == JObject, $v)

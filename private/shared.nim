@@ -5,12 +5,12 @@ import neverwinter/util, neverwinter/resman,
   neverwinter/resref, neverwinter/key,
   neverwinter/resfile, neverwinter/resmemfile, neverwinter/resdir,
   neverwinter/erf, neverwinter/gff, neverwinter/gffjson,
-  neverwinter/languages
+  neverwinter/languages, neverwinter/compressedbuf
 
 # The things we do to cut down import hassle in tools.
 # Should clean this up at some point and let the utils deal with it.
 export util, resman, resref, key, resfile, resmemfile, resdir, erf, gff, gffjson,
-  languages
+  languages, compressedbuf
 
 import terminal, progressbar, version
 export progressbar

@@ -427,14 +427,14 @@ proc resolve(self: GffField): GffField =
 
   case self.fieldKind
 
-  # simple types
-  # of GffFieldKind.Byte: self.gffByte = cast[uint8](self.dataOrOffset)
-  # of GffFieldKind.Char: self.gffChar = cast[int8](self.dataOrOffset)
-  # of GffFieldKind.Word: self.gffWord = cast[uint16](self.dataOrOffset)
-  # of GffFieldKind.Short: self.gffShort = cast[int16](self.dataOrOffset)
-  # of GffFieldKind.Dword: self.gffDword = cast[uint32](self.dataOrOffset)
-  # of GffFieldKind.Int: self.gffInt = cast[int32](self.dataOrOffset)
-  # of GffFieldKind.Float: self.gffFloat = cast[float](self.dataOrOffset)
+  # simple types: handled above
+  of GffFieldKind.Byte: discard
+  of GffFieldKind.Char: discard
+  of GffFieldKind.Word: discard
+  of GffFieldKind.Short: discard
+  of GffFieldKind.Dword: discard
+  of GffFieldKind.Int: discard
+  of GffFieldKind.Float: discard
 
   # complex types
   of GffFieldKind.CExoLocString:
@@ -490,8 +490,6 @@ proc resolve(self: GffField): GffField =
       result = newGffStruct()
       readStructInto(loader, idx, result)
     )
-
-  else: discard
 
   self.resolved = true
 
@@ -610,6 +608,16 @@ proc write*(io: Stream, root: GffRoot) =
         f.dataOrOffset = fieldData.getPosition
 
         case v.fieldKind:
+
+        # simple types: handled above
+        of GffFieldKind.Byte: discard
+        of GffFieldKind.Char: discard
+        of GffFieldKind.Word: discard
+        of GffFieldKind.Short: discard
+        of GffFieldKind.Dword: discard
+        of GffFieldKind.Int: discard
+        of GffFieldKind.Float: discard
+
         of GffFieldKind.CExoString:
           let s = v.getValue(GffCExoString).toNwnEncoding
           fieldData.write(s.len.int32)
@@ -653,7 +661,19 @@ proc write*(io: Stream, root: GffRoot) =
           listIndicesArray.add(thisListStructIdxs.len)
           listIndicesArray &= thisListStructIdxs
 
-        else: discard
+        of GffFieldKind.Dword64:
+          fieldData.write(v.getValue(GffDword64))
+
+        of GffFieldKind.Int64:
+          fieldData.write(v.getValue(GffInt64))
+
+        of GffFieldKind.Double:
+          fieldData.write(v.getValue(GffDouble))
+
+        of GffFieldKind.Void:
+          let vd = v.getValue(GffVoid).string
+          fieldData.write(uint32 vd.len)
+          fieldData.write(vd)
 
       let fieldPos = fields.len
       fields.add(f)

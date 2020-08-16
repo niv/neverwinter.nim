@@ -51,21 +51,21 @@ const sourceRoot = currentSourcePath().splitPath.head
 proc ZSTD_versionString*(): cstring {.importc.}
 proc ZSTD_versionNumber*(): cuint {.importc.}
 
-proc ZSTD_isError*(srcSize: csize): csize {.importc.}
-proc ZSTD_getErrorName*(srcSize: csize): cstring {.importc.}
+proc ZSTD_isError*(srcsize_t: csize_t): csize_t {.importc.}
+proc ZSTD_getErrorName*(srcsize_t: csize_t): cstring {.importc.}
 
-proc ZSTD_compressBound*(srcSize: csize): csize {.importc.}
+proc ZSTD_compressBound*(srcsize_t: csize_t): csize_t {.importc.}
 
 proc ZSTD_compress*(
-  dst: pointer, dstCapacity: csize,
-  src: pointer, srcSize: csize,
-  compressionLevel: cint): csize {.importc: "ZSTD_compress".}
+  dst: pointer, dstCapacity: csize_t,
+  src: pointer, srcsize_t: csize_t,
+  compressionLevel: cint): csize_t {.importc: "ZSTD_compress".}
 
-proc ZSTD_getFrameContentSize*(src: pointer, srcSize: csize): culonglong {.importc.}
+proc ZSTD_getFrameContentSize*(src: pointer, srcsize_t: csize_t): culonglong {.importc.}
 
 proc ZSTD_decompress*(
-  dst: pointer, dstSize: csize,
-  src: pointer, compressedSize: csize): csize {.importc.}
+  dst: pointer, dstSize: csize_t,
+  src: pointer, compressedSize: csize_t): csize_t {.importc.}
 
 type ZSTD_CCtx* = distinct pointer
 type ZSTD_DCtx* = distinct pointer
@@ -76,11 +76,11 @@ proc ZSTD_freeDCtx*(ctx: ZSTD_DCtx): cuint {.importc.}
 
 proc ZSTD_compressCCtx*(
   ctx: ZSTD_CCtx,
-  dst: pointer, dstCapacity: csize,
-  src: pointer, srcSize: csize,
-  compressionLevel: cint): csize {.importc.}
+  dst: pointer, dstCapacity: csize_t,
+  src: pointer, srcsize_t: csize_t,
+  compressionLevel: cint): csize_t {.importc.}
 
 proc ZSTD_decompressDCtx*(
   ctx: ZSTD_DCtx,
-  dst: pointer, dstCapacity: csize,
-  src: pointer, srcSize: csize): csize {.importc.}
+  dst: pointer, dstCapacity: csize_t,
+  src: pointer, srcsize_t: csize_t): csize_t {.importc.}

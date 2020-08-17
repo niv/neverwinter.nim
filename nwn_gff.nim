@@ -23,9 +23,16 @@ Usage:
 Options:
   -i IN                       Input file [default: -]
   -l INFORMAT                 Input format [default: autodetect]
+  --in-sqlite FILE            Squash the given SQLite database into the struct
+                              after reading IN. Only some GFF formats support
+                              embedded SQLite databases. This will clobber any
+                              SQLite data already present in IN.
 
   -o OUT                      Output file [default: -]
   -k OUTFORMAT                Output format [default: autodetect]
+  --out-sqlite FILE           Extract the SQLite contained in the operated-on
+                              file. Only some GFF formats support embedded SQLite
+                              databases.
 
   -p, --pretty                Pretty output (json only)
   $OPT
@@ -53,6 +60,17 @@ proc postProcessJson(j: JsonNode) =
     j.fields.sort do (a, b: auto) -> int: cmpIgnoreCase(a[0], b[0])
   elif j.kind == JArray:
     for e in j.elems: postProcessJson(e)
+
+if args["--in-sqlite"]:
+  let blob = compress(readFile($args["--in-sqlite"]), Algorithm.Zstd, makeMagic("SQL3"))
+  state["SQLite", GffStruct] = newGffStruct(10)
+  state["SQLite", GffStruct]["Data", GffVoid] = blob.GffVoid
+  state["SQLite", GffStruct]["Size", GffDword] = blob.len.GffDword
+
+if args["--out-sqlite"]:
+  if state.hasField("SQLite", GffStruct) and state["SQLite", GffStruct].hasField("Data", GffVoid):
+    let blob = state["SQLite", GffStruct]["Data", GffVoid].string
+    writeFile($args["--out-sqlite"], decompress(blob, makeMagic("SQL3")))
 
 case outformat:
 of "gff":    output.write(state)

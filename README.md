@@ -22,7 +22,7 @@ platforms and work on all of them equally well.
 
 ## Tools provided
 
-* `nwn_gff`: Transforms gff data to/from various formats.
+* `nwn_gff`: Transforms gff data to/from various formats, extract/embed SQLite.
 * `nwn_erf`: Un/pack erf files.
 * `nwn_tlk`: Transforms tlk tables from/to various formats.
 * `nwn_twoda`: Transforms 2da files from/to various formats.
@@ -38,6 +38,7 @@ platforms and work on all of them equally well.
 * `nwn_net`: A utility providing some network-related helpers, like querying servers.
 * `nwn_erf_tlkify`: Refactor strings in a erf into a exisiting or new tlk.
 * `nwn_sff`: Convert SSF files to/from csv.
+* `nwn_compressedbuf`: De/compress NWCompressedBuf payloads.
 
 All utilities write their working output to stdout, and any library- or tool-
 related logging goes to stderr.  You can turn on debug logging with `--verbose`,

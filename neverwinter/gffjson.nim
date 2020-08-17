@@ -37,7 +37,7 @@ proc toJson*(s: GffStruct): JSONNode =
       result[k]["value"] = entries
 
     of GffFieldKind.ResRef: result[k]["value"] = %v.getValue(GffResRef).string
-    of GffFieldKind.Void: result[k]["value"] = %v.getValue(GffVoid).string.encode()
+    of GffFieldKind.Void: result[k]["value64"] = %v.getValue(GffVoid).string.encode()
 
     of GffFieldKind.Struct:
       let s = v.getValue(GffStruct)
@@ -93,8 +93,13 @@ proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
       expect(v["value"].kind == JString, $v)
       result[k, GffResRef] = v["value"].str.GffResRef
     of "void":
-      expect(v["value"].kind == JString, $v)
-      result[k, GffVoid] = v["value"].str.decode().GffVoid
+      expect((v.hasKey("value64") and v["value64"].kind == JString) or
+             (v.hasKey("value") and v["value"].kind == JString), $v)
+      let blob = if v.hasKey("value64"):
+          v["value64"].str.decode()
+        else:
+          v["value"].str
+      result[k, GffVoid] = blob.GffVoid
 
     of "struct":
       expect(v["value"].kind == JObject, $v)

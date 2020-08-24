@@ -1,0 +1,2 @@
+# Make GitHub Linguist (language detector) ignore files in this directory https://github.com/github/linguist#using-gitattributes
+/neverwinter/private/zstd/lib/** linguist-vendored

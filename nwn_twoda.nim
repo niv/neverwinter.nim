@@ -6,7 +6,7 @@ const SupportedFormats = {
 }.toTable
 
 let args = DOC """
-Converts twoda tables from/to various fromats.
+Converts twoda tables from/to various formats.
 
 Input and output default to stdin/stdout respectively.
 

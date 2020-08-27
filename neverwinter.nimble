@@ -1,4 +1,4 @@
-import sequtils, ospaths, strutils
+import sequtils, os, strutils
 
 version       = "1.3.1"
 author        = "Bernhard Stöckner <niv@nwnx.io>"

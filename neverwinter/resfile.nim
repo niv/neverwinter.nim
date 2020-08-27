@@ -28,7 +28,7 @@ method demand*(self: ResFile, rr: ResRef): Res =
   let mtime = getLastModificationTime(fp)
   let sz = getFileSize(fp).int
 
-  result = newRes(newResOrigin(self), rr, mtime, io = openFileStream(fp), size = sz)
+  result = newRes(newResOrigin(self, self.filename), rr, mtime, io = openFileStream(fp), size = sz)
 
 method count*(self: ResFile): int =
   if fileExists(self.resRefToFullPath(self.resRef)): 1 else: 0

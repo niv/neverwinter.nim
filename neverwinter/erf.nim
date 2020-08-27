@@ -109,7 +109,7 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
         rr = newrr
 
     let resData = resList[i]
-    var erfObj = newRes(newResOrigin(result), rr, result.mtime, io,
+    var erfObj = newRes(newResOrigin(result, filename & ": " & $rr), rr, result.mtime, io,
       size = resData.size, offset = resData.offset)
     result.entries[rr] = erfObj
 

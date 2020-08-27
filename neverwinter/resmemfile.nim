@@ -25,7 +25,7 @@ method contains*(self: ResMemFile, rr: ResRef): bool =
   self.resRef == rr
 
 method demand*(self: ResMemFile, rr: ResRef): Res =
-  newRes(origin = newResOrigin(self), resref = rr, mtime = self.mtime,
+  newRes(origin = newResOrigin(self, self.label), resref = rr, mtime = self.mtime,
     io = self.io, size = self.size)
 
 method count*(self: ResMemFile): int = 1

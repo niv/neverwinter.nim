@@ -20,7 +20,7 @@ when defined(profiler):
 
 const GffExtensions* = @[
   "utc", "utd", "ute", "uti", "utm", "utp", "uts", "utt", "utw",
-  "git", "are", "gic", "mod", "ifo", "fac", "dlg", "itp", "bic",
+  "git", "are", "gic", "ifo", "fac", "dlg", "itp", "bic",
   "jrl", "gff", "gui"
 ]
 

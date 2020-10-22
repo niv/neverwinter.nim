@@ -174,9 +174,9 @@ proc val(v: seq[string]): Value = Value(kind: vkList, list_v: v)
 ### EMBEDDED: docopt
 
 type
-    DocoptLanguageError* = object of Exception
+    DocoptLanguageError* = object of Defect
         ## Error in construction of usage-message by developer.
-    DocoptExit* = object of Exception
+    DocoptExit* = object of CatchableError
         ## Exit in case user invoked program with incorrect arguments.
         usage*: string
 

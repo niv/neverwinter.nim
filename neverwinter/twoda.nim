@@ -29,7 +29,7 @@ proc `[]`*(self: TwoDA, row: Natural): Option[Row] =
   ## Looks up a row value on this 2da.
   ## Will return a none if out of bounds.
   if row < self.rows.len: some self.rows[row]
-  else: none Row # raise newException(IndexError, "Out of bounds")
+  else: none Row # raise newException(IndexDefect, "Out of bounds")
 
 proc `[]=`*(self: TwoDA, row: Natural, data: Row) =
   ## Assign a row. To clear row data, assign a empty seq. Adding a row
@@ -64,13 +64,13 @@ proc `[]`*(self: TwoDA, row: Natural, column: string, default: string): string =
 
 proc `[]=`*(self: TwoDA, row: Natural, column: string, value: Cell) =
   ## Sets a single cell value.
-  ## Will raise IndexError if either row or column don't exist.
+  ## Will raise IndexDefect if either row or column don't exist.
   if row >= self.rows.len:
-    raise newException(IndexError, "Row out of bounds")
+    raise newException(IndexDefect, "Row out of bounds")
 
   let colId = self.headersForLookup.find(column.toLowerAscii)
   if colId == -1:
-    raise newException(IndexError, "Column not found: " & column)
+    raise newException(IndexDefect, "Column not found: " & column)
 
   self.rows[row][colId] = value
 

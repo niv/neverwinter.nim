@@ -1,5 +1,5 @@
 import arpie, net, strutils, sequtils, os, jser, docopt, times
-import net, asyncnetudp, asyncdispatch, netutil, nativesockets
+import net, asyncnet, asyncdispatch, netutil, nativesockets
 import shared
 
 let args = DOC """

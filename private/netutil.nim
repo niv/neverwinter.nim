@@ -1,4 +1,4 @@
-import asyncnetudp, arpie, logging, net, asyncdispatch, times, json,
+import asyncnet, arpie, logging, net, asyncdispatch, times, json,
   nativesockets
 
 type AskResult* = tuple
@@ -10,8 +10,10 @@ proc ask*(socket: AsyncSocket, host: string, port: Port,
   debug "Asking ", host, ":", port, " for ", data
 
   let tstart = epochTime() * 1000
-  if -1 == socket.sendTo(host, port, data):
-    raise newException(IOError, "Send failed")
+  try:
+    socket.sendTo(host, port, data):
+  except:
+    raise newException(IOError, "Send failed: " & getCurrentExceptionMsg())
 
   let fut = socket.recvFrom(65_000)
   let waitable = withTimeout(fut, timeout)

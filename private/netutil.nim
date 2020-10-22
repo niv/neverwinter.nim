@@ -1,5 +1,10 @@
-import asyncnetudp, arpie, logging, net, asyncdispatch, times, json,
+import arpie, logging, net, asyncdispatch, times, json,
   nativesockets
+
+when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
+  import asyncnet
+else:
+  import asyncnetudp
 
 type AskResult* = tuple
   time: int64
@@ -10,8 +15,14 @@ proc ask*(socket: AsyncSocket, host: string, port: Port,
   debug "Asking ", host, ":", port, " for ", data
 
   let tstart = epochTime() * 1000
-  if -1 == socket.sendTo(host, port, data):
-    raise newException(IOError, "Send failed")
+  when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
+    try:
+      socket.sendTo(host, port, data):
+    except:
+      raise newException(IOError, "Send failed: " & getCurrentExceptionMsg())
+  else:
+    if -1 == socket.sendTo(host, port, data):
+      raise newException(IOError, "Send failed")
 
   let fut = socket.recvFrom(65_000)
   let waitable = withTimeout(fut, timeout)

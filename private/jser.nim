@@ -41,7 +41,7 @@ import json
 export json
 
 type
-  DeserializeError* = object of Exception ## \
+  DeserializeError* = object of CatchableError ## \
   ## Raised when something prevents json from being deserialized into a tuple.
   ## Your tuple might be in a undefined state at that point.
 
@@ -77,8 +77,6 @@ const
   DefaultSerializerFlags*: set[SerializerFlags] = {
     SerializerFlags.SkipNil
   }
-
-import sequtils
 
 type
   IntType =

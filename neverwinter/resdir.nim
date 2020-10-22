@@ -4,7 +4,7 @@
 
 import streams, strutils, os, logging
 
-import resman, util
+import resman
 
 type
   ResDir* = ref object of ResContainer

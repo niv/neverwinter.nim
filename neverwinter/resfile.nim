@@ -3,7 +3,7 @@
 
 import streams, strutils, os
 
-import resman, util
+import resman
 
 type
   ResFile* = ref object of ResContainer

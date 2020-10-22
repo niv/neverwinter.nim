@@ -1,9 +1,9 @@
 import shared
 
-import critbits, os, osproc, tables, options, sets, sequtils, strutils, logging
+import critbits, os, tables, options, sets, sequtils, strutils, logging
 
 import neverwinter/gff, neverwinter/erf, neverwinter/resman,
-  neverwinter/resref, neverwinter/tlk, neverwinter/twoda
+  neverwinter/resref, neverwinter/tlk
 
 let Args = DOC """
 This utility reads a ERF (mod, hak), extracting all strings in

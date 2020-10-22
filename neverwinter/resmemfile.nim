@@ -1,6 +1,6 @@
 import streams, strutils, os, times
 
-import resman, util
+import resman
 
 type
   ResMemFile* = ref object of ResContainer

@@ -78,8 +78,6 @@ const
     SerializerFlags.SkipNil
   }
 
-import sequtils
-
 type
   IntType =
     uint | int | int8 | int16 | int32 | int64 |

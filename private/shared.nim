@@ -1,6 +1,8 @@
 import strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
 export strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
 
+import std/exitprocs
+
 import neverwinter/util, neverwinter/resman,
   neverwinter/resref, neverwinter/key,
   neverwinter/resfile, neverwinter/resmemfile, neverwinter/resdir,
@@ -28,7 +30,7 @@ addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
 
 if isatty(stdout):
   hideCursor()
-  system.addQuitProc do () -> void {.noconv.}:
+  exitprocs.addExitProc do () -> void {.noconv.}:
     resetAttributes()
     showCursor()
 

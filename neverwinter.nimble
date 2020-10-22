@@ -5,7 +5,7 @@ author        = "Bernhard Stöckner <niv@nwnx.io>"
 description   = "Neverwinter Nights 1: Enhanced Edition data accessor library and utilities"
 license       = "MIT"
 
-requires "nim >= 1.4.0"
+requires "nim >= 1.0.8"
 
 installDirs = @["neverwinter"]
 

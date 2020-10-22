@@ -1,8 +1,6 @@
 import strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
 export strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
 
-import std/exitprocs
-
 import neverwinter/util, neverwinter/resman,
   neverwinter/resref, neverwinter/key,
   neverwinter/resfile, neverwinter/resmemfile, neverwinter/resdir,
@@ -28,11 +26,19 @@ const GffExtensions* = @[
 
 addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
 
-if isatty(stdout):
-  hideCursor()
-  exitprocs.addExitProc do () -> void {.noconv.}:
-    resetAttributes()
-    showCursor()
+when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
+  import std/exitprocs
+  if isatty(stdout):
+    hideCursor()
+    exitprocs.addExitProc do () -> void {.noconv.}:
+      resetAttributes()
+      showCursor()
+  else:
+    if isatty(stdout):
+      hideCursor()
+      addQuitProc do () -> void {.noconv.}:
+        resetAttributes()
+        showCursor()
 
 import docopt as docopt_internal
 export docopt_internal

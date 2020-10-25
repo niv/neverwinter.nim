@@ -4,11 +4,11 @@
 from os import splitPath
 const sourceRoot = currentSourcePath().splitPath.head
 
-{.passC: "-I" & sourceRoot & "/lib/common".}
-{.passC: "-I" & sourceRoot & "/lib/decompress".}
-{.passC: "-I" & sourceRoot & "/lib/compress".}
-{.passC: "-I" & sourceRoot & "/lib/dictBuilder".}
-{.passC: "-I" & sourceRoot & "/lib/legacy".}
+{.passC: "-I" & "\"" & sourceRoot & "/lib/common" & "\"".}
+{.passC: "-I" & "\"" & sourceRoot & "/lib/decompress" & "\"".}
+{.passC: "-I" & "\"" & sourceRoot & "/lib/compress" & "\"".}
+{.passC: "-I" & "\"" & sourceRoot & "/lib/dictBuilder" & "\"".}
+{.passC: "-I" & "\"" & sourceRoot & "/lib/legacy" & "\"".}
 
 {.compile: sourceRoot & "/lib/compress/zstd_compress_superblock.c".}
 {.compile: sourceRoot & "/lib/compress/zstdmt_compress.c".}

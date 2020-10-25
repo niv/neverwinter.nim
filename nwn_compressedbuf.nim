@@ -28,7 +28,7 @@ Options:
 let input  = if $args["-i"] == "-": newFileStream(stdin) else: openFileStream($args["-i"])
 let output = if $args["-o"] == "-": newFileStream(stdout) else: openFileStream($args["-o"], fmWrite)
 
-let alg = parseEnum[Algorithm]($args["--alg"])
+let alg = parseEnum[Algorithm](($args["--alg"]).capitalizeAscii)
 let magic = makeMagic($args["<magic>"])
 
 if args["-c"]:

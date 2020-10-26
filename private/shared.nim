@@ -33,12 +33,12 @@ when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
     exitprocs.addExitProc do () -> void {.noconv.}:
       resetAttributes()
       showCursor()
-  else:
-    if isatty(stdout):
-      hideCursor()
-      addQuitProc do () -> void {.noconv.}:
-        resetAttributes()
-        showCursor()
+else:
+  if isatty(stdout):
+    hideCursor()
+    addQuitProc do () -> void {.noconv.}:
+      resetAttributes()
+      showCursor()
 
 import docopt as docopt_internal
 export docopt_internal

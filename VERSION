@@ -3,11 +3,10 @@ LICENCE
 
 $LICENCE
 
+=======
 
 Library and utilities made with love to support Neverwinter Nights development.
 
 You can find the full source code at: https://github.com/niv/neverwinter.nim
 
-Author contact for help and suggestions: niv@nwnx.io
-
-Version: $VERSION
+$VERSION

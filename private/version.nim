@@ -1,17 +1,19 @@
-import os, strutils, times
+import os, strutils, parsecfg, streams
 
-## This embeds the LICENCE file (and git revision data) at *compile time*.
+const Nimble: string   = slurp(currentSourcePath().splitFile().dir & "/../neverwinter.nimble")
+const Template: string = slurp(currentSourcePath().splitFile().dir & "/../VERSION").strip
+const Licence: string  = slurp(currentSourcePath().splitFile().dir & "/../LICENCE").strip
 
 const GitBranch*: string = staticExec("git symbolic-ref -q --short HEAD").strip
-const GitRev*: string = staticExec("git rev-parse HEAD").strip
-# const BuildTime = format(getLocalTime(getTime()), "d MMMM yyyy HH:mm")
+const GitRev*: string    = staticExec("git rev-parse HEAD").strip
 
-const Template: string = readFile(currentSourcePath().splitFile().dir & "/../VERSION").strip
-const Licence: string = readFile(currentSourcePath().splitFile().dir & "/../LICENCE").strip
+let nimbleConfig        = loadConfig(newStringStream(Nimble))
+let PackageVersion*     = nimbleConfig.getSectionValue("", "version")
+let PackageDescription* = nimbleConfig.getSectionValue("", "description")
+let VersionString*  = "neverwinter " & PackageVersion & " (" & GitBranch & "/" & GitRev[0..5] & ", nim " & NimVersion & ")"
 
 proc printVersion*() =
-  let version = GitBranch & " (" & GitRev[0..5] & ")"
-
   echo Template.
        replace("$LICENCE", Licence).
-       replace("$VERSION", version)
+       replace("$VERSION", VersionString)
+  quit(0)

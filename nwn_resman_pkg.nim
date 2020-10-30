@@ -1,4 +1,4 @@
-import shared
+import shared, std/sha1
 
 const ServerPackageExtensions = [
   # walkmeshes: needed to pathfind
@@ -40,6 +40,9 @@ Options:
   --doy DOY                   Override embedded day of year [default: """ & $getTime().utc.yearday & """]
   --extensions LIST           Comma-separated list of extensions to pack [default: """ & ServerPackageExtensions.join(",") & """]
   --stubext LIST              Comma-separated list of extensions to pack as zero-byte stub files [default: """ & ServerPackageStubExtensions.join(",") & """]
+
+  --data-version VERSION      Data file version to write (one of V1, E1). [default: V1]
+  --data-compression ALG      Compression for E1 (one of """ & SupportedAlgorithms & """) [default: none]
   $OPTRESMAN
 """
 
@@ -56,6 +59,10 @@ doAssert(doy <= 365u32, "doy is out of range (0-365)")
 
 let whitelistExt = ($args["--extensions"]).split(",")
 let stublistExt  = ($args["--stubext"]).split(",")
+
+let dataVersion = parseEnum[KeyBifVersion](capitalizeAscii $args["--data-version"])
+let dataCompAlg = parseEnum[Algorithm](capitalizeAscii $args["--data-compression"])
+let dataExoComp = if dataCompAlg != Algorithm.None: ExoResFileCompressionType.CompressedBuf else: ExoResFileCompressionType.None
 
 proc shouldBePackaged(o: ResRef): bool =
   let r = ($o.resType).toLowerAscii
@@ -82,11 +89,20 @@ let bifs = allBifsToWrite.map() do (idx: int, k: seq[ResRef]) -> KeyBifEntry:
   result.directory = bifDir
   result.entries = k.mapIt(it)
 
-writeKeyAndBif(destDir=destination, keyName=keyName, bifPrefix=bifPrefix,
-    bifs=bifs, year, doy) do (r: ResRef, io: Stream):
+writeKeyAndBif(version=dataVersion,
+  exocomp=dataExoComp, compalg=dataCompAlg,
+  destDir=destination, keyName=keyName, bifPrefix=bifPrefix,
+    bifs=bifs, year, doy) do (r: ResRef, io: Stream) -> (int, SecureHash):
 
+  var sha1: SecureHash
   if shouldHaveData(r):
     let res = rm[r].get()
-    io.write(res.readAll)
+    let all = res.readAll()
+    io.write(all)
+    if dataVersion == KeyBifVersion.E1:
+      sha1 = secureHash(all)
+    (res.ioSize, sha1)
+  else:
+    (0, sha1)
 
 info keyName, ".key written"

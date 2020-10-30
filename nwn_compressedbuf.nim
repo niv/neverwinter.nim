@@ -15,7 +15,7 @@ Usage:
 
 Options:
   -c                          Compress IN, expect <magic> or error
-  -a --alg ALG                Algorithm to use for compression [default: zstd]
+  -a --alg ALG                Algorithm to use for compression (one of """ & SupportedAlgorithms & """) [default: zstd]
 
   -d                          Decompress IN, expect <magic> or error
 

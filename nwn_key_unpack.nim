@@ -56,8 +56,7 @@ for bif in kt.bifs:
 
   for vr in vrs.withProgressBar(bif.filename & ": "):
     let fs = openFileStream(targetDir / $vr.resref, fmWrite)
-    let str = bif.getStreamForVariableResource(vr.id)
-    fs.write(str.readStr(vr.fileSize))
+    fs.write(bif.readAll(vr.id))
     fs.close()
 
     metaBifEntriesOrder.writeLine($vr.resref)

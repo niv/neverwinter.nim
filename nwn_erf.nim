@@ -1,4 +1,4 @@
-import shared
+import shared, std/sha1
 
 let args = DOC """
 Un/packs erf files.
@@ -23,6 +23,10 @@ Options:
   -e, --erf-type TYPE         Override erf header type. Will attempt auto-detection
                               from outfile name, or "ERF" if stdout (in which case you
                               need to specify it.)
+
+  --data-version VERSION      Data file version to write (one of V1, E1). [default: V1]
+  --data-compression ALG      Compression for E1 (one of """ & SupportedAlgorithms & """) [default: none]
+
   $OPT
 """
 
@@ -30,6 +34,9 @@ let filename = $args["-f"]
 let maxRecurseLevel = parseInt($args["-r"])
 let noLinks = args["--no-symlinks"]
 let verbose = args["-v"]
+let dataVersion = parseEnum[ErfVersion](capitalizeAscii $args["--data-version"])
+let dataCompAlg = parseEnum[Algorithm](capitalizeAscii $args["--data-compression"])
+let dataExoComp = if dataCompAlg != Algorithm.None: ExoResFileCompressionType.CompressedBuf else: ExoResFileCompressionType.None
 
 proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string],
     outSeq: var seq[ResRef], recurseLevel: int) =
@@ -86,12 +93,17 @@ if args["-c"]:
       notice "erf: out erf header type set from filename to ", fnextd
       fnextd
 
-  writeErf(outFile, fileType = fileType, locStrings = initTable[int, string](),
-      strRef = 0, entries = entries) do (r: ResRef, io: Stream):
+  writeErf(outFile, fileType = fileType, fileVersion = dataVersion,
+      exocomp = dataExoComp, compalg = dataCompAlg,
+      locStrings = initTable[int, string](),
+      strRef = 0, entries = entries) do (r: ResRef, io: Stream) -> (int, SecureHash):
 
     if verbose: echo r
     let data = readFile(resRefToFile[r])
+    var sha1: SecureHash
+    if dataVersion == ErfVersion.E1: sha1 = secureHash(data)
     io.write(data)
+    (data.len, sha1)
 
 elif args["-t"]:
   let erf = openErf()

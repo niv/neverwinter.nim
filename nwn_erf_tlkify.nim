@@ -1,4 +1,4 @@
-import shared
+import shared, std/sha1
 
 import critbits, os, tables, options, sets, sequtils, strutils, logging
 
@@ -28,6 +28,9 @@ Options:
                               be the first in the list. This functionality only exists
                               to support adopting incorrectly-classified languages in
                               your module.
+
+  --data-version VERSION      Data file version to write (one of V1, E1). [default: V1]
+  --data-compression ALG      Compression for E1 (one of """ & SupportedAlgorithms & """) [default: none]
   $OPTRESMAN
 """
 
@@ -39,6 +42,10 @@ let tlkBaseFn = splitFile(tlkFn).name.toLowerAscii
 
 let selectedLanguages = ($ARGS["--languages"]).split(",").mapIt(it.resolveLanguage)
 doAssert(selectedLanguages.len > 0)
+
+let dataVersion = parseEnum[ErfVersion](capitalizeAscii $Args["--data-version"])
+let dataCompAlg = parseEnum[Algorithm](capitalizeAscii $Args["--data-compression"])
+let dataExoComp = if dataCompAlg != Algorithm.None: ExoResFileCompressionType.CompressedBuf else: ExoResFileCompressionType.None
 
 info "Base TLK name: ", tlkBaseFn
 info "Selected languages: ", $selectedLanguages
@@ -140,11 +147,15 @@ proc tlkify(gin: var GffStruct) =
 
 proc tlkify(ein: Erf, outFile: string) =
   writeErf(openFileStream(outFile, fmWrite),
-      ein.fileType, ein.locStrings,
-      ein.strRef, toSeq(ein.contents.items)) do (r: ResRef, io: Stream):
+      ein.fileType, dataVersion,
+      dataExoComp, dataCompAlg,
+      ein.locStrings,
+      ein.strRef, toSeq(ein.contents.items)) do (r: ResRef, io: Stream) -> (int, SecureHash):
 
     let ff = ein.demand(r)
     ff.seek()
+    let startPos = io.getPosition()
+    var sha1: SecureHash
 
     let rr = r.resolve().get()
     if GffExtensions.contains(rr.resExt):
@@ -167,7 +178,16 @@ proc tlkify(ein: Erf, outFile: string) =
     else:
       debug "Writing out non-gff: ", rr
       io.write(ff.readAll())
-    discard
+
+    let endPos = io.getPosition()
+
+    if dataVersion == ErfVersion.E1:
+      io.setPosition(startPos)
+      let peek = io.readStrOrErr(endPos - startPos)
+      sha1 = secureHash(peek)
+      doAssert(io.getPosition() == endPos)
+
+    (endPos - startPos, sha1)
 
 var newTlk: SingleTlk
 

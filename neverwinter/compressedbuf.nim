@@ -14,6 +14,8 @@ type Algorithm* {.pure.} = enum
   Zlib = 1,
   Zstd = 2
 
+const SupportedAlgorithms* = "none, " & (when defined(zlib): "zlib, " else: "") & "zstd"
+
 const Version = 3
 ## uint32_t m_magic;
 ## uint32_t m_version;

@@ -1,16 +1,22 @@
-import streams, strutils, sequtils, tables, times, algorithm, os, logging
+import streams, strutils, sequtils, tables, times, algorithm, os, logging, std/sha1
 
-import resman, util, resref
+import resman, util, resref, exo, compressedbuf
 
 # This is advisory only. We will emit a warning on mismatch (so library users
 # get more debug hints), but still attempt to load the file.
 const ValidErfTypes = ["NWM ", "MOD ", "ERF ", "HAK "]
+
+type ErfVersion* {.pure.} = enum
+  V1,
+  # V11: rim/encrypted premiums. No longer supported.
+  E1
 
 type
   Erf* = ref object of ResContainer
     mtime*: Time
 
     fileType*: string
+    fileVersion*: ErfVersion
 
     filename: string
 
@@ -37,8 +43,10 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
          "', possibly invalid erf?")
 
   let modv = io.readStrOrErr(4)
-  if  modv != "V1.0":
-    warn "unsupported erf version: ", modv, "; erf might fail to load"
+  case modv
+  of "V1.0": result.fileVersion = ErfVersion.V1
+  of "E1.0": result.fileVersion = ErfVersion.E1
+  else: warn("unsupported erf version: ", modv, "; erf might fail to load")
 
   let locStrCount = io.readInt32()
   let locStringSz = io.readInt32()
@@ -64,10 +72,19 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
   if io.getPosition != offsetToLocStr + locStringSz:
     warn "erf header field locStringSize has invalid value (safe to ignore)"
 
-  var resList = newSeq[tuple[offset: int, size: int]]()
+  var resList = newSeq[tuple[offset, diskSize, uncompressedSize: int, exocomp: ExoResFileCompressionType, sha1: SecureHash]]()
   io.setPosition(offsetToResourceList)
   for i in 0..<entryCount:
-    resList.add((offset: io.readInt32().int, size: io.readInt32().int))
+    let offset = io.readUint32()
+    let diskSize = io.readUint32()
+    var uncompressedSize = diskSize
+    var exocomp = ExoResFileCompressionType.None
+    if result.fileVersion == ErfVersion.E1:
+      exocomp = io.readUint32().ExoResFileCompressionType
+      uncompressedSize = io.readUint32()
+
+    var sha1: SecureHash # filled in in keylist
+    resList.add((int offset, int diskSize, int uncompressedSize, exocomp, sha1))
 
   # key list
   io.setPosition(offsetToKeyList)
@@ -76,6 +93,10 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
     io.setPosition(io.getPosition + 4) # id - we're not using it
     let restype = io.readInt16()
     io.setPosition(io.getPosition + 2) # unused NULLs
+
+    if result.fileVersion == ErfVersion.E1:
+      let str = io.readStrOrErr(20)
+      for i in 0..<20: Sha1Digest(resList[i].sha1)[i] = uint8(str[i])
 
     var rr =
       try:
@@ -89,7 +110,7 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
     # point to the same resource.
     if result.entries.hasKey(rr):
       if result.entries[rr].ioOffset == resList[i].offset and
-         result.entries[rr].len == resList[i].size:
+         result.entries[rr].ioSize == resList[i].diskSize:
         warn "Duplicate resref entry in erf pointing to same data, skipping: ", rr
         continue
 
@@ -98,32 +119,39 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
         let newrr = newResRef("__erfdup__" & $i, restype.ResType)
 
         warn(("Duplicate resref entry in erf, but differing offset/size: " &
-              "resref=$# offset=$# size=$# (idx=$#) would collide with " &
+              "resref=$# offset=$# disksize=$# (idx=$#) would collide with " &
               "offset=$# size=$#; renamed to $#"
               ).format(
-                rr, resList[i].offset, resList[i].size, i,
+                rr, resList[i].offset, resList[i].diskSize, i,
                 result.entries[rr].ioOffset,
-                result.entries[rr].len,
+                result.entries[rr].ioSize,
                 newrr))
 
         rr = newrr
 
     let resData = resList[i]
     var erfObj = newRes(newResOrigin(result, filename & ": " & $rr), rr, result.mtime, io,
-      size = resData.size, offset = resData.offset)
+      ioSize = resData.diskSize, ioOffset = resData.offset,
+      compression = resData.exocomp, uncompressedSize = resData.uncompressedSize, sha1 = resData.sha1)
     result.entries[rr] = erfObj
+
+type ErfEntryWriter* = proc(r: ResRef, io: Stream): tuple[bytes: int, sha1: SecureHash]
 
 proc writeErf*(io: Stream,
                fileType: string,
+               fileVersion: ErfVersion,
+               exocomp: ExoResFileCompressionType, compalg: Algorithm,
                locStrings: Table[int, string] = initTable[int, string](),
                strRef = 0,
                entries: seq[ResRef],
                # This is called when we want you to write the binary data
                # of r:ResRef to io.
-               writer: proc(r: ResRef, io: Stream): void) =
+               writer: ErfEntryWriter) =
 
   ## Writes a new ERF.
   ## `entries` maps resrefs to filenames on the local system.
+
+  doAssert(exocomp == ExoResFileCompressionType.None or fileVersion == ErfVersion.E1, "Compression requires E1")
 
   let ioStart = io.getPosition
 
@@ -132,14 +160,25 @@ proc writeErf*(io: Stream,
 
   let offsetToLocStr = 160
   let offsetToKeyList = offsetToLocStr + locStrSize
-  let keyListSize = entries.len * 24
+  let keyListSize = entries.len * (
+    case fileVersion
+    of ErfVersion.V1: 24
+    of ErfVersion.E1: 24 + 20 # sha1
+  )
   let offsetToResourceList = offsetToKeyList + keyListSize
+  let resourceListSize = entries.len * (
+    case fileVersion
+    of ErfVersion.V1: 8     # offset, (compressed/disk) size
+    of ErfVersion.E1: 8 + 8 # exocomptype, uncomp size
+  )
 
   let myFileType = fileType[0..min(fileType.high, 3)] &
                    strutils.repeat(" ", clamp(3 - fileType.high, 0,  4))
   assert(myFileType.len == 4)
   io.write(myFileType.toUpperAscii)
-  io.write("V1.0")
+  case fileVersion
+  of ErfVersion.V1: io.write("V1.0")
+  of ErfVersion.E1: io.write("E1.0")
   io.write(locStrings.len.int32)
   io.write(locStrSize.int32)
   io.write(entries.len.int32)
@@ -162,40 +201,70 @@ proc writeErf*(io: Stream,
     io.write(str.toNwnEncoding.len.int32)
     io.write(str.toNwnEncoding)
 
-  # key list
-  var id = 0
+  # key list: pad out first and revisit when data was written and we
+  #           have sizes and sha1
+  io.write(repeat("\x00", keyListSize))
+
+  # res list: pad out first and revisit when data was written and we
+  # have the sizes
+  io.write(repeat("\x00", resourceListSize))
+
+  var writtenEntries = newSeq[tuple[rr: ResRef, diskSize: int, uncompressedSize: int, sha1: SecureHash]]()
+  let offsetToResourceData = io.getPosition
+  doAssert(offsetToResourceList + resourceListSize == offsetToResourceData)
+
+  # res data: write data and keep track of sizes and checksums written
   for rr in keysToWrite:
+    let pos = io.getPosition
+
+    var compressedSize: int
+    var uncompressedSize: int
+    var sha1: SecureHash
+
+    case exocomp
+    of ExoResFileCompressionType.CompressedBuf:
+      let inmem = newStringStream()
+      (uncompressedSize, sha1) = writer(rr, inmem)
+      inmem.setPosition(0)
+      # TODO: make this more efficient w/o a duplicate stream
+      compressedbuf.compress(io, inmem, compalg, ExoResFileCompressedBufMagic)
+      compressedSize = io.getPosition() - pos
+
+    of ExoResFileCompressionType.None:
+      (uncompressedSize, sha1) = writer(rr, io)
+      compressedSize = uncompressedSize
+
+    doAssert(compressedSize > 0 and uncompressedSize > 0)
+
+    writtenEntries.add((rr, compressedSize, uncompressedSize, sha1))
+
+  # keep around the offset to the EOF, so we can reset the stream pointer
+  let offsetToEndOfFile = io.getPosition
+
+  # backfill the keylist
+  io.setPosition(offsetToKeyList)
+  var id = 0
+  for (rr, diskSize, uncompressedSize, sha1) in writtenEntries:
     io.write(rr.resRef & repeat("\x00", 16 - rr.resRef.len))
     io.write(id.int32)
     io.write(rr.resType.int16)
     io.write("\x00\x00")
+    if fileVersion == ErfVersion.E1:
+      io.write(sha1)
     id += 1
 
-  var sizes = initTable[ResRef, BiggestInt]()
-  let resListOffset = io.getPosition
-
-  # res list: pad out first and revisit when data was written and we
-  # have the sizes
-  io.write(repeat("\x00", 8 * keysToWrite.len))
-
-  let resDataOffset = io.getPosition
-
-  # res data: write data and keep track of sizes written
-  for rr in keysToWrite:
-    let pos = io.getPosition
-    writer(rr, io)
-    sizes[rr] = io.getPosition - pos
-
-  let eofOffset = io.getPosition
-
-  io.setPosition(resListOffset)
-  var currentOffset: BiggestInt = resDataOffset
-  for rr in keysToWrite:
+  # backfill the reslist
+  io.setPosition(offsetToResourceList)
+  var currentOffset: BiggestInt = offsetToResourceData
+  for (rr, diskSize, uncompressedSize, sha1) in writtenEntries:
     io.write(uint32 currentOffset)
-    io.write(uint32 sizes[rr])
-    currentOffset += sizes[rr]
+    io.write(uint32 diskSize)
+    if fileVersion == ErfVersion.E1:
+      io.write(uint32 exocomp)
+      io.write(uint32 uncompressedSize)
+    currentOffset += diskSize
 
-  io.setPosition(eofOffset)
+  io.setPosition(offsetToEndOfFile)
 
 method contains*(self: Erf, rr: ResRef): bool =
   self.entries.hasKey(rr)

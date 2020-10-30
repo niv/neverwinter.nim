@@ -1,6 +1,11 @@
-import streams, options, sequtils, strutils, tables, times, os, sets, math
+import streams, options, sequtils, strutils, tables, times, os, sets, math, std/sha1
 
-import resman, util
+import resman, util, compressedbuf, exo
+
+# bif and key version NEEDS to match
+type KeyBifVersion* {.pure.} = enum
+  V1,
+  E1
 
 type
   ResId = int32
@@ -10,8 +15,8 @@ type
     id: ResId
 
     # Where in the bif can we find our data?
-    offset: int
-    fileSize: int
+    ioOffset: int
+    ioSize: int
 
     # This is a bit of a hack: We are storing the resref in the bif structure,
     # because our key_unpack utility needs to know that in order to write out
@@ -19,17 +24,23 @@ type
     # table on the keyfile itself.
     resref: ResRef
 
+    # Only E1
+    compressionType: ExoResFileCompressionType
+    uncompressedSize: int
+    sha1: SecureHash
+
   Bif* = ref object
     keyTable: KeyTable
     filename: string
     mtime: Time
     io: Stream
     fileType: string
-    fileVersion: string
+    fileVersion: KeyBifVersion
 
     variableResources: OrderedTable[ResId, VariableResource]
 
   KeyTable* = ref object of ResContainer
+    version: KeyBifVersion
     io: Stream
     ioStart: int
     label: string
@@ -43,15 +54,15 @@ type
 # Accessors for VariableResource: Don't allow modifications from outside.
 proc id*(self: VariableResource): ResId = self.id
   ## The id of this VA. Note: This is already stripped of the bif idx component.
-proc offset*(self: VariableResource): int = self.offset
+proc ioOffset*(self: VariableResource): int = self.ioOffset
   ## The offset where this VA starts inside a bif.
-proc fileSize*(self: VariableResource): int = self.fileSize
+proc ioSize*(self: VariableResource): int = self.ioSize
   ## The data size of this VA inside the owning bif.
 proc resref*(self: VariableResource): ResRef = self.resref
   ## The resref of this VA.
 proc `$`*(self: VariableResource): string = $self.resref
 
-proc readBif(io: Stream, owner: KeyTable, filename: string, expectIdx: int): Bif =
+proc readBif(expectVersion: KeyBifVersion, io: Stream, owner: KeyTable, filename: string, expectIdx: int): Bif =
   ## Read a bif file from a stream. Used internally; as reading bif files from
   ## the outside isn't very useful (you can't get resrefs).
 
@@ -65,8 +76,11 @@ proc readBif(io: Stream, owner: KeyTable, filename: string, expectIdx: int): Bif
 
   result.fileType = io.readStrOrErr(4)
   expect(result.fileType == "BIFF")
-  result.fileVersion = io.readStrOrErr(4)
-  expect(result.fileVersion == "V1  ")
+  let fileVersion = io.readStrOrErr(4)
+  case expectVersion:
+  of KeyBifVersion.V1: expect(fileVersion == "V1  ")
+  of KeyBifVersion.E1: expect(fileVersion == "E1  ")
+  result.fileVersion = expectVersion
 
   let varResCount = io.readInt32()
   let fixedResCount = io.readInt32()
@@ -80,13 +94,24 @@ proc readBif(io: Stream, owner: KeyTable, filename: string, expectIdx: int): Bif
     let offset = io.readInt32()
     let fileSize = io.readInt32()
     let resType = io.readInt32()
+
+    let compressionType =
+      if result.fileVersion == KeyBifVersion.E1: io.readInt32().ExoResFileCompressionType
+      else: ExoResFileCompressionType.None
+
+    let uncompressedSize =
+      if result.fileVersion == KeyBifVersion.E1: io.readInt32()
+      else: fileSize
+
     discard resType # This is unused because we later on map the actual
                     # resref to this VA
 
     let r = VariableResource(
       id: fullId.ResId,
-      offset: offset,
-      fileSize: fileSize
+      ioOffset: offset,
+      ioSize: fileSize,
+      compressionType: compressionType,
+      uncompressedSize: uncompressedSize
     )
 
     # I'm not even sure anymore what's wrong with you, nwn data files.
@@ -115,12 +140,22 @@ proc getVariableResources*(self: Bif): seq[VariableResource] =
 proc getStreamForVariableResource*(self: Bif, id: ResId): Stream =
   ## Gets the stream data for a ID. The offset is already correct; but you
   ## will have to know the VA length to read data correctly (see getVariableResource).
+  ## You also need to know the compression and decompress it yourself (for now).
 
   result = self.io
   expect(self.variableResources.hasKey(id and 0xfffff), "attempted to look up id " & $id &
     " in bif, but not found")
 
-  result.setPosition(self.variableResources[id and 0xfffff].offset)
+  result.setPosition(self.variableResources[id and 0xfffff].ioOffset)
+
+proc readAll*(self: Bif, id: ResId): string =
+  ## Reads and decompresses (if needed) the full payload for the given VR.
+  let vr = getVariableResource(self, id)
+  let stream = getStreamForVariableResource(self, id)
+  let rawData = stream.readStrOrErr(vr.ioSize)
+  result = case vr.compressionType
+  of ExoResFileCompressionType.None: rawData
+  of ExoResFileCompressionType.CompressedBuf: decompress(rawData, ExoResFileCompressedBufMagic)
 
 proc filename*(self: Bif): string =
   ## Returns the filename with which this bif was referenced in the key table.
@@ -148,7 +183,10 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
   let ft = io.readStrOrErr(4)
   expect(ft == "KEY ")
   let fv = io.readStrOrErr(4)
-  expect(fv == "V1  ")
+  expect(fv == "V1  " or fv == "E1  ")
+  case fv
+  of "V1  ": result.version = KeyBifVersion.V1
+  of "E1  ": result.version = KeyBifVersion.E1
 
   let bifCount = io.readInt32()
   let keyCount = io.readInt32()
@@ -190,7 +228,7 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
   for fnidx, fn in filenameTable:
     let fnio = resolveBif(fn)
     expect(fnio != nil, "key file referenced file " & fn & " but cannot open")
-    let bf = readBif(fnio, result, fn, fnidx)
+    let bf = readBif(result.version, fnio, result, fn, fnidx)
     result.bifs.add(bf)
 
   io.setPosition(offsetToKeyTable)
@@ -199,6 +237,11 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
     let restype = io.readInt16().ResType
     let resId = io.readInt32()
     let bifIdx = resId shr 20
+
+    var sha1: SecureHash
+    if result.version == KeyBifVersion.E1:
+      let str = io.readStrOrErr(20)
+      for i in 0..<20: Sha1Digest(sha1)[i] = uint8(str[i])
 
     expect(bifIdx >= 0 and bifIdx < result.bifs.len,
       "while reading res " & $resId & "=" & $resref & "." & $restype & ", bifidx not indiced by keyfile: " &
@@ -218,7 +261,11 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
     let vra = result.bifs[bifIdx].getVariableResource(resId)
     expect(vra != nil, "key table references unknown variable resource (bug?): " &
       $bifIdx & " doesn't have " & $resId)
+
+    # We also have to backfill the resref and the sha1, as they are stored
+    # in the keyfile, not the bif.
     vra.resref = rr
+    vra.sha1 = sha1
 
 proc readKeyTable*(io: Stream, resolveBif: proc (fn: string): Stream): KeyTable =
   ## Alias for readKeyTable, just without a label.
@@ -238,7 +285,7 @@ method demand*(self: KeyTable, rr: ResRef): Res =
   let st = b.getStreamForVariableResource(resId)
 
   result = newRes(newResOrigin(self, "id=" & $resId & " in " & b.filename),
-    resref = rr, mtime = b.mtime, io = st, offset = va.offset, size = va.fileSize)
+    resref = rr, mtime = b.mtime, io = st, ioOffset = va.ioOffset, ioSize = va.ioSize)
 
 method count*(self: KeyTable): int = self.resrefIdLookup.len
 
@@ -264,32 +311,64 @@ type KeyBifEntry* = tuple
   name: string
   entries: seq[ResRef]
 
-proc writeBif*(ioBif: Stream, entries: seq[ResRef],
-    pleaseWrite: proc(r: ResRef, io: Stream)): int =
+type BifEntryWriter* = proc(r: ResRef, io: Stream): tuple[bytes: int, sha1: SecureHash]
 
-  ioBif.write("BIFFV1  ")
+type WriteBifResult = tuple
+  bytes: int
+  entries: seq[tuple[resref: ResRef, sha1: SecureHash]]
+
+proc writeBif(version: KeyBifVersion, exocomp: ExoResFileCompressionType, compalg: Algorithm,
+    ioBif: Stream, entries: seq[ResRef], pleaseWrite: BifEntryWriter): WriteBifResult =
+  result.entries = newSeq[tuple[resref: ResRef, sha1: SecureHash]]()
+
+  case version
+  of KeyBifVersion.V1: ioBif.write("BIFFV1  ")
+  of KeyBifVersion.E1: ioBif.write("BIFFE1  ")
+
   ioBif.write(uint32 entries.len) # entries
   ioBif.write(uint32 0) #fixedres
   ioBif.write(uint32 20) #vartable offset, hardcoded value
 
   doAssert(ioBif.getPosition == 20)
 
-  var resrefDataSizes = initTable[ResRef, int]()
+  let entrySize = case version
+  of KeyBifVersion.V1: 16 # id, offset, len, type
+  of KeyBifVersion.E1: 16 + 8+20 # compression, sha1
+
+  var resrefData = initTable[ResRef, tuple[uncompressed: int, compressed: int, sha1: SecureHash]]()
   let varTableStart = ioBif.getPosition
 
   # Pad out initial data which we back-fill later with collected size/offset data
   for i in 0..<entries.len:
-    ioBif.write(repeat("\x00", 16)) # id, offset, len, type
+    ioBif.write(repeat("\x00", entrySize))
 
   # Write out data. This fills in resrefDataSizes so we know
   # what we need to put into the varResTable
   for idx, resRef in entries:
     let pos = ioBif.getPosition
-    pleaseWrite(resRef, ioBif)
-    resrefDataSizes[resRef] = ioBif.getPosition - pos
+
+    var compressedSize: int
+    var uncompressedSize: int
+    var sha1: SecureHash
+
+    case exocomp
+    of ExoResFileCompressionType.CompressedBuf:
+      let inmem = newStringStream()
+      (uncompressedSize, sha1) = pleaseWrite(resRef, inmem)
+      inmem.setPosition(0)
+      # TODO: make this more efficient w/o a duplicate stream
+      compressedbuf.compress(ioBif, inmem, compalg, ExoResFileCompressedBufMagic)
+      compressedSize = ioBif.getPosition() - pos
+
+    of ExoResFileCompressionType.None:
+      (uncompressedSize, sha1) = pleaseWrite(resRef, ioBif)
+      compressedSize = uncompressedSize
+
+    resrefData[resRef] = (uncompressedSize, compressedSize, sha1)
+    result.entries.add((resRef, sha1))
 
   # Backfill what we skipped before.
-  var offset: BiggestInt = varTableStart + (entries.len * 16)
+  var offset: BiggestInt = varTableStart + (entries.len * entrySize)
   ioBif.setPosition(varTableStart)
   for idx, resRef in entries:
     # let res = rm[resRef].get()
@@ -299,30 +378,42 @@ proc writeBif*(ioBif: Stream, entries: seq[ResRef],
     let id = (idx.uint32 shl 20u32) + idx.uint32
     ioBif.write(uint32 id)
     ioBif.write(uint32 offset)
-    ioBif.write(uint32 resrefDataSizes[resRef])
-    offset += resrefDataSizes[resRef]
+    ioBif.write(uint32 resrefData[resRef].compressed)
+    offset += resrefData[resRef].compressed
     ioBif.write(uint32 resRef.resType)
 
-  result = ioBif.getPosition
+    if version == KeyBifVersion.E1:
+      ioBif.write(uint32 exocomp)
+      ioBif.write(uint32 resrefData[resRef].uncompressed)
+
+  result.bytes = ioBif.getPosition
   ioBif.close
 
-proc writeKeyAndBif*(destDir: string,
+proc writeKeyAndBif*(
+    version: KeyBifVersion,
+    exocomp: ExoResFileCompressionType, compalg: Algorithm,
+    destDir: string,
     keyName: string, bifPrefix: string, bifs: seq[KeyBifEntry],
     buildYear, buildDay: uint32,
-    pleaseWrite: proc(r: ResRef, io: Stream)) =
+    pleaseWrite: BifEntryWriter) =
+
+  doAssert(exocomp == ExoResFileCompressionType.None or version == KeyBifVersion.E1, "Compression requires E1")
 
   const HeaderStartOfKeyFileData = 64 # key
 
   let ioFileTable = newStringStream()
   let ioFilenames = newStringStream()
 
+  var bifResults = newSeq[WriteBifResult]()
+
   for bif in bifs:
     createDir(destDir / bif.directory)
     let fn = destDir / bif.directory / bif.name & ".bif"
     let ioBif = openFileStream(fn, fmWrite)
-    let writtenSize = writeBif(ioBif, bif.entries, pleaseWrite)
+    let writtenBif = writeBif(version, exocomp, compalg, ioBif, bif.entries, pleaseWrite)
+    bifResults.add(writtenBif)
 
-    ioFileTable.write(uint32 writtenSize - 20) # header not included
+    ioFileTable.write(uint32 writtenBif.bytes - 20) # header not included
     let fnForBif = bifPrefix.strip(chars={'/', '\\'}) & "\\" & bif.name & ".bif"
     ioFileTable.write(uint32 HeaderStartOfKeyFileData + (bifs.len * 12) + ioFilenames.getPosition)
     ioFileTable.write(uint16 fnForBif.len)
@@ -335,7 +426,10 @@ proc writeKeyAndBif*(destDir: string,
   let filenamesSz = ioFilenames.getPosition
   let totalResRefCount = sum(bifs.mapIt(it.entries.len))
 
-  ioKey.write("KEY V1  ")
+  case version
+  of KeyBifVersion.V1: ioKey.write("KEY V1  ")
+  of KeyBifVersion.E1: ioKey.write("KEY E1  ")
+
   ioKey.write(uint32 bifs.len) # bifs.len
   ioKey.write(uint32 totalResRefCount)
   ioKey.write(uint32 64) # offset to file table
@@ -367,15 +461,24 @@ proc writeKeyAndBif*(destDir: string,
       let id: uint32 = (bifIdx.uint32 shl 20u32) + resIdx.uint32
       ioKey.write(uint32 id)
 
+      if version == KeyBifVersion.E1:
+        ioKey.write(bifResults[bifIdx].entries[resIdx].sha1)
+
+  let expectedEntrySize = case version
+    of KeyBifVersion.V1: 16+2+4
+    of KeyBifVersion.E1: 16+2+4 + 20
   doAssert(ioKey.getPosition == HeaderStartOfKeyFileData + fileTableSz + filenamesSz +
-    totalResRefCount * (16+2+4))
+    totalResRefCount * expectedEntrySize)
 
   ioKey.close
 
-proc writeKeyAndBif*(destDir: string,
+proc writeKeyAndBif*(
+    version: KeyBifVersion,
+    exocomp: ExoResFileCompressionType, compalg: Algorithm,
+    destDir: string,
     keyName: string, bifPrefix: string, bifs: seq[KeyBifEntry],
-    pleaseWrite: proc(r: ResRef, io: Stream)) =
-  writeKeyAndBif(destDir, keyName, bifPrefix, bifs,
+    pleaseWrite: BifEntryWriter) =
+  writeKeyAndBif(version, exocomp, compalg, destDir, keyName, bifPrefix, bifs,
     uint32 getTime().utc.year,
     uint32 getTime().utc.yearday,
     pleaseWrite)

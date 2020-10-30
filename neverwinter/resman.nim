@@ -16,10 +16,10 @@
 ## inherits from ResConainer and then creating the required methods (see below).
 
 
-import options, streams, sets, times, strutils
+import options, streams, sets, times, strutils, std/sha1
 export options, streams, sets
 
-import resref, restype, util, lru
+import resref, restype, util, lru, exo, compressedbuf
 export resref, restype
 
 const MemoryCacheThreshold* = 1024 * 1024 # 1MB
@@ -37,9 +37,15 @@ type
     io: Stream
     ioOwned: bool
     resref: ResRef
-    offset: int
-    size: int
-    cached: bool
+    ioOffset: int      # offset into stream where the raw data is
+    ioSize: int        # size of raw data (before decompression)
+
+    sha1: SecureHash   # hash of object (can be zeroed out if no hash was provided)
+
+    compression: ExoResFileCompressionType
+    uncompressedSize: int
+
+    cached: bool       # is the decompressed object cached in memory?
     cache: string
 
     origin: ResOrigin
@@ -120,22 +126,30 @@ proc `$`*(self: ResOrigin): string =
 #  Res
 # -----
 
-proc newRes*(origin: ResOrigin, resref: ResRef, mtime: Time, io: Stream,
-    size: int, offset = 0, ioOwned = false): Res =
+const EmptySecureHash = [0u8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0].SecureHash
+proc newRes*(
+    origin: ResOrigin, resref: ResRef,
+    mtime: Time,
+    io: Stream, ioSize: int, ioOffset = 0,
+    ioOwned = false,
+    compression = ExoResFileCompressionType.None, uncompressedSize = 0,
+    sha1: SecureHash = EmptySecureHash): Res =
 
   new(result)
   result.io = io
   result.resref = resref
-  result.offset = offset
-  result.size = size
+  result.ioOffset = ioOffset
+  result.ioSize = ioSize
   result.mtime = mtime
   result.origin = origin
   result.ioOwned = ioOwned
+  result.compression = compression
+  result.uncompressedSize =
+    if compression == ExoResFileCompressionType.None and uncompressedSize == 0: ioSize
+    else: uncompressedSize
+  result.sha1 = sha1
 
 proc resRef*(self: Res): ResRef = self.resRef
-
-proc len*(self: Res): int =
-  self.size
 
 proc mtime*(self: Res): Time =
   ## When this Res was last modified (This is highly experimental.)
@@ -145,18 +159,25 @@ proc io*(self: Res): Stream =
   ## The backing IO (a stream) for this Res.  This is NOT guaranteed to be
   ## safe for concurrent readers, nor are there any guarantees as to length,
   ## current positioning, or data availability.
+  ## This is also the raw data stream, NOT decompressed data (if the Res is compressed).
   self.io
 
 proc ioOffset*(self: Res): int =
-  self.offset
+  self.ioOffset
+
+proc ioSize*(self: Res): int =
+  self.ioSize
 
 proc cached*(self: Res): bool =
   self.cached
 
+proc uncompressedSize*(self: Res): int = self.uncompressedSize
+proc compressionAlgorithm*(self: Res): ExoResFileCompressionType = self.compression
+
 proc seek*(self: Res) =
   ## Convenience method to make the backing io for this Res seek to the proper
   ## position.
-  self.io.setPosition(self.offset)
+  self.io.setPosition(self.ioOffset)
 
 proc origin*(self: Res): ResOrigin =
   ## Returns the origin of this res: The container it came from and the debug
@@ -164,21 +185,28 @@ proc origin*(self: Res): ResOrigin =
   self.origin
 
 method readAll*(self: Res, useCache: bool = true): string {.base.} =
-  ## Reads the full data of this res. The value is cached, as long as it
-  ## fits inside MemoryCacheThreshold.
+  ## Reads the full data of this res. Transparently decompresses.
+  ## The value is cached, as long as it fits inside MemoryCacheThreshold.
   if useCache and self.cached:
     result = self.cache
 
   else:
-    self.io.setPosition(self.offset)
+    self.io.setPosition(self.ioOffset)
 
-    if self.size == -1:
-      result = self.io.readAll
-      self.size = result.len
+    let rawData = if self.ioSize == -1:
+      self.io.readAll
     else:
-      result = self.io.readStrOrErr(self.size)
+      self.io.readStrOrErr(self.ioSize)
 
-    if useCache and self.size < MemoryCacheThreshold:
+    self.ioSize = rawData.len
+
+    result = case self.compression
+    of ExoResFileCompressionType.None:
+      rawData
+    of ExoResFileCompressionType.CompressedBuf:
+      decompress(rawData, ExoResFileCompressedBufMagic)
+
+    if useCache and self.ioSize < MemoryCacheThreshold:
       self.cached = true
       self.cache = result
       if self.ioOwned: self.io.close()
@@ -222,7 +250,7 @@ proc demand*(self: ResMan, rr: ResRef, usecache = true): Res =
       result = c.demand(rr)
       if self.cache != nil and usecache:
         # echo "rr=", rr, " put in cache"
-        self.cache[rr, result.len] = result
+        self.cache[rr, result.ioSize] = result
       break
 
 proc count*(self: ResMan): int =

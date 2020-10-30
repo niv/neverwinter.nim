@@ -27,7 +27,7 @@ method demand*(self: ResDir, rr: ResRef): Res =
   let sz = getFileSize(fp).int
 
   let fs = openFileStream(fp, fmRead)
-  result = newRes(newResOrigin(self, self.directory), rr, mtime, fs, size = sz, ioOwned = true)
+  result = newRes(newResOrigin(self, self.directory), rr, mtime, fs, ioSize = sz, ioOwned = true)
 
 method count*(self: ResDir): int =
   self.contents.card

@@ -47,7 +47,7 @@ for keyIdx, key in keyTables:
 
     for chkIdx, refs in transparent[keyIdx]:
       if refs.len > 0:
-        let bytes = foldl(refs, a + key.demand(b).len, 0i64)
+        let bytes = foldl(refs, a + key.demand(b).ioSize, 0i64)
         echo align(bytes.formatSize, 15), "  ",
              align($refs.len, 12), " in ",
              keyTables[chkIdx]

@@ -49,7 +49,7 @@ for res in filterByMatch(rm, patternMatch, binaryMatch, invert):
     stdout.write secureHash(res.readAll()), "  "
 
   if args["--details"]:
-    stdout.write align(res.len.formatSize, 12), "  ",
+    stdout.write align(res.ioSize.formatSize, 12), "  ",
                  res.origin()
 
   stdout.write("\c\L")

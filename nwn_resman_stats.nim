@@ -107,9 +107,9 @@ proc makeStatsForContainer(cont: ResContainer): StatsForContainer =
         result.resShadowedByContIdx.inc(theirIdx)
         result.resShadowedTypes.inc(o.resType)
         result.resShadowedCount += 1
-        result.resShadowedTotalSize += cont.demand(o).len
+        result.resShadowedTotalSize += cont.demand(o).ioSize
         result.resShadowedSizes[o.resType] =
-          result.resShadowedSizes.getOrDefault(o.resType) + cont.demand(o).len
+          result.resShadowedSizes.getOrDefault(o.resType) + cont.demand(o).ioSize
 
         if shadowsFileIo != nil:
           shadowsFileIo.writeLine($o & "\t" & $cont)
@@ -117,10 +117,10 @@ proc makeStatsForContainer(cont: ResContainer): StatsForContainer =
   for o in cont.contents.withProgressBar($cont & " contents: "):
     let res = cont.demand(o)
     # result.resRefs.add(o)
-    result.resTotalSize += res.len
+    result.resTotalSize += res.ioSize
     result.resTypes.inc(o.resType)
     if not result.resSizes.hasKey(o.resType): result.resSizes[o.resType] = 0
-    result.resSizes[o.resType] += res.len
+    result.resSizes[o.resType] += res.ioSize
 
   sort(result.resTypes)
   sort(result.resShadowedTypes)

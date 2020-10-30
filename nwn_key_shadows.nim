@@ -33,7 +33,7 @@ echo align("bytes", Padding), "  ",
 echo repeat("-", terminalWidth())
 
 for keyIdx, key in keyTables:
-  let shadowedBytes = foldl(shadowed[keyIdx], a + key.demand(b).len, 0i64)
+  let shadowedBytes = foldl(shadowed[keyIdx], a + key.demand(b).ioSize, 0i64)
 
   echo align(shadowedBytes.formatSize, Padding), "  ",
     align($shadowed[keyIdx].len, Padding), "  ",

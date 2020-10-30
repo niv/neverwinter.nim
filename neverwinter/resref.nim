@@ -64,14 +64,15 @@ proc resRef*(rr: ResRef): string = rr.resRef
 proc resType*(rr: ResRef): ResType = rr.resType
 proc resExt*(rr: ResolvedResRef): string = rr.resExt
 
-proc `cmp`*[T: ResRef](a, b: T): int {.procvar.} =
-  # We compare uppercase resrefs, just like NWN does too.
-  # This matters for sorting things like "_" versus "A".
-  system.cmp(($a).toUpperAscii, ($b).toUpperAscii)
-
 proc hash*(self: ResRef): Hash =
   0 !& hash(self.resRef.toUpperAscii) !& hash(self.resType)
 
 proc `==`*(a, b: ResRef): bool =
-  a.resRef.toUpperAscii == b.resRef.toUpperAscii and
-    a.resType == b.resType
+  a.resType == b.resType and cmpIgnoreCase(a.resRef, b.resRef) == 0
+
+proc `cmp`*[T: ResRef](a, b: T): int {.procvar.} =
+  # We compare uppercase resrefs, just like NWN does too.
+  # This matters for sorting things like "_" versus "A".
+  if a.resType != b.resType: return a.resType.int - b.resType.int
+  else: return cmpIgnoreCase(a.resRef, b.resRef)
+

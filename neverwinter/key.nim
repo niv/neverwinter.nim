@@ -201,7 +201,7 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
     let bifIdx = resId shr 20
 
     expect(bifIdx >= 0 and bifIdx < result.bifs.len,
-      "while reading res " & $resId & ", bifidx not indiced by keyfile: " &
+      "while reading res " & $resId & "=" & $resref & "." & $restype & ", bifidx not indiced by keyfile: " &
       $bifIdx)
 
     let rr = newResRef(resref, restype)

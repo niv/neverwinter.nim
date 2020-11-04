@@ -32,11 +32,13 @@ proc compress*(input: string, level: int = 3, ctx: CompressionContext = nil): st
     raise newException(ValueError, $ZSTD_getErrorName(strlen))
   result = newString(strlen)
 
+  # Support compressing a zero-byte payload. Still need to generate a valid frame.
+  let inputptr = if input.len > 0: unsafeAddr(input[0]) else: nil
   let err =
     if not isNil(ctx):
-      ZSTD_compressCCtx(ctx.ctx, addr(result[0]), strlen, unsafeAddr(input[0]), input.len.csize_t, level.cint)
+      ZSTD_compressCCtx(ctx.ctx, addr(result[0]), strlen, inputptr, input.len.csize_t, level.cint)
     else:
-      ZSTD_compress(addr(result[0]), strlen, unsafeAddr(input[0]), input.len.csize_t, level.cint)
+      ZSTD_compress(addr(result[0]), strlen, inputptr, input.len.csize_t, level.cint)
 
   if ZSTD_isError(err) > 0:
     raise newException(ValueError, $ZSTD_getErrorName(err))

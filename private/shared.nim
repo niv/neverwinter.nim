@@ -133,7 +133,23 @@ proc findNwnRoot*(): string =
     result = $Args["--root"]
   elif getEnv("NWN_ROOT") != "":
     result = getEnv("NWN_ROOT")
-  else:
+
+  # 1) Steam
+  if result == "":
+    when defined(macosx):
+      let steamapps = r"~/Library/Application Support/Steam/steamapps/common".expandTilde
+    elif defined(linux):
+      let steamapps = r"~/.local/share/Steam/steamapps/common".expandTilde
+    elif defined(windows):
+      let steamapps = r"c:\program files\steam\steamapps\common"
+    else: {.fatal: "Unsupported os for findNwnRoot".}
+
+    if dirExists(steamapps / "Neverwinter Nights" / "data") and
+        fileExists(steamApps / "Neverwinter Nights" / "steam_appid.txt"):
+      result = steamapps / "Neverwinter Nights"
+
+  # 2) BDC
+  if result == "":
     when defined(macosx):
       let settingsFile = r"~/Library/Application Support/Beamdog Client/settings.json".expandTilde
     elif defined(linux):
@@ -147,13 +163,9 @@ proc findNwnRoot*(): string =
     doAssert(j.hasKey("folders"))
     doAssert(j["folders"].kind == JArray)
 
-    # Which NWN release do we want? So many questions. We pick the first one available, in order:
-    # 00840: Digital Deluxe Beta (Head Start)
-    # 00829: Normal Beta (Head Start)
-    # TODO:
-    #   00839: Digital Deluxe
-    #   00832: Nightly
-    const releases = ["00840", "00829"]
+    # 00785: Stable
+    # 00829: Development
+    const releases = ["00829", "00785"]
     for torrentId in releases:
       var fo = j["folders"].mapIt(it.str / torrentId)
 
@@ -162,9 +174,16 @@ proc findNwnRoot*(): string =
         result = fo[0]
         break
 
-  if result == "" or not dirExists(result): raise newException(ValueError,
-    "Could not locate NWN; try --root")
-  debug "NWN root: ", result
+  if result == "" or not dirExists(result):
+    raise newException(ValueError, "Could not locate NWN; try --root")
+
+  let databuild = if not fileExists(result / "databuild.txt"):
+    warn "NWN root does not contain databuild.txt"
+    ""
+  else:
+    readFile(result / "databuild.txt").split("\n")[0].strip
+
+  debug "NWN root: ", result, " databuild: ", databuild
 
 proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan =
   ## Sets up a resman that defaults to what 1.8 looks like.

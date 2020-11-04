@@ -49,9 +49,6 @@ let dataExoComp = if dataCompAlg != Algorithm.None: ExoResFileCompressionType.Co
 
 info "Base TLK name: ", tlkBaseFn
 info "Selected languages: ", $selectedLanguages
-let dialogTlkFn = findNwnRoot() & "/data/dialog.tlk"
-info "Base game dialog TLK at: ", dialogTlkFn
-let dialogTlk = readSingleTlk(openFileStream(dialogTlkFn, fmRead))
 
 # text => strref
 var translations: CritBitTree[StrRef]

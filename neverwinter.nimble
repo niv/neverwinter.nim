@@ -11,8 +11,9 @@ installDirs = @["neverwinter"]
 
 binDir = "bin/"
 bin = listFiles(thisDir()).
-  mapIt(it.splitFile.name).
-  filterIt(it.startsWith("nwn_"))
+  mapIt(it.splitFile).
+  filterIt(it.name.startsWith("nwn_") and it.ext == ".nim").
+  mapIt(it.name)
 
 task clean, "Remove compiled binaries and temporary data":
   for b in bin:

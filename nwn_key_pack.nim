@@ -76,7 +76,7 @@ proc packKeyBif*(keyFilename: string, sourceDir: string, targetDir: string) =
 
   info "all done"
 
-let keyName   = $args["<key>"]
+let keyName   = splitFile($args["<key>"]).name
 let sourceDir = $args["<source>"]
 let targetDir = $args["<destination>"]
 

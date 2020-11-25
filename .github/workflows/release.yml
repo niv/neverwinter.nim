@@ -38,7 +38,7 @@ jobs:
           cd nim
           wget https://nim-lang.org/download/nim-$NIMVER-linux_x64.tar.xz
           tar xf nim-$NIMVER-linux_x64.tar.xz
-          echo "::set-env name=PATH::$PWD/nim-$NIMVER/bin:$PATH"
+          echo "PATH=$PWD/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install nimble packages
         run: nimble install -y
@@ -108,7 +108,7 @@ jobs:
           bin/nim c koch
           ./koch boot -d:release
           ./koch tools
-          echo "::set-env name=PATH::$PWD/bin:$PATH"
+          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install nimble packages
         run: nimble install -y

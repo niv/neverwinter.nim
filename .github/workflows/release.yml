@@ -22,7 +22,7 @@ jobs:
         uses: actions/cache@v2
         id: cache
         with:
-          key: build-${{ matrix.bintype }}-nim-${{ env.NIMVER }}
+          key: build-${{ matrix.bintype }}-nim-${{ env.NIMVER }}--1
           path: |
             nim
             ~/.nimble
@@ -31,17 +31,19 @@ jobs:
         if: matrix.bintype != 'linux'
         run: sudo apt-get install -y --no-install-recommends mingw-w64
 
-      - name: Download nim, add to PATH
+      - name: Download nim
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           mkdir nim
           cd nim
           wget https://nim-lang.org/download/nim-$NIMVER-linux_x64.tar.xz
           tar xf nim-$NIMVER-linux_x64.tar.xz
-          echo "PATH=$PWD/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Set up PATH
+        run: echo "PATH=$PWD/nim/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install nimble packages
-        run: nimble install -y
+        run: nimble install --depsOnly -y
 
       - name: Compile for Linux
         if: matrix.bintype == 'linux'
@@ -91,7 +93,7 @@ jobs:
         uses: actions/cache@v2
         id: cache
         with:
-          key: build-macos-${{ env.NIMVER }}
+          key: build-macos-${{ env.NIMVER }}--1
           path: |
             nim
             ~/.nimble
@@ -108,10 +110,12 @@ jobs:
           bin/nim c koch
           ./koch boot -d:release
           ./koch tools
-          echo "PATH=$PWD/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Set up PATH
+        run: echo "PATH=$PWD/nim/nim-$NIMVER/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install nimble packages
-        run: nimble install -y
+        run: nimble install --depsOnly -y
 
       - name: Compile for macOS
         run: nimble build -d:release

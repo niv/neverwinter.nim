@@ -1,4 +1,4 @@
-import streams, strutils, sequtils, tables, times, algorithm, os, logging, std/sha1
+import streams, strutils, sequtils, tables, times, algorithm, os, logging, std/sha1, std/oids
 
 import resman, util, resref, exo, compressedbuf
 
@@ -26,6 +26,9 @@ type
     strRef*: int
     locStrings: Table[int, string]
     entries: OrderedTableRef[ResRef, Res]
+
+    # E1:
+    oid: Oid
 
 proc locStrings*(self: Erf): var Table[int, string] =
   self.locStrings
@@ -57,7 +60,13 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
   result.buildYear = io.readInt32()
   result.buildDay = io.readInt32()
   result.strRef = io.readInt32()
-  io.setPosition(io.getPosition + 116) # reserved
+  case result.fileVersion
+  of ErfVersion.V1:
+    io.setPosition(io.getPosition + 16) # reserved cipher mp5 for RIM, unused these days.
+    io.setPosition(io.getPosition + 100) # reserved
+  of ErfVersion.E1:
+    result.oid = parseOid io.readStrOrErr(24)
+    io.setPosition(io.getPosition + 92) #reserved
 
   # locstrlist
   io.setPosition(offsetToLocStr)
@@ -144,6 +153,8 @@ proc writeErf*(io: Stream,
                locStrings: Table[int, string] = initTable[int, string](),
                strRef = 0,
                entries: seq[ResRef],
+               # What OID to write out to the ERF. Defaults to no OID.
+               erfOid: Oid = parseOid(repeat("\x00", 24)),
                # This is called when we want you to write the binary data
                # of r:ResRef to io.
                writer: ErfEntryWriter) =
@@ -188,8 +199,15 @@ proc writeErf*(io: Stream,
   io.write(int32 getTime().utc.year - 1900) # self.buildYear.int32)
   io.write(int32 getTime().utc.yearday) # self.buildDay.int32)
   io.write(int32 strRef)
-  io.write(repeat("\x00", 116))
-  assert(io.getPosition == ioStart + 160)
+
+  case fileVersion
+  of ErfVersion.V1:
+    io.write(repeat("\x00", 116))
+    assert(io.getPosition == ioStart + 160)
+  of ErfVersion.E1:
+    io.write($erfOid)
+    io.write(repeat("\x00", 92))
+    assert(io.getPosition == ioStart + 160)
 
   # We save out entries sorted alphabetically for now. This ensures a reproducible
   # build.

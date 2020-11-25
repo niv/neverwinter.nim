@@ -1,4 +1,4 @@
-import shared, std/sha1
+import shared, std/sha1, std/oids
 
 import critbits, os, tables, options, sets, sequtils, strutils, logging
 
@@ -147,7 +147,8 @@ proc tlkify(ein: Erf, outFile: string) =
       ein.fileType, dataVersion,
       dataExoComp, dataCompAlg,
       ein.locStrings,
-      ein.strRef, toSeq(ein.contents.items)) do (r: ResRef, io: Stream) -> (int, SecureHash):
+      ein.strRef, toSeq(ein.contents.items),
+      parseOid(repeat("\x00", 24))) do (r: ResRef, io: Stream) -> (int, SecureHash):
 
     let ff = ein.demand(r)
     ff.seek()

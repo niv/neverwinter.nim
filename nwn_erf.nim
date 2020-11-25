@@ -1,4 +1,4 @@
-import shared, std/sha1
+import shared, std/sha1, std/oids
 
 let args = DOC """
 Un/packs erf files.
@@ -96,7 +96,8 @@ if args["-c"]:
   writeErf(outFile, fileType = fileType, fileVersion = dataVersion,
       exocomp = dataExoComp, compalg = dataCompAlg,
       locStrings = initTable[int, string](),
-      strRef = 0, entries = entries) do (r: ResRef, io: Stream) -> (int, SecureHash):
+      strRef = 0, entries = entries,
+      erfOid = parseOid(repeat("\x00", 24))) do (r: ResRef, io: Stream) -> (int, SecureHash):
 
     if verbose: echo r
     let data = readFile(resRefToFile[r])

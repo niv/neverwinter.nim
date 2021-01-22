@@ -1,6 +1,3 @@
-
-{.passC: "-DZSTD_STATIC_LINKING_ONLY".}
-
 from os import splitPath, quoteShell
 const sourceRoot = currentSourcePath().splitPath.head
 

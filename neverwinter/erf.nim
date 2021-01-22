@@ -252,8 +252,6 @@ proc writeErf*(io: Stream,
       (uncompressedSize, sha1) = writer(rr, io)
       compressedSize = uncompressedSize
 
-    doAssert(compressedSize > 0 and uncompressedSize > 0)
-
     writtenEntries.add((rr, compressedSize, uncompressedSize, sha1))
 
   # keep around the offset to the EOF, so we can reset the stream pointer

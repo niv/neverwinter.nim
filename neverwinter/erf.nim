@@ -103,6 +103,10 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
     let restype = io.readInt16()
     io.setPosition(io.getPosition + 2) # unused NULLs
 
+    # Invalid restype is OK
+    if restype == 65535:
+      continue
+
     if result.fileVersion == ErfVersion.E1:
       let str = io.readStrOrErr(20)
       for i in 0..<20: Sha1Digest(resList[i].sha1)[i] = uint8(str[i])

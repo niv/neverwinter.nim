@@ -6,6 +6,7 @@ description   = "Neverwinter Nights 1: Enhanced Edition data accessor library an
 license       = "MIT"
 
 requires "nim >= 1.4.8"
+requires "docopt >= 0.6.8"
 
 installDirs = @["neverwinter"]
 

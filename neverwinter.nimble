@@ -20,4 +20,6 @@ task clean, "Remove compiled binaries and temporary data":
   for b in bin:
     rmFile(binDir / b)
     rmFile(binDir / b & ".exe")
+    rmFile(b)
+    rmFile(b & ".exe")
   rmdir(nimcacheDir())

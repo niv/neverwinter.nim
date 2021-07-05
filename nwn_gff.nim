@@ -44,7 +44,6 @@ let informat    = ensureValidFormat($args["-l"], inputfile, SupportedFormats)
 let outformat   = ensureValidFormat($args["-k"], outputfile, SupportedFormats)
 
 let input  = if $args["-i"] == "-": newFileStream(stdin) else: openFileStream($args["-i"])
-let output = if $args["-o"] == "-": newFileStream(stdout) else: openFileStream($args["-o"], fmWrite)
 
 var state: GffRoot
 
@@ -71,6 +70,8 @@ if args["--out-sqlite"]:
   if state.hasField("SQLite", GffStruct) and state["SQLite", GffStruct].hasField("Data", GffVoid):
     let blob = state["SQLite", GffStruct]["Data", GffVoid].string
     writeFile($args["--out-sqlite"], decompress(blob, makeMagic("SQL3")))
+
+let output = if $args["-o"] == "-": newFileStream(stdout) else: openFileStream($args["-o"], fmWrite)
 
 case outformat:
 of "gff":    output.write(state)

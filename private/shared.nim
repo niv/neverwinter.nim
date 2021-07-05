@@ -74,7 +74,9 @@ Resources:
 let ResmanOpts = """
 
 Resman:
-  --root ROOT                 Override NWN root (autodetected from BDX)
+  --root ROOT                 Override NWN root (autodetection is attempted)
+  --userdirectory USERDIR     Override NWN user directory (autodetection is attempted)
+
   --no-keys                   Do not load keys into resman (ignore --keys)
   --keys KEYS                 key files to load (from root:data/)
                               [default: autodetect]
@@ -84,6 +86,7 @@ Resman:
 
   --language LANG             Load language overrides [default: en]
 
+  --manifests MANIFESTS       Load comma-separated NWSync manifests [default: ]
   --erfs ERFS                 Load comma-separated erf files [default: ]
   --dirs DIRS                 Load comma-separated directories [default: ]
 """ & GlobalOpts
@@ -184,6 +187,24 @@ proc findNwnRoot*(): string =
     readFile(result / "databuild.txt").split("\n")[0].strip
 
   debug "NWN root: ", result, " databuild: ", databuild
+
+proc findUserRoot*(): string =
+  if Args["--userdirectory"]:
+    result = $Args["--userdirectory"]
+  elif getEnv("NWN_USER_DIRECTORY") != "":
+    result = getEnv("NWN_USER_DIRECTORY")
+  else:
+    when defined(macosx):
+      result = r"~/Documents/Neverwinter Nights".expandTilde
+    elif defined(linux):
+      let settingsFile = r"~/.local/share/Neverwinter Nights".expandTilde
+    elif defined(windows):
+      let settingsFile = getHomeDir() / r"Documents\Neverwinter Nights"
+    else: {.fatal: "Unsupported os for findUserRoot"}
+
+  if result == "" or not dirExists(result): raise newException(ValueError,
+    "Could not locate NWN user directory; try --userdirectory or set NWN_USER_DIRECTORY")
+  debug "NWN user directory: ", result
 
 proc newBasicResMan*(root = findNwnRoot(), language = "", cacheSize = 0): ResMan =
   ## Sets up a resman that defaults to what 1.8 looks like.

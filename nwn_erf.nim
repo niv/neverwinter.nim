@@ -47,7 +47,7 @@ proc pathToResRefMapping(path: string, outTbl: var Table[ResRef, string],
     # Fail for explicitly listed filenames.
     let rr = newResolvedResRef(path.extractFilename)
     if outSeq.find(rr) != -1:
-      error("duplicate resef " & path)
+      error("duplicate resref " & path)
       quit(1)
     else:
       outSeq.add(rr)

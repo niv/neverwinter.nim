@@ -71,7 +71,7 @@ proc writeCsv(s: Stream, tbl: TwoDA) =
     proc quoteOrStar(s: Cell): string =
       if s.isSome:
         let ss = s.get()
-        if ss.find(Whitespace) != -1: ("\"" & ss & "\"")
+        if ss.find(Whitespace) != -1 or ss.find($args["--csv-separator"]) != -1: ("\"" & ss & "\"")
         elif ss == "": "\"\""
         else: ss
       else:

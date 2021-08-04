@@ -193,6 +193,10 @@ proc readTwoDA*(io: Stream): TwoDA =
     except IOError:
       break
 
+  # strip all empty trailing rows
+  while result.rows[result.rows.len - 1].allIt(isNone it):
+    discard result.rows.pop
+
 proc escapeField*(field: Cell): string =
   ## Transforms a field for twoda writing.
   if field.isNone: "****"

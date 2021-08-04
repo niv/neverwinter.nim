@@ -75,7 +75,7 @@ proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
       expect(v["value"].kind == JInt, $v)
       result[k, GffInt] = v["value"].getInt.GffInt
     of "float":
-      expect(v["value"].kind == JFloat, $v)
+      expect(v["value"].kind == JFloat or v["value"].kind == JInt, $v)
       result[k, GffFloat] = v["value"].getFloat.GffFloat
     of "dword64":
       expect(v["value"].kind == JInt, $v)

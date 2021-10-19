@@ -1,4 +1,4 @@
-import tables, strutils, options
+import strutils, options
 from hashes import hash, Hash, `!&`
 
 import restype, util
@@ -75,4 +75,3 @@ proc `cmp`*[T: ResRef](a, b: T): int {.procvar.} =
   # This matters for sorting things like "_" versus "A".
   if a.resType != b.resType: return a.resType.int - b.resType.int
   else: return cmpIgnoreCase(a.resRef, b.resRef)
-

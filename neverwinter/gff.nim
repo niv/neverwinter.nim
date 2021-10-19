@@ -1,4 +1,4 @@
-import strutils, sequtils, algorithm, streams, sugar, tables, sets, encodings,
+import strutils, sequtils, streams, sugar, tables, sets, encodings,
   typetraits
 
 import util, languages

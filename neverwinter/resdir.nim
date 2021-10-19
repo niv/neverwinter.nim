@@ -2,7 +2,7 @@
 ## are available live (meaning that adding files makes them available immediately).
 ## This may change in the future.
 
-import streams, strutils, os, logging
+import streams, os
 
 import resman
 

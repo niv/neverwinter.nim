@@ -1,5 +1,5 @@
-import arpie, net, strutils, sequtils, os, jser, docopt, times
-import net, asyncdispatch, netutil, nativesockets
+import arpie, net, strutils, os, jser, docopt, times
+import asyncdispatch, netutil, nativesockets
 import shared
 
 when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):

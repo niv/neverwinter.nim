@@ -1,4 +1,4 @@
-import streams, strutils, sequtils, tables, times, algorithm, os, logging, std/sha1, std/oids
+import streams, strutils, sequtils, tables, times, algorithm, logging, std/sha1, std/oids
 
 import resman, util, resref, exo, compressedbuf
 

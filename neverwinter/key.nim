@@ -1,4 +1,4 @@
-import streams, options, sequtils, strutils, tables, times, os, sets, math, std/sha1, std/oids
+import streams, sequtils, strutils, tables, times, os, sets, math, std/sha1, std/oids
 doAssert(($genOid()).len == 24)
 
 import resman, util, compressedbuf, exo

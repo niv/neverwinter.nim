@@ -94,7 +94,7 @@ proc readBif(expectVersion: KeyBifVersion, expectOid: Oid, io: Stream, owner: Ke
   let variableTableOffset = io.readInt32()
 
   if expectVersion == KeyBifVersion.E1:
-    result.oid = parseOid io.readStrOrErr(24)
+    result.oid = parseOid io.readStrOrErr(24).cstring
     expect(result.oid == expectOid, "bif oid (" & $result.oid & ") mismatches key oid (" & $expectOid & ")")
 
   expect(fixedResCount == 0, "fixed resources in bif not supported")
@@ -206,7 +206,7 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
   result.buildYear = io.readInt32()
   result.buildDay = io.readInt32()
   if result.version == KeyBifVersion.E1:
-    result.oid = parseOid io.readStrOrErr(24)
+    result.oid = parseOid io.readStrOrErr(24).cstring
     io.setPosition(io.getPosition + 8) # reserved bytes
   else:
     io.setPosition(io.getPosition + 32) # reserved bytes

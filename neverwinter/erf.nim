@@ -65,7 +65,7 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
     io.setPosition(io.getPosition + 16) # reserved cipher mp5 for RIM, unused these days.
     io.setPosition(io.getPosition + 100) # reserved
   of ErfVersion.E1:
-    result.oid = parseOid io.readStrOrErr(24)
+    result.oid = parseOid io.readStrOrErr(24).cstring
     io.setPosition(io.getPosition + 92) #reserved
 
   # locstrlist
@@ -158,7 +158,7 @@ proc writeErf*(io: Stream,
                strRef = 0,
                entries: seq[ResRef],
                # What OID to write out to the ERF. Defaults to no OID.
-               erfOid: Oid = parseOid(repeat("\x00", 24)),
+               erfOid: Oid = parseOid(repeat("\x00", 24).cstring),
                # This is called when we want you to write the binary data
                # of r:ResRef to io.
                writer: ErfEntryWriter) =

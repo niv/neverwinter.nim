@@ -148,7 +148,7 @@ proc tlkify(ein: Erf, outFile: string) =
       dataExoComp, dataCompAlg,
       ein.locStrings,
       ein.strRef, toSeq(ein.contents.items),
-      parseOid(repeat("\x00", 24))) do (r: ResRef, io: Stream) -> (int, SecureHash):
+      parseOid(repeat("\x00", 24).cstring)) do (r: ResRef, io: Stream) -> (int, SecureHash):
 
     let ff = ein.demand(r)
     ff.seek()

@@ -97,7 +97,7 @@ if args["-c"]:
       exocomp = dataExoComp, compalg = dataCompAlg,
       locStrings = initTable[int, string](),
       strRef = 0, entries = entries,
-      erfOid = parseOid(repeat("\x00", 24))) do (r: ResRef, io: Stream) -> (int, SecureHash):
+      erfOid = parseOid(repeat("\x00", 24).cstring)) do (r: ResRef, io: Stream) -> (int, SecureHash):
 
     if verbose: echo r
     let data = readFile(resRefToFile[r])

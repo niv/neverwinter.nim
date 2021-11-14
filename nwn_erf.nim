@@ -93,11 +93,12 @@ if args["-c"]:
       notice "erf: out erf header type set from filename to ", fnextd
       fnextd
 
+  const tmp = repeat("\x00", 24)
   writeErf(outFile, fileType = fileType, fileVersion = dataVersion,
       exocomp = dataExoComp, compalg = dataCompAlg,
       locStrings = initTable[int, string](),
       strRef = 0, entries = entries,
-      erfOid = parseOid(repeat("\x00", 24))) do (r: ResRef, io: Stream) -> (int, SecureHash):
+      erfOid = parseOid(tmp)) do (r: ResRef, io: Stream) -> (int, SecureHash):
 
     if verbose: echo r
     let data = readFile(resRefToFile[r])

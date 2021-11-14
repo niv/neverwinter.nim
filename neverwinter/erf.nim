@@ -65,7 +65,8 @@ proc readErf*(io: Stream, filename = "(anon-io)"): Erf =
     io.setPosition(io.getPosition + 16) # reserved cipher mp5 for RIM, unused these days.
     io.setPosition(io.getPosition + 100) # reserved
   of ErfVersion.E1:
-    result.oid = parseOid io.readStrOrErr(24)
+    let tmp = io.readStrOrErr(24)
+    result.oid = parseOid tmp.cstring
     io.setPosition(io.getPosition + 92) #reserved
 
   # locstrlist

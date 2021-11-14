@@ -143,18 +143,19 @@ proc tlkify(gin: var GffStruct) =
         trackSkipped(str)
 
 proc tlkify(ein: Erf, outFile: string) =
+  const tmp = repeat("\x00", 24)
   writeErf(openFileStream(outFile, fmWrite),
       ein.fileType, dataVersion,
       dataExoComp, dataCompAlg,
       ein.locStrings,
       ein.strRef, toSeq(ein.contents.items),
-      parseOid(repeat("\x00", 24))) do (r: ResRef, io: Stream) -> (int, SecureHash):
+      parseOid(tmp)) do (r: ResRef, io: Stream) -> (int, SecureHash):
 
     let ff = ein.demand(r)
     ff.seek()
     let startPos = io.getPosition()
     var sha1: SecureHash
-
+  
     let rr = r.resolve().get()
     if GffExtensions.contains(rr.resExt):
       var root = readGffRoot(ff.io)

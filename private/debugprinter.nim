@@ -13,7 +13,7 @@ proc newDebugPrinter*(input, output: Stream): DebugPrinter =
   result.output = output
   result.nextOffset = 0
 
-template nest*(p: DebugPrinter, lbl: string, body: any) =
+template nest*(p: DebugPrinter, lbl: string, body: auto) =
   p.output.writeLine repeat(" ", 8), " ",
     repeat("  ", p.depth), lbl, ":"
   p.depth += 1

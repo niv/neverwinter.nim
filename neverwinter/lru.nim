@@ -1,4 +1,4 @@
-import lists, tables, options, strutils, logging
+import lists, tables, options, logging
 
 ## This is a weighted LRU cache. It works just like a regular, plain
 ## LRU cache, except you can specify the weight of each item manually.

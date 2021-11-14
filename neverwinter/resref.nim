@@ -1,4 +1,4 @@
-import tables, strutils, options
+import strutils, options
 from hashes import hash, Hash, `!&`
 
 import restype, util

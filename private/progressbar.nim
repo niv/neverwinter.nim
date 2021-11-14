@@ -1,4 +1,4 @@
-import terminal, sets, math, strutils, streams
+import terminal, sets, math, strutils
 
 type ProgressBar = ref object
   label: string

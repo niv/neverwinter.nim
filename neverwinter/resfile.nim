@@ -1,7 +1,7 @@
 ## A ResFile is a single file mapped into resman: it needs to live in the
 ## file system and remain accessible.
 
-import streams, strutils, os
+import streams, os
 
 import resman
 

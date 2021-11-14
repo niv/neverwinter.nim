@@ -1,4 +1,4 @@
-import arpie, net, strutils, sequtils, os, jser, docopt, times
+import arpie, net, strutils, os, jser, docopt, times
 import net, asyncdispatch, netutil, nativesockets
 import shared
 

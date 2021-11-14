@@ -1,4 +1,4 @@
-import tables, strutils, sequtils
+import tables, strutils
 
 type
   StrRef* = uint32

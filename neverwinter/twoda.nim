@@ -145,7 +145,7 @@ proc readTwoDA*(io: Stream): TwoDA =
   result = newTwoDA()
 
   proc line(): string =
-    var tn = TaintedString ""
+    var tn = ""
     if io.readLine(tn): result = tn.strip
     else: raise newException(EOFError, "EOF while reading 2da")
 

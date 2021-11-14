@@ -4,7 +4,7 @@ import streams, encodings
 #  IO and error handling
 # -----------------------
 
-proc readStrChunked*(io: Stream, size: int): TaintedString =
+proc readStrChunked*(io: Stream, size: int): string =
   ## Read size bytes from stream, in chunks as to avoid memory contention.
 
   result = ""
@@ -18,7 +18,7 @@ proc readStrChunked*(io: Stream, size: int): TaintedString =
     remaining -= buf.len
     result &= buf
 
-proc readStrOrErr*(io: Stream, size: int): TaintedString =
+proc readStrOrErr*(io: Stream, size: int): string =
   ## Reads a string of exactly size bytes off io, or error out.
   result = io.readStrChunked(size)
 

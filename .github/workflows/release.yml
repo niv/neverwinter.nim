@@ -6,7 +6,7 @@ on:
       - '*'
 
 env:
-  NIMVER: "1.4.8"
+  NIMVER: "1.6.0"
 
 jobs:
   build-linux-win:

@@ -129,7 +129,7 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
       if rt < low(uint16).int or rt > high(uint16).int:
         raise newException(ValueError, "Integer " & $rt & " out of range for ResType")
 
-      registerResType(ResType rt, ext)
+      registerCustomResType(ResType rt, ext)
       debug "Registering custom ResType ", ext, " -> ", rt
 
 proc findNwnRoot*(): string =

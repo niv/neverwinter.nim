@@ -56,12 +56,21 @@ jobs:
           name: neverwinter.linux.amd64
           path: bin/*
 
+      - name: Download Windows DLLs
+        if: matrix.bintype == 'win-i386' || matrix.bintype == 'win-amd64'
+        run: |
+          mkdir dll
+          cd dll
+          wget https://nim-lang.org/download/dlls.zip
+          unzip dlls.zip
+
       - name: Compile for Windows i386
         if: matrix.bintype == 'win-i386'
         # on Ubuntu the binary has no .exe extension for some reason
         run: |
           nimble build -d:release -d:mingw --cpu:i386
           for f in bin/*; do mv "$f" "$f.exe"; done
+          for f in dll/*; do cp "$f" "bin/"; done
 
       - name: Upload Windows i386 artifact
         if: matrix.bintype == 'win-i386'
@@ -75,6 +84,7 @@ jobs:
         run: |
           nimble build -d:release -d:mingw --cpu:amd64
           for f in bin/*; do mv "$f" "$f.exe"; done
+          for f in dll/*; do cp "$f" "bin/"; done
 
       - name: Upload Windows amd64 artifact
         if: matrix.bintype == 'win-amd64'

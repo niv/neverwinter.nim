@@ -30,6 +30,9 @@ type
     # E1:
     oid: Oid
 
+proc filename*(self: Erf): string =
+  self.filename
+
 proc locStrings*(self: Erf): var Table[int, string] =
   self.locStrings
 

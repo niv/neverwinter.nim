@@ -14,6 +14,9 @@ proc newResDir*(directory: string): ResDir =
   new(result)
   result.directory = directory
 
+proc directory*(self: ResDir): string =
+  self.directory
+
 proc resRefToFullPath(self: ResDir, rr: ResolvedResRef): string =
   self.directory & DirSep & rr.toFile
 

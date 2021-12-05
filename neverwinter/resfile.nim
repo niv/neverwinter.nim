@@ -15,6 +15,9 @@ proc newResFile*(filename: string): ResFile =
   result.filename = filename
   result.resRef = newResolvedResRef(extractFilename(filename))
 
+proc filename*(self: ResFile): string =
+  self.filename
+
 proc resRefToFullPath(self: ResFile, rr: ResolvedResRef): string =
   self.filename
 

@@ -255,15 +255,23 @@ proc writeErf*(io: Stream,
       # TODO: make this more efficient w/o a duplicate stream
       compressedbuf.compress(io, inmem, compalg, ExoResFileCompressedBufMagic)
       compressedSize = io.getPosition() - pos
+      debug "erf: compressed ", rr, " ", formatSize(compressedSize), " from ",
+        formatSize(uncompressedSize)
 
     of ExoResFileCompressionType.None:
       (uncompressedSize, sha1) = writer(rr, io)
       compressedSize = uncompressedSize
+      debug "erf: written ", rr, " ", formatSize(compressedSize)
+
+    doASsert(io.getPosition() < int32.high, "ERF will exceed 2GB limit. " &
+      "This is not supported by the file format.")
 
     writtenEntries.add((rr, compressedSize, uncompressedSize, sha1))
 
   # keep around the offset to the EOF, so we can reset the stream pointer
   let offsetToEndOfFile = io.getPosition
+  doASsert(offsetToEndOfFile < int32.high, "ERF will exceed 2GB limit. " &
+    "This is not supported by the file format.")
 
   # backfill the keylist
   io.setPosition(offsetToKeyList)

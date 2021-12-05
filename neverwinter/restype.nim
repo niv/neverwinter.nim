@@ -114,6 +114,7 @@ func makeResTypeTable(): tuple[types: Table[ResType, string], rtypes: Table[stri
   registerResType(ResType 2080, "png")
   registerResType(ResType 2081, "jpg")
   registerResType(ResType 2082, "caf")
+  registerResType(ResType 2083, "jui")
   registerResType(ResType 9996, "ids")
   registerResType(ResType 9997, "erf")
   registerResType(ResType 9998, "bif")

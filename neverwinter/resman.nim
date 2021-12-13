@@ -215,7 +215,12 @@ method readAll*(self: Res, useCache: bool = true): string {.base.} =
 proc `$`*(self: Res): string =
   "$#@$#".format(self.resref, self.origin)
 
-
+proc sha1*(self: Res): SecureHash =
+  ## Returns the checksum for the contained data. Warning: may invoke a full read
+  ## if the container doesn't have checksums embedded.
+  if self.sha1 == EmptySecureHash:
+    self.sha1 = secureHash(self.readAll)
+  self.sha1
 
 # --------
 #  ResMan

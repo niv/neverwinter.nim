@@ -79,5 +79,5 @@ of "json":
              let j = state.toJson()
              postProcessJson(j)
              output.write(if args["--pretty"]: j.pretty() else: $j)
-             output.write("\c\L")
+             output.write("\n")
 else: quit("Unsupported outformat: " & outformat)

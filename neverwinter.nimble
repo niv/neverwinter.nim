@@ -1,6 +1,6 @@
 import sequtils, os, strutils
 
-version       = "1.5.4"
+version       = "1.5.5"
 author        = "Bernhard Stöckner <n@e-ix.net>"
 description   = "Neverwinter Nights 1: Enhanced Edition data accessor library and utilities"
 license       = "MIT"

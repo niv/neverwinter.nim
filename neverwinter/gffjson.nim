@@ -18,16 +18,16 @@ proc toJson*(s: GffStruct): JSONNode =
     result[k]["type"] = %s.toLowerAscii
 
     case v.fieldKind:
-    of GffFieldKind.Byte: result[k]["value"] = %v.getValue(GffByte).int
-    of GffFieldKind.Char: result[k]["value"] = %v.getValue(GffChar).int
-    of GffFieldKind.Word: result[k]["value"] = %v.getValue(GffWord).int
-    of GffFieldKind.Short: result[k]["value"] = %v.getValue(GffShort).int
-    of GffFieldKind.Dword: result[k]["value"] = %v.getValue(GffDword).int
-    of GffFieldKind.Int: result[k]["value"] = %v.getValue(GffInt).int
-    of GffFieldKind.Float: result[k]["value"] = %v.getValue(GffFloat).float
-    of GffFieldKind.Dword64: result[k]["value"] = %v.getValue(GffDword64).int64
-    of GffFieldKind.Int64: result[k]["value"] = %v.getValue(GffInt64).int64
-    of GffFieldKind.Double: result[k]["value"] = %v.getValue(GffDouble).float64
+    of GffFieldKind.Byte: result[k]["value"] = %v.getValue(GffByte)
+    of GffFieldKind.Char: result[k]["value"] = %v.getValue(GffChar)
+    of GffFieldKind.Word: result[k]["value"] = %v.getValue(GffWord)
+    of GffFieldKind.Short: result[k]["value"] = %v.getValue(GffShort)
+    of GffFieldKind.Dword: result[k]["value"] = %v.getValue(GffDword)
+    of GffFieldKind.Int: result[k]["value"] = %v.getValue(GffInt)
+    of GffFieldKind.Float: result[k]["value"] = %v.getValue(GffFloat)
+    of GffFieldKind.Dword64: result[k]["value"] = %v.getValue(GffDword64)
+    of GffFieldKind.Int64: result[k]["value"] = %v.getValue(GffInt64)
+    of GffFieldKind.Double: result[k]["value"] = %v.getValue(GffDouble)
     of GffFieldKind.CExoString: result[k]["value"] = %v.getValue(GffCExoString)
     of GffFieldKind.CExoLocString:
       let entries = newJObject()

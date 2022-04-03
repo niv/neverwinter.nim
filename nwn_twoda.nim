@@ -29,6 +29,8 @@ Options:
   -o OUT                      Output file [default: -]
   -k OUTFORMAT                Output format [default: autodetect]
 
+  --minify                    Minifies 2da output using minimal padding instead of using pretty formatting.
+
   --csv-separator SEP         What to use as separator for CSV cells [default: ,]
 
   --write-id-column           Generate ID column when exporting non-2da formats.
@@ -94,6 +96,6 @@ of "csv":    state = input.readCsv()
 else: quit("Unsupported informat: " & informat)
 
 case outformat:
-of "2da":    output.writeTwoDA(state)
+of "2da":    output.writeTwoDA(state, args["--minify"])
 of "csv":   output.writeCsv(state)
 else: quit("Unsupported outformat: " & outformat)

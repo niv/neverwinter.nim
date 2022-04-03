@@ -181,6 +181,16 @@ suite "TwoDA writing":
     let all = io.readAll
     check(-1 != all.find("LongValue     B"))
 
+  test "write minified does not pad out columns to max width of cells":
+    var tda = newTwoDA()
+    tda.columns = @["A", "B"]
+    tda[0] = @[some "LongValue", some "B"]
+    var io = newStringStream()
+    io.writeTwoDA(tda, true)
+    io.setPosition(0)
+    let all = io.readAll
+    check(-1 != all.find("LongValue B"))
+
   test "writes out with CRLF":
     var tda = newStringStream(TwodaHeader & "\n\nA B\n0 a b").readTwoDA()
     var io = newStringStream()

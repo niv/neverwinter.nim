@@ -4,6 +4,7 @@ import resman, resref, util
 
 const
   CellPadding = 2
+  CellPaddingMini = 1
   MaxColumns = 1024 # im a hack
   TwodaHeader = "2DA V2.0"
 
@@ -209,7 +210,7 @@ proc escapeField*(field: Cell): string =
     else:
       fd
 
-proc writeTwoDA*(io: Stream, self: TwoDA) =
+proc writeTwoDA*(io: Stream, self: TwoDA, minify = false) =
   ## Writes a twoda to the stream. Attempts to format the twoda to look pretty.
 
   if self.headers.len == 0:
@@ -232,22 +233,22 @@ proc writeTwoDA*(io: Stream, self: TwoDA) =
   if self.defaultValue.isSome: io.write("DEFAULT: " & self.defaultValue.escapeField)
   io.write("\c\L")
 
-  io.write(repeat(" ", idWidth + CellPadding))
+  io.write(repeat(" ", if minify: CellPaddingMini else: idWidth + CellPadding))
   for idx, h in self.headers:
     io.write(h)
     if idx != self.headers.len - 1:
-      io.write(repeat(" ", maxColWidth[idx] - h.len + 3 + CellPadding))
+      io.write(repeat(" ", if minify: CellPaddingMini else: maxColWidth[idx] - h.len + 3 + CellPadding))
   io.write("\c\L")
 
   for rowidx, row in self.rows:
     let thisId = $rowIdx
-    io.write(thisId & repeat(" ", idWidth + CellPadding - thisId.len))
+    io.write(thisId & repeat(" ", if minify: CellPaddingMini else: idWidth + CellPadding - thisId.len))
 
     for cellidx, cell in row:
       let fmt = cell.escapeField
       io.write(fmt.toNwnEncoding)
       if cellidx != self.headers.len - 1:
-        io.write(repeat(" ", maxColWidth[cellidx] - fmt.len + 3 + CellPadding))
+        io.write(repeat(" ", if minify: CellPaddingMini else: maxColWidth[cellidx] - fmt.len + 3 + CellPadding))
     io.write("\c\L")
 
 proc as2DA*(self: Res): TwoDA =

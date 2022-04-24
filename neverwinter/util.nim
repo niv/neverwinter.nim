@@ -1,4 +1,4 @@
-import streams, encodings
+import std/[streams, encodings, endians]
 
 # -----------------------
 #  IO and error handling
@@ -38,6 +38,12 @@ template expect*(cond: bool, msg: string = "") =
         else: "Expectation failed: " & astToStr(cond)
       raise newException(ValueError, expmsg)
 
+func swapEndian*[T: SomeInteger | SomeFloat](u: T): T =
+  when sizeof(T) == 1: result = u
+  elif sizeof(T) == 2: endians.swapEndian16(unsafeAddr result, unsafeAddr u)
+  elif sizeof(T) == 4: endians.swapEndian32(unsafeAddr result, unsafeAddr u)
+  elif sizeof(T) == 8: endians.swapEndian64(unsafeAddr result, unsafeAddr u)
+  else: {.error: "swapEndian not implemented for " & $typedesc(T).}
 
 
 # ----------

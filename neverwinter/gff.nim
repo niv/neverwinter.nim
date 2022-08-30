@@ -376,10 +376,10 @@ proc readStructInto(loader: GffLazyLoader, idx: int, into: GffStruct) =
     let lblidx = labelArrayIndices[idx]
     expect(lblidx >= 0 and lblidx < loader.labelsArray.len)
     let lbl = loader.labelsArray[lblidx]
-    expect(not into.fields.hasKey(lbl))
+    expect(not into.fields.hasKey(lbl), "duplicate label in label array: " & lbl)
 
     let faix = fieldArrayIndices[idx]
-    expect(not loader.fieldsArray[faix].resolved, "field index referenced twice")
+    expect(not loader.fieldsArray[faix].resolved, "field index referenced twice: " & $faix)
     loader.fieldsArray[faix].resolved = true
 
     let fld = GffField(

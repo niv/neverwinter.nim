@@ -33,7 +33,9 @@ proc toJson*(s: GffStruct): JSONNode =
       let entries = newJObject()
       for kk, vv in pairs(v.getValue(GffCExoLocString).entries): entries[$kk] = %vv
       let id = v.getValue(GffCExoLocString).strRef
-      if id != BadStrRef: result[k]["id"] = %(int64 id)
+      if id != BadStrRef:
+        # See reader codepath for comment why this lives on entries now.
+        entries["id"] = %(int64 id)
       result[k]["value"] = entries
 
     of GffFieldKind.ResRef: result[k]["value"] = %v.getValue(GffResRef).string
@@ -111,9 +113,20 @@ proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
       expect(v["value"].kind == JObject, $v)
       let exo = newCExoLocString()
       for kk, vv in pairs(v["value"].getFields):
-        exo.entries[kk.parseInt] = vv.str
+        # This used to be one level up (on the locstr struct directly), but the game
+        # actually has a mismatch/compat where it put the strref on the value
+        # struct. Instead of patching the game and breaking the format there, I'll
+        # just make it the new default. The old format can still be read as well.
+        if kk == "id":
+          expect(vv.kind == JInt, $v)
+          exo.strRef = vv.getBiggestInt.StrRef
+        else:
+          exo.entries[kk.parseInt] = vv.str
       result[k, GffCExoLocString] = exo
-      if v.hasKey("id"):
+
+      # Legacy codepath: Don't clobber the entries one if both are set.
+      if exo.strRef != BadStrRef and v.hasKey("id"):
+        expect(v["id"].kind == JInt, $v)
         exo.strRef = v["id"].getBiggestInt.StrRef
 
     of "list":

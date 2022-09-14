@@ -131,6 +131,8 @@ proc `$`*(i: Instr): string =
     of TYPE_INTEGER:          $str.readInt32().swapEndian()
     of TYPE_OBJECT:           "0x" & toHex str.readInt32().swapEndian()
     of TYPE_FLOAT:            $str.readFloat32().swapEndian()
+    of TYPE_ENGST2:           $str.readUInt32().swapEndian() # loc preset
+    of TYPE_ENGST7:           i.extra.substr(2).escape() # json
     else: raise newException(Defect, "implement me: " & $i.op & ":" & $i.aux)
   of JZ, JMP, JSR, JNZ:       $str.readInt32().swapEndian()
   of STORE_STATE: $str.readInt32().swapEndian() & ", " & $str.readInt32().swapEndian()
@@ -155,6 +157,8 @@ func getExtraInstructionSize*(i: Instr, peekStringSize: int = 0): int =
     of TYPE_FLOAT: 4    # float val
     of TYPE_OBJECT: 4   # object_id val
     of TYPE_STRING: 2 + peekStringSize # uint16 strlen, str
+    of TYPE_ENGST2: 4   # location preset as a uint32 constant
+    of TYPE_ENGST7: 2 + peekStringSize
     else: 0
   of JZ, JMP, JSR, JNZ: 4 # int32 stackLocation
   of STORE_STATE: 4 + 4 # int32 baseStackToSave, int32 stackToSave

@@ -10,6 +10,8 @@ proc findUserRoot*(override: string = ""): string =
   if override.len > 0:
     echo "OVERRIDE: ", override.escape
     result = override
+  elif getEnv("NWN_HOME") != "":
+    result = getEnv("NWN_HOME")
   elif getEnv("NWN_USER_DIRECTORY") != "":
     result = getEnv("NWN_USER_DIRECTORY")
   else:
@@ -20,9 +22,9 @@ proc findUserRoot*(override: string = ""): string =
     elif defined(windows):
       let settingsFile = getHomeDir() / r"Documents\Neverwinter Nights"
     else: {.fatal: "Unsupported os for findUserRoot"}
-  echo result
+
   if result == "" or not dirExists(result): raise newException(ValueError,
-    "Could not locate NWN user directory; try --userdirectory or set NWN_USER_DIRECTORY")
+    "Could not locate NWN user directory; try --userdirectory or set NWN_HOME (NWN_USER_DIRECTORY also works, but is considered alternate)")
   debug "NWN user directory: ", result
 
 proc findNwnRoot*(override: string = ""): string =

@@ -62,8 +62,6 @@ Resman:
   --no-keys                   Do not load keys into resman (ignore --keys)
   --keys KEYS                 key files to load (from root:data/)
                               [default: autodetect]
-                              Will auto-detect if you are using a 1.69 or 1.8
-                              layout.
   --no-ovr                    Do not load ovr/ in resman
 
   --language LANG             Load language overrides [default: en]
@@ -119,7 +117,20 @@ proc newBasicResMan*(
     language = "", cacheSize = 0): ResMan =
   ## Sets up a resman that defaults to what EE looks like.
   ## Will load an additional language directory, if language is given.
-  newDefaultResMan(root, user, language, cacheSize)
+
+  let keys = ($Args["--keys"]).strip().split(",").mapIt(it.strip).filterIt(it.len > 0)
+  let erfs = ($Args["--erfs"]).strip().split(",").mapIt(it.strip).filterIt(it.len > 0).mapIt(it.expandTilde)
+  let dirs = ($Args["--dirs"]).strip().split(",").mapIt(it.strip).filterIt(it.len > 0).mapIt(it.expandTilde)
+
+  try:
+    newDefaultResMan(root, user, language, cacheSize,
+      loadKeys = not Args["--no-keys"],
+      loadOvr  = not Args["--no-ovr"],
+      keys = keys,
+      additionalErfs = erfs,
+      additionalDirs = dirs)
+  except:
+    quit(getCurrentExceptionMsg())
 
 proc ensureValidFormat*(format, filename: string,
                        supportedFormats: Table[string, seq[string]]): string =

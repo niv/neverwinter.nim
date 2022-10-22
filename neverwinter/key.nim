@@ -126,12 +126,6 @@ proc readBif(expectVersion: KeyBifVersion, expectOid: Oid, io: Stream, owner: Ke
       uncompressedSize: uncompressedSize
     )
 
-    # I'm not even sure anymore what's wrong with you, nwn data files.
-    # This triggers with the distro files from 1.69.
-    # let bifId = fullId shr 20
-    # expect(expectIdx == bifId, "bif " & filename & " has ID not belonging to its " &
-    #   "idx: expected " & $expectIdx & " but got " & $bifId)
-
     result.variableResources[r.id and 0xfffff] = r
 
 proc hasResId*(self: Bif, id: ResId): bool =

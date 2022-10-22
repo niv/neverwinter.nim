@@ -21,7 +21,7 @@ Diffing against another install (no other-language support yet):
   Hint: Give --verbose to see what exactly gets loaded into either.
 
   Example:
-    $0 path ../00810            (diff to NWN 1.69, auto-detected)
+    $0 path ../00810
 
 
 This utility will explicitly ignore .wav files that:

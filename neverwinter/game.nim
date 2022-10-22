@@ -85,12 +85,18 @@ proc findNwnRoot*(override: string = ""): string =
 
   debug "NWN root: ", result, " databuild: ", databuild
 
-proc newDefaultResMan*(root, userDirectory: string, language: string, cacheSize = 0,
-    loadKeys: bool = true,
-    loadOvr: bool = true,
-    additionalErfs: seq[string] = @[],
-    additionalDirs: seq[string] = @[],
-    additionalManifests: seq[ManifestSHA1] = @[]): ResMan =
+proc newDefaultResMan*(
+    root: string,                      # game root
+    userDirectory: string,             # user directory (needed for nwsync)
+    language: string,                  # language override (en otherwise)
+    cacheSize = 0,                     # see resman doc
+    loadKeys: bool = true,             # Load keyfiles?
+    loadOvr: bool = true,              # Load system ovr/?
+    keys: seq[string] = @[],           # Override set of keys to load (ignored if not loadKeys)
+    additionalErfs: seq[string] = @[], # Additional list of filenames, fully qualified
+    additionalDirs: seq[string] = @[], # Additional list of directories, fully qualified
+    additionalManifests: seq[ManifestSHA1] = @[]
+): ResMan =
 
   ## Sets up a resman that defaults to what EE looks like.
   ## Will load an additional language directory, if language is given.
@@ -98,19 +104,10 @@ proc newDefaultResMan*(root, userDirectory: string, language: string, cacheSize 
   let resolvedLanguage     = language
   let resolvedLanguageRoot = root / "lang" / resolvedLanguage
 
-  # 1.6
-  let legacyLayout = fileExists(root / "chitin.key")
-  if legacyLayout: debug("legacy resman layout detected (1.69)")
-  else: debug("new resman layout detected (1.8 w/ nwn_base & _loc)")
-
   doAssert(dirExists(resolvedLanguageRoot), "language " & resolvedLanguageRoot & " not found")
 
-  # Attempt to auto-detect the resman type we have.
   let actualKeys =
-    # 1.6:
-    if legacyLayout: "chitin,xp1,xp2,xp3,xp2patch"
-    # 1.8:
-    #else: "nwn_base,nwn_base_loc,xp1,xp2,xp3,xp2patch"
+    if keys.len > 0 and keys != @["autodetect"]: keys.join(",")
     else: "nwn_base,nwn_base_loc"
 
   let keys = actualKeys.split(",").mapIt(it.strip).filterIt(it.len > 0)
@@ -118,14 +115,16 @@ proc newDefaultResMan*(root, userDirectory: string, language: string, cacheSize 
   let dirs = additionalDirs
 
   for e in erfs:
-    if not fileExists(e): quit("requested --erfs not found: " & e)
+    if not fileExists(e):
+      raise newException(ValueError, "requested --erfs not found: " & e)
 
   for d in dirs:
-    if not dirExists(d): quit("requested --dirs not found: " & d)
+    let d = expandTilde(d)
+    if not dirExists(d):
+      raise newException(ValueError, "requested --dirs not found: " & d)
 
   proc loadKey(into: ResMan, key: string) =
-    let keyFile = if legacyLayout: key & ".key"
-                  else: "data" / key & ".key"
+    let keyFile = "data" / key & ".key"
 
     let fn = if fileExists(resolvedLanguageRoot / keyFile): resolvedLanguageRoot / keyFile
              else: root / keyFile

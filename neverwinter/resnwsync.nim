@@ -11,9 +11,9 @@ const NWSyncCompressedBufMagic* = makeMagic(NWSyncCompressedBufMagicStr)
 # -----------
 
 type
-  ShardId = int
-  ManifestSHA1 = SecureHash
-  ResRefSHA1 = SecureHash
+  ShardId       = int
+  ManifestSHA1* = SecureHash
+  ResRefSHA1*   = SecureHash
 
   NWSyncShard = tuple
     id: ShardId

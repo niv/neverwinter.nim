@@ -152,10 +152,10 @@ proc newDefaultResMan*(root, userDirectory: string, language: string, cacheSize 
   result = resman.newResMan(cacheSize)
 
   if loadKeys:
-    for k in keys: #.withProgressBar("load key: "):
+    for k in keys:
       result.loadKey(k)
 
-  for e in erfs: #.withProgressBar("load erf: "):
+  for e in erfs:
     let fs = openFileStream(e)
     let erf = fs.readErf(e)
     debug "  ", erf
@@ -182,7 +182,7 @@ proc newDefaultResMan*(root, userDirectory: string, language: string, cacheSize 
     debug "  ", c
     result.add(c)
 
-  for d in dirs: #.withProgressBar("load resdir: "):
+  for d in dirs:
     let c = newResDir(d)
     debug "  ", c
     result.add(c)

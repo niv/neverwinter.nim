@@ -54,7 +54,7 @@ for bif in kt.bifs:
   let metaFn = dest / baseFn & "_order.txt"
   var metaBifEntriesOrder = openFileStream(metaFn, fmWrite)
 
-  for vr in vrs.withProgressBar(bif.filename & ": "):
+  for vr in vrs:
     let fs = openFileStream(targetDir / $vr.resref, fmWrite)
     fs.write(bif.readAll(vr.id))
     fs.close()

@@ -99,7 +99,7 @@ proc makeStatsForContainer(cont: ResContainer): StatsForContainer =
   result.resCount = cont.contents.len
 
   # echo "mkShSt, ouridx=", cntIdx, " high=", rm.containers.high
-  for o in cont.contents.withProgressBar($cont & " shadows: "):
+  for o in cont.contents:
     for theirIdx in 0..cntIdx-1:
       let theirCnt = rm.containers[theirIdx]
       doAssert(theirCnt != cont); doAssert(theirIdx != cntIdx)
@@ -114,7 +114,7 @@ proc makeStatsForContainer(cont: ResContainer): StatsForContainer =
         if shadowsFileIo != nil:
           shadowsFileIo.writeLine($o & "\t" & $cont)
 
-  for o in cont.contents.withProgressBar($cont & " contents: "):
+  for o in cont.contents:
     let res = cont.demand(o)
     # result.resRefs.add(o)
     result.resTotalSize += res.ioSize

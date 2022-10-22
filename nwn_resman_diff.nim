@@ -75,17 +75,17 @@ else: quit("??")
 var baseContents = initHashSet[ResRef]()
 var otherContents = initHashSet[ResRef]()
 
-for o in resBase.contents().withProgressBar("filter: "):
+for o in resBase.contents():
   if includeWav or o.resType != getResType("wav"): baseContents.incl(o)
 
-for o in resOther.contents().withProgressBar("filter: "):
+for o in resOther.contents():
   if includeWav or o.resType != getResType("wav"): otherContents.incl(o)
 
 let baseOnly = baseContents - otherContents
 let otherOnly = otherContents - baseContents
 var binaryMismatch = initHashSet[ResRef]()
 
-for it in intersection(baseContents, otherContents).withProgressBar("intersect: "):
+for it in intersection(baseContents, otherContents):
   let olhs = resBase[it]
   doAssert(olhs.isSome, $it & " not in lhs")
   let orhs = resOther[it]
@@ -133,7 +133,7 @@ if binaryMismatch.card > 0:
 let fnDiffDir = "resman_diff_" & filenamePrefix & "_hash_mismatches"
 if binaryMismatch.card > 0 and writeOutMismatches:
   createDir(fnDiffDir)
-  for o in binaryMismatch.withProgressBar("write binarymismatch: "):
+  for o in binaryMismatch:
     # if $o != "c_a_bat.mdl": continue
     let lhs = resBase[o].get().readAll()
     let rhs = resOther[o].get().readAll()

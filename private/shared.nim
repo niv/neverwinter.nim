@@ -21,7 +21,8 @@ export progressbar
 when defined(profiler):
   import nimprof
 
-addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
+when not defined(nwnNoSharedLogger):
+  addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
 
 when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
   import std/exitprocs

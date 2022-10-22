@@ -10,7 +10,6 @@ const GffExtensions* = @[
 
 proc findUserRoot*(override: string = ""): string =
   if override.len > 0:
-    echo "OVERRIDE: ", override.escape
     result = override
   elif getEnv("NWN_HOME") != "":
     result = getEnv("NWN_HOME")

@@ -19,9 +19,9 @@ proc findUserRoot*(override: string = ""): string =
     when defined(macosx):
       result = r"~/Documents/Neverwinter Nights".expandTilde
     elif defined(linux):
-      let settingsFile = r"~/.local/share/Neverwinter Nights".expandTilde
+      result = r"~/.local/share/Neverwinter Nights".expandTilde
     elif defined(windows):
-      let settingsFile = getHomeDir() / r"Documents\Neverwinter Nights"
+      result = getHomeDir() / r"Documents\Neverwinter Nights"
     else: {.fatal: "Unsupported os for findUserRoot"}
 
   if result == "" or not dirExists(result): raise newException(ValueError,

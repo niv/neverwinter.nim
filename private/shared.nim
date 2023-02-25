@@ -1,10 +1,9 @@
-import strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils, std/sha1
+import strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
 export strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets, strutils
 
 import neverwinter/util, neverwinter/resman,
   neverwinter/resref, neverwinter/key,
   neverwinter/resfile, neverwinter/resmemfile, neverwinter/resdir,
-  neverwinter/resnwsync,
   neverwinter/erf, neverwinter/gff, neverwinter/gffjson,
   neverwinter/languages, neverwinter/compressedbuf,
   neverwinter/exo,

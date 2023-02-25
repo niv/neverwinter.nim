@@ -118,7 +118,10 @@ proc readFields(line: string, maxcount: Natural, minpad = 0): Row =
   var quotes = false
 
   proc addField(r: var seq[Cell]): bool =
-    if currentField == "****": r.add(none(string)) else: r.add(some(currentField.fromNwnEncoding))
+    if currentField == "****" or currentField == "":
+      r.add(none(string))
+    else:
+      r.add(some(currentField.fromNwnEncoding))
     currentField = ""
     if r.len >= maxcount: return true
 

@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - TwoDA library now considers `""` cells empty and transforms them into `****`.
+- CLI utils: `compressedbuf`, `gff`, `ssf`, `tlk`, `twoda` now read input stream fully before writing to it, allowing write back to same file.
 
 ### Fixed
 

@@ -43,7 +43,11 @@ let outputfile  = $args["-o"]
 let informat    = ensureValidFormat($args["-l"], inputfile, SupportedFormats)
 let outformat   = ensureValidFormat($args["-k"], outputfile, SupportedFormats)
 
-let input  = if $args["-i"] == "-": newFileStream(stdin) else: openFileStream($args["-i"])
+# Always fully read input file.
+let input  = if $args["-i"] == "-":
+  newStringStream(stdin.readAll())
+else:
+  newStringStream(readFile(inputfile))
 
 var state: GffRoot
 

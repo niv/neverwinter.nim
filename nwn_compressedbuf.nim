@@ -25,7 +25,12 @@ Options:
   $OPT
 """
 
-let input  = if $args["-i"] == "-": newFileStream(stdin) else: openFileStream($args["-i"])
+# Always fully read input file.
+let input  = if $args["-i"] == "-":
+  newStringStream(stdin.readAll())
+else:
+  newStringStream(readFile($args["-i"]))
+
 let output = if $args["-o"] == "-": newFileStream(stdout) else: openFileStream($args["-o"], fmWrite)
 
 let alg = parseEnum[Algorithm](($args["--alg"]).capitalizeAscii)

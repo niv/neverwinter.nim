@@ -125,7 +125,7 @@ proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
       result[k, GffCExoLocString] = exo
 
       # Legacy codepath: Don't clobber the entries one if both are set.
-      if exo.strRef != BadStrRef and v.hasKey("id"):
+      if exo.strRef == BadStrRef and v.hasKey("id"):
         expect(v["id"].kind == JInt, $v)
         exo.strRef = v["id"].getBiggestInt.StrRef
 

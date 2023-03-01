@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.9] - 2023-03-01
+
 ### Changed
 
 - TwoDA library now considers `""` cells empty and transforms them into `****`.

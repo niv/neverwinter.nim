@@ -46,6 +46,12 @@ proc tryNewResolvedResRef*(filename: string): Option[ResolvedResRef] =
     if ext.isSome:
       result = newResRef(sp[0], ext.get()).resolve()
 
+proc newResolvedResRef*(resRef: string, resType: ResType): ResolvedResRef =
+  ## Alias for newResRef().resolve()
+  let r = newResRef(resRef, resType).resolve()
+  expect(r.isSome, "'" & resRef & "." & $resType & "' is not a resolvable resref")
+  r.unsafeGet
+
 proc newResolvedResRef*(filename: string): ResolvedResRef =
   ## Alias for newResRef().resolve().get()
   let r = tryNewResolvedResRef(filename)

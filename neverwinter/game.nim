@@ -130,7 +130,9 @@ proc newDefaultResMan*(
              else: root / keyFile
 
     if not fileExists(fn):
-      warn("  key not found, skipping: ", fn)
+      # Don't warn about loc missing, it's optional for some languages
+      if key != "nwn_base_loc":
+        warn("  key not found, skipping: ", fn)
       return
     let ktfn = openFileStream(fn)
 

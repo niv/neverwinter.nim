@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Builtin resman will no longer warn about missing _loc keytable on startup (they're optional for some languages).
+
 ## [1.5.9] - 2023-03-01
 
 ### Changed

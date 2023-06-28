@@ -241,13 +241,13 @@ proc getValue*[T: GffFieldType](self: GffField, t: typedesc[T]): T =
   else: {.fatal: "You added a gff type but didn't make it resolvable in getValue()"}
 
 proc assignValue*[T: GffFieldType](self: GffField, v: T) =
-  when T is GffByte: self.dataOrOffset = cast[int32](v)
-  elif T is GffChar: self.dataOrOffset = cast[int32](v)
-  elif T is GffWord: self.dataOrOffset = cast[int32](v)
-  elif T is GffShort: self.dataOrOffset = cast[int32](v)
-  elif T is GffDword: self.dataOrOffset = cast[int32](v)
-  elif T is GffInt: self.dataOrOffset = cast[int32](v)
-  elif T is GffFloat: self.dataOrOffset = cast[int32](v)
+  when T is GffByte: self.dataOrOffset = v.int32
+  elif T is GffChar: self.dataOrOffset = v.int32
+  elif T is GffWord: self.dataOrOffset = v.int32
+  elif T is GffShort: self.dataOrOffset = v.int32
+  elif T is GffDword: self.dataOrOffset = v.int32
+  elif T is GffInt: self.dataOrOffset = v.int32
+  elif T is GffFloat: self.dataOrOffset = v.int32
 
   elif T is GffDword64: self.gffDword64 = v
   elif T is GffInt64: self.gffInt64 = v

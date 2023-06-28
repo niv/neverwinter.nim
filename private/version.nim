@@ -1,7 +1,7 @@
 import os, strutils, parsecfg, streams
 
 const Nimble: string   = slurp(currentSourcePath().splitFile().dir & "/../neverwinter.nimble")
-const Template: string = slurp(currentSourcePath().splitFile().dir & "/../VERSION").strip
+const Template: string = slurp(currentSourcePath().splitFile().dir & "/../VERSION.tpl").strip
 const Licence: string  = slurp(currentSourcePath().splitFile().dir & "/../LICENCE").strip
 
 const GitBranch*: string = staticExec("git symbolic-ref -q --short HEAD").strip

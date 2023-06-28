@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - First public release of the game script compiler source code.
+- New CLI utility: nwn_script_comp.
 
 ### Fixed
 

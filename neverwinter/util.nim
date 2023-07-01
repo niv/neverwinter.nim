@@ -50,20 +50,27 @@ func swapEndian*[T: SomeInteger | SomeFloat](u: T): T =
 #  Encoding
 # ----------
 
-var nwnEncoding = "windows-1252"
-var nativeEncoding = getCurrentEncoding()
+# These are initialised on first use per thread.
+var nwnEncoding {.threadvar.}: string
+var nativeEncoding {.threadvar.}: string
 
-proc getNwnEncoding*(): string = nwnEncoding
+proc getNwnEncoding*(): string =
   ## Returns the configured encoding you expect to be used by NWN data files.
   ## The default is windows-1252 for western NWN1.
+  if nwnEncoding == "":
+    nwnEncoding = "windows-1252"
+  nwnEncoding
 
 proc setNwnEncoding*(e: string) = nwnEncoding = e
   ## Sets the encoding you expect your read and written nwn data formats to be in.
   ## The default is windows-1252 for western NWN1.
 
-proc getNativeEncoding*(): string = nativeEncoding
+proc getNativeEncoding*(): string =
   ## Returns the configured native encoding files are read and written as.
   ##   (This is ALWAYS utf-8 for json.)
+  if nativeEncoding == "":
+    nativeEncoding = getCurrentEncoding()
+  nativeEncoding
 
 proc setNativeEncoding*(e: string) = nativeEncoding = e
   ## Sets the configured native encoding files are read and written as.

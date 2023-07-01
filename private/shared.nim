@@ -19,9 +19,6 @@ import version
 when defined(profiler):
   import nimprof
 
-when not defined(nwnNoSharedLogger):
-  addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
-
 import docopt as docopt_internal
 export docopt_internal
 
@@ -31,7 +28,7 @@ const GlobalUsage = """
 """.strip
 
 # Options common to ALL utilities
-let GlobalOpts = """
+proc getGlobalOpts(): string = """
 
 Logging:
   --verbose                   Turn on debug logging
@@ -52,7 +49,7 @@ Resources:
 """
 
 # Options common to utilities working with a resman.
-let ResmanOpts = """
+proc getResmanOpts(): string = """
 
 Resman:
   --root ROOT                 Override NWN root (autodetection is attempted)
@@ -68,15 +65,17 @@ Resman:
   --manifests MANIFESTS       Load comma-separated NWSync manifests [default: ]
   --erfs ERFS                 Load comma-separated erf files [default: ]
   --dirs DIRS                 Load comma-separated directories [default: ]
-""" & GlobalOpts
+""" & getGlobalOpts()
 
-var Args: Table[string, docopt_internal.Value]
+type OptArgs* = Table[string, docopt_internal.Value]
 
-proc DOC*(body: string): Table[string, docopt_internal.Value] =
+var Args {.threadvar.}: OptArgs
+
+proc DOC*(body: string): OptArgs =
   let body2 = body.replace("$USAGE", GlobalUsage).
                    replace("$0", getAppFilename().extractFilename()).
-                   replace("$OPTRESMAN", ResmanOpts).
-                   replace("$OPT", GlobalOpts)
+                   replace("$OPTRESMAN", getResmanOpts()).
+                   replace("$OPT", getGlobalOpts())
 
   result = docopt_internal.docopt(body2)
   Args = result
@@ -88,6 +87,9 @@ proc DOC*(body: string): Table[string, docopt_internal.Value] =
   if Args.hasKey("--verbose") and Args["--verbose"]: setLogFilter(lvlDebug)
   elif Args.hasKey("--quiet") and Args["--quiet"]: setLogFilter(lvlError)
   else: setLogFilter(lvlInfo)
+
+  when not defined(nwnNoSharedLogger):
+    addHandler newFileLogger(stderr, fmtStr = "$levelid [$datetime] ")
 
   setNwnEncoding($Args["--nwn-encoding"])
   setNativeEncoding($Args["--other-encoding"])

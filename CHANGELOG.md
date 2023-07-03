@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- First public release of the game script compiler source code.
+
 ### Fixed
 
 - Builtin resman will no longer warn about missing _loc keytable on startup (they're optional for some languages).

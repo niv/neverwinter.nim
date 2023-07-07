@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.0] - 2023-07-06
+
 ### Added
 
 - First public release of the game script compiler source code.

@@ -131,13 +131,13 @@ const CompileErrorTlk* = {
   40104: "ERROR: ELSE CANNOT BE FOLLOWED BY A NULL STATEMENT"
 }.toTable
 
+var resolveTlkBuf {.threadvar.}: string
 proc resolveTlk(r: uint32): cstring {.cdecl.} =
-  var buf {.threadvar.}: string
   if CompileErrorTlk.contains(r.int):
-    buf = CompileErrorTlk[r.int]
+    resolveTlkBuf = CompileErrorTlk[r.int]
   else:
-    buf = "[unresolved tlk: " & $r & "]"
-  buf.cstring
+    resolveTlkBuf = "[unresolved tlk: " & $r & "]"
+  resolveTlkBuf.cstring
 
 proc scriptCompApiNewCompiler(
   lang: cstring, src, bin, dbt: cint,
@@ -169,6 +169,8 @@ type CompileResult* = tuple
 proc scriptCompApiCompileFile(instance: CScriptCompiler, fn: cstring): tuple[code: int32, str: cstring] {.importc.}
 
 proc compileFile*(instance: CScriptCompiler, fn: string): CompileResult =
+  assert not isNil instance.pointer
+  assert fn != ""
   let q = scriptCompApiCompileFile(instance, fn.cstring)
   result.code = q.code * -1
   result.str  = strip $(q.str)

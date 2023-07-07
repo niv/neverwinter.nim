@@ -6,11 +6,11 @@ on:
       - '*'
 
 env:
-  NIMVER: "1.6.4"
+  NIMVER: "1.6.14"
 
 jobs:
   build-linux-win:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         bintype: [linux, win-i386, win-amd64]
@@ -138,7 +138,7 @@ jobs:
 
   release:
     needs: [build-linux-win, build-macos]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - name: Download Linux artifact
         uses: actions/download-artifact@v2

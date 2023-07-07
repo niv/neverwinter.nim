@@ -1,10 +1,14 @@
-{.compile: "native/exostring.cpp".}
-{.compile: "native/scriptcompcore.cpp".}
-{.compile: "native/scriptcomplexical.cpp".}
-{.compile: "native/scriptcompparsetree.cpp".}
-{.compile: "native/scriptcompidentspec.cpp".}
-{.compile: "native/scriptcompfinalcode.cpp".}
-{.compile: "compilerapi.cpp".}
+{.passL: "-lstdc++".}
+const cppFlags = "-std=c++14"
+when defined(linux) or defined(mingw):
+  {.passL: "-static".}
+{.compile("native/exostring.cpp", cppFlags).}
+{.compile("native/scriptcompcore.cpp", cppFlags).}
+{.compile("native/scriptcomplexical.cpp", cppFlags).}
+{.compile("native/scriptcompparsetree.cpp", cppFlags).}
+{.compile("native/scriptcompidentspec.cpp", cppFlags).}
+{.compile("native/scriptcompfinalcode.cpp", cppFlags).}
+{.compile("compilerapi.cpp", cppFlags).}
 
 import std/[tables, strutils]
 

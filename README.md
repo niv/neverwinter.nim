@@ -40,6 +40,7 @@ platforms and work on all of them equally well.
 * `nwn_sff`: Convert SSF files to/from csv.
 * `nwn_compressedbuf`: De/compress NWCompressedBuf payloads.
 * `nwn_asm`: Utility to deal with nwscript assembly.
+* `nwn_script_comp`: NWScript compiler using the official open-source compiler library.
 
 All utilities write their working output to stdout, and any library- or tool-
 related logging goes to stderr.  You can turn on debug logging with `--verbose`,

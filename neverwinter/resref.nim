@@ -7,15 +7,16 @@ const
   ResRefMaxLength = 16
 
 type
-  ResRef* = ref object of RootObj
+  ResRef* = object
     ## A ResRef is a string/restype pair; the restype does not neccessarily need
     ## to be registered with resman.
     resRef: string
     resType: ResType
 
-  ResolvedResRef* = ref object of ResRef
+  ResolvedResRef* = object
     ## A ResolvedResRef is a ResRef that we have a human-readable extension for.
     ## You can only resolve resrefs where the restype is known to resman.
+    base: ResRef
     resExt: string
 
 proc isValidResRefPart1(s: string): bool = s.len > 0 and s.len <= ResRefMaxLength
@@ -23,7 +24,6 @@ proc isValidResRefPart1(s: string): bool = s.len > 0 and s.len <= ResRefMaxLengt
 proc newResRef*(resRef: string, resType: ResType): ResRef =
   ## Creates a new ResRef. Will raise a ValueError if the given data is invalid.
   expect(resRef.isValidResRefPart1, "'" & resRef & "." & $resType & "' is not a valid resref")
-  new(result)
   result.resRef = resRef
   result.resType = resType
 
@@ -32,9 +32,8 @@ proc resolve*(rr: ResRef): Option[ResolvedResRef] =
   ## the given optional to check for success.
   let ext = lookupResExt(rr.resType)
   if ext.isSome:
-    let r = new(ResolvedResRef)
-    r.resRef = rr.resRef
-    r.resType = rr.resType
+    var r: ResolvedResRef
+    r.base = rr
     r.resExt = ext.get()
     result = some(r)
 
@@ -58,11 +57,9 @@ proc newResolvedResRef*(filename: string): ResolvedResRef =
   expect(r.isSome, "'" & filename & "' is not a resolvable resref")
   result = r.get()
 
-converter stringToResolvedResRef*(filename: string): ResolvedResRef =
-  ## Automatically convert a string (filename) to a ResolvedResRef.
-  newResolvedResRef(filename)
+converter resolvedToBaseResRef*(rr: ResolvedResRef): ResRef = rr.base
 
-proc toFile*(rr: ResolvedResRef): string = rr.resRef & "." & rr.resExt
+proc toFile*(rr: ResolvedResRef): string = rr.base.resRef & "." & rr.resExt
 proc `$`*(rr: ResolvedResRef): string = rr.toFile
 proc `$`*(rr: ResRef): string = rr.resRef & "." & $rr.resType
 

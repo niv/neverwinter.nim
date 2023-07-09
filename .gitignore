@@ -6,3 +6,4 @@ tests/test_*
 !tests/test_*.nim
 nwn_*
 !nwn_*.nim
+!nwn_*.nim.cfg

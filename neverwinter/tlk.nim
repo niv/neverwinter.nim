@@ -1,6 +1,6 @@
 import streams, strutils, options, sequtils, tables, math
 
-import util, lru, resman, resref, languages
+import util, lru, resman, languages
 export languages
 
 type

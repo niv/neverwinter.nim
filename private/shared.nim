@@ -32,7 +32,8 @@ proc getGlobalOpts(): string = """
 
 Logging:
   --verbose                   Turn on debug logging
-  --quiet                     Turn off all logging except errors
+  --quiet                     Turn off all logging, except errors and above
+  --silent                    Suppress all logging
   --version                   Show program version and licence info
 
 Encoding:
@@ -86,6 +87,7 @@ proc DOC*(body: string): OptArgs =
 
   if Args.hasKey("--verbose") and Args["--verbose"]: setLogFilter(lvlDebug)
   elif Args.hasKey("--quiet") and Args["--quiet"]: setLogFilter(lvlError)
+  elif Args.hasKey("--silent") and Args["--silent"]: setLogFilter(lvlFatal)
   else: setLogFilter(lvlInfo)
 
   when not defined(nwnNoSharedLogger):

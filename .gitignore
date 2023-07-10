@@ -7,3 +7,4 @@ tests/test_*
 nwn_*
 !nwn_*.nim
 !nwn_*.nim.cfg
+profile_results.txt

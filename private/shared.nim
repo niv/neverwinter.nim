@@ -16,9 +16,6 @@ export util, resman, resref, key, resfile, resmemfile, resdir, erf, gff, gffjson
 
 import version
 
-when defined(profiler):
-  import nimprof
-
 import docopt as docopt_internal
 export docopt_internal
 

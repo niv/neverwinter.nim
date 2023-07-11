@@ -615,6 +615,60 @@ int32_t CScriptCompiler::ParseStringCharacter(int32_t ch, int32_t chNext, char *
 	return nReturnValue;
 }
 
+int32_t CScriptCompiler::ParseRawStringCharacter(int32_t ch, int32_t chNext)
+{
+	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RAW_STRING)
+	{
+		if (ch == '"')
+		{
+			if (chNext == '"')
+			{
+				// "" in a raw string means single "
+				m_pchToken[m_nTokenCharacters++] = '"';
+				if (m_nTokenCharacters >= CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
+				{
+					return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
+				}
+				return 1; // consume 1 more
+			}
+
+			// Otherwise, terminate string literal.
+			m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_STRING;
+			return HandleToken();
+		}
+
+		m_pchToken[m_nTokenCharacters++] = (char) ch;
+		if (m_nTokenCharacters >= CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
+		{
+			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
+		}
+
+		return 0;
+	}
+
+	return STRREF_CSCRIPTCOMPILER_ERROR_UNEXPECTED_CHARACTER;
+}
+
+int32_t CScriptCompiler::ParseCharacterAtSign(int32_t chNext)
+{
+	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_UNKNOWN)
+	{
+		if (chNext == '"')
+		{
+			m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_RAW_STRING;
+			m_nTokenCharacters = 0;
+			return 1; // consume @"
+		}
+	}
+	else
+	{
+		return STRREF_CSCRIPTCOMPILER_ERROR_UNEXPECTED_CHARACTER;
+	}
+
+	return 0;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //  CScriptCompiler::ParseCharacterQuotationMark()
 ///////////////////////////////////////////////////////////////////////////////
@@ -1536,6 +1590,11 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, char *pS
 		return ParseStringCharacter(ch,chNext, pScript, nScriptLength);
 	}
 
+	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RAW_STRING)
+	{
+		return ParseRawStringCharacter(ch, chNext);
+	}
+
 	// Handle the tokens associated with integer and real numbers.
 	// Note that we terminate the current token if we are currently
 	// building an integer or a real number, and we've received a non
@@ -1707,6 +1766,10 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, char *pS
 	if (ch == ':')
 	{
 		return ParseCharacterColon();
+	}
+	if (ch == '@')
+	{
+		return ParseCharacterAtSign(chNext);
 	}
 
 	return 0;

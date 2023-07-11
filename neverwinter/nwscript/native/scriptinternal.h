@@ -177,6 +177,7 @@
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_ARRAY                      113
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_STRING                     114
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_LOCATION_INVALID                115
+#define CSCRIPTCOMPILER_TOKEN_RAW_STRING                              116
 
 #define CSCRIPTCOMPILER_GRAMMAR_PROGRAM                            0
 #define CSCRIPTCOMPILER_GRAMMAR_FUNCTIONAL_UNIT                    1

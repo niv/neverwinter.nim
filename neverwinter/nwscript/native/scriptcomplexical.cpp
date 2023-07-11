@@ -1559,8 +1559,12 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, char *pS
 	{
 		int32_t nCompiledCharacters = 0;
 		// Compile all suffixes that make sense.
-		if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_FLOAT && (ch == 'f'))
+		if (ch == 'f')
 		{
+			if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_INTEGER)
+			{
+				m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_FLOAT;
+			}
 			nCompiledCharacters = 1;
 		}
 

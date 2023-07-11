@@ -24,7 +24,7 @@ proc isValidResRefPart1(s: string): bool = s.len > 0 and s.len <= ResRefMaxLengt
 proc newResRef*(resRef: string, resType: ResType): ResRef =
   ## Creates a new ResRef. Will raise a ValueError if the given data is invalid.
   expect(resRef.isValidResRefPart1, "'" & resRef & "." & $resType & "' is not a valid resref")
-  result.resRef = resRef
+  result.resRef = resRef.toLowerAscii
   result.resType = resType
 
 proc resolve*(rr: ResRef): Option[ResolvedResRef] =
@@ -39,7 +39,7 @@ proc resolve*(rr: ResRef): Option[ResolvedResRef] =
 
 proc tryNewResolvedResRef*(filename: string): Option[ResolvedResRef] =
   ## Alias for newResRef().resolve()
-  let sp = filename.toLowerAscii.rsplit(".", 1)
+  let sp = filename.rsplit(".", 1)
   if sp.len == 2 and isValidResRefPart1(sp[0]):
     let ext = lookupResType(sp[1])
     if ext.isSome:
@@ -68,14 +68,14 @@ proc resType*(rr: ResRef): ResType = rr.resType
 proc resExt*(rr: ResolvedResRef): string = rr.resExt
 
 proc hash*(self: ResRef): Hash =
-  0 !& hash(self.resRef.toUpperAscii) !& hash(self.resType)
+  0 !& hash(self.resRef) !& hash(self.resType)
 
 proc `==`*(a, b: ResRef): bool =
-  a.resType == b.resType and cmpIgnoreCase(a.resRef, b.resRef) == 0
+  a.resType == b.resType and cmp(a.resRef, b.resRef) == 0
 
 proc `cmp`*[T: ResRef](a, b: T): int {.procvar.} =
   # We compare uppercase resrefs, just like NWN does too.
   # This matters for sorting things like "_" versus "A".
   if a.resType != b.resType: return a.resType.int - b.resType.int
-  else: return cmpIgnoreCase(a.resRef, b.resRef)
+  else: return cmp(a.resRef, b.resRef)
 

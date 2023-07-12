@@ -1,8 +1,5 @@
 nimcache
-tests/fuzzing/results
 bin/nwn_*
-tests/test_*
-!tests/test_*.nim
 nwn_*
 !nwn_*.nim
 !nwn_*.nim.cfg
@@ -10,3 +7,13 @@ profile_results.txt
 .DS_Store
 .vscode
 Justfile
+
+# testing: testament utility
+testresults
+testresults.html
+tests/megatest*
+tests/*/*
+tests/*/*.exe
+!tests/*/*.*
+/outputExpected.txt
+/outputGotten.txt

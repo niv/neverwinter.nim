@@ -1,3 +1,7 @@
+discard """
+  disabled: true
+"""
+
 import streams, asyncnet, asyncdispatch, tables, algorithm, os, posix
 
 import neverwinter.gff

@@ -73,6 +73,9 @@ proc hash*(self: ResRef): Hash =
 proc `==`*(a, b: ResRef): bool =
   a.resType == b.resType and cmpIgnoreCase(a.resRef, b.resRef) == 0
 
+proc `<`*(a, b: ResRef): bool =
+  a.resRef < b.resRef or a.resType < b.resType
+
 proc `cmp`*[T: ResRef](a, b: T): int {.procvar.} =
   # We compare uppercase resrefs, just like NWN does too.
   # This matters for sorting things like "_" versus "A".

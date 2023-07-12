@@ -4,23 +4,11 @@ import std/[streams, encodings, endians]
 #  IO and error handling
 # -----------------------
 
-proc readStrChunked*(io: Stream, size: int): string =
-  ## Read size bytes from stream, in chunks as to avoid memory contention.
-
-  result = ""
-  var remaining = size
-
-  while remaining > 0:
-    let want = min(remaining, 1024)
-    let buf = io.readStr(want)
-    if buf.len == 0 or buf.len < want: raise newException(IOError,
-      "wanted to read " & $want & " but only got " & $buf.len)
-    remaining -= buf.len
-    result &= buf
-
 proc readStrOrErr*(io: Stream, size: int): string =
   ## Reads a string of exactly size bytes off io, or error out.
-  result = io.readStrChunked(size)
+  result = io.readStr(size)
+  if result.len < size:
+    raise newException(IOError, "wanted to read " & $size & " but only got " & $result.len)
 
 proc readFixedCountSeq*[T](io: Stream, count: int, reader: proc(idx: int): T): seq[T] =
   result = newSeq[T](count)

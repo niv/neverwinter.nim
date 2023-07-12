@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- `nwn_script_comp` can now compile in parallel; has gained more CLI flags.
+
 ## [1.6.0] - 2023-07-06
 
 ### Added

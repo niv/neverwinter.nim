@@ -212,6 +212,9 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
 
   # expect(offsetToFileTable > HeaderSize and offsetToFileTable < offsetToKeyTable)
 
+  proc stripTrailing0(s: var string) {.inline.} =
+    s.removeSuffix('\0')
+
   var fileTable = newSeq[tuple[fSize: int32, fnOffset: int32,
                                fnSize: int16, drives: int16]]()
 
@@ -230,7 +233,8 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
     io.setPosition(ioStart + entry.fnOffset)
     expect(entry.fnSize >= 1, "bif filename in filenametable empty")
 
-    result = io.readStrOrErr(entry.fnSize).strip(false, true, {'\0'})
+    result = io.readStrOrErr(entry.fnSize)
+    result.stripTrailing0()
 
     when defined(posix):
       result = result.replace("\\", "/")
@@ -244,7 +248,8 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
 
   io.setPosition(offsetToKeyTable)
   for i in 0..<keyCount:
-    let resref = io.readStrOrErr(16).strip(false, true, {'\0'})
+    var resref = io.readStrOrErr(16)
+    resref.stripTrailing0()
     let restype = io.readInt16().ResType
     let resId = io.readInt32()
     let bifIdx = resId shr 20

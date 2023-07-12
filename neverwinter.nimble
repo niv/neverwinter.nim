@@ -23,3 +23,9 @@ task clean, "Remove compiled binaries and temporary data":
     rmFile(b)
     rmFile(b & ".exe")
   rmdir(nimcacheDir())
+  rmFile("testresults.html")
+  rmdir("testresults")
+
+task test, "Run all tests":
+  # Megatest disabled because of legacy runners using unittest, where output differs
+  exec "testament --megatest:off all"

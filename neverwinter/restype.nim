@@ -11,6 +11,8 @@ import util
 type ResType* = distinct uint16
 
 proc `==`*(x, y: ResType): bool {.borrow.}
+proc `<`*(x, y: ResType): bool {.borrow.}
+proc `<=`*(x, y: ResType): bool {.borrow.}
 
 func makeResTypeTable(): tuple[types: Table[ResType, string], rtypes: Table[string, ResType]] =
   var r = result

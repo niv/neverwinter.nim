@@ -40,7 +40,7 @@ jobs:
         nim-version: ${{ matrix.nim-version }}
 
     - name: Install Packages
-      run: nimble install -y
+      run: nimble install -y --depsOnly
 
     - name: Test
       run: nimble test

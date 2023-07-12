@@ -2757,9 +2757,9 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// TOTALLY boned when using variables in the second part.
 
 		int32_t nElementsToDelete = 4;
-		if (pNode->nType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT)
+		if (pNode->pLeft && pNode->pLeft->nType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT)
 		{
-			nElementsToDelete = GetStructureSize(*(pNode->m_psTypeName));
+			nElementsToDelete = GetStructureSize(*(pNode->pLeft->m_psTypeName));
 		}
 
 		m_nStackCurrentDepth -= (nElementsToDelete >> 2);

@@ -349,7 +349,7 @@ private:
 	CScriptCompilerKeyWordEntry *m_pcKeyWords;
 
 	int32_t ParseCharacterNumeric(int32_t ch);
-	int32_t ParseCharacterPeriod();
+	int32_t ParseCharacterPeriod(int32_t chNext);
 	int32_t ParseCharacterSlash(int32_t chNext);
 	int32_t ParseCharacterAsterisk(int32_t chNext);
 	int32_t ParseCharacterAmpersand(int32_t chNext);

@@ -27,5 +27,6 @@ task clean, "Remove compiled binaries and temporary data":
   rmdir("testresults")
 
 task test, "Run all tests":
-  # Megatest disabled because of legacy runners using unittest, where output differs
+  # Megatest disabled for now: it appears to show all tests as skipped in html, and
+  # i'm not sure it'll work well with threaded tests
   exec "testament --megatest:off all"

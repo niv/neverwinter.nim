@@ -525,6 +525,8 @@ private:
 	CScriptParseTreeNode *m_pGlobalVariableParseTree;
 	int32_t AddToGlobalVariableList(CScriptParseTreeNode *pGlobalVariableNode);
 
+	BOOL ConstantFoldNode(CScriptParseTreeNode *pNode);
+
 	BOOL m_bConstantVariableDefinition;
 
 	int32_t m_nLoopIdentifier;

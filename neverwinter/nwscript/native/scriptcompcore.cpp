@@ -1528,6 +1528,143 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 	return nError;
 }
 
+
+// Destructively modify a node and all its children to decay it into a single
+// CONSTANT operation, if possible.
+// This function is safe to call multiple times on the same node.
+BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode)
+{
+	if (!pNode)
+		return FALSE;
+
+	// Only fold operations that have two operands
+	// TODO: ~0 unary op?
+	if (!pNode->pLeft || !pNode->pRight)
+		return FALSE;
+
+	// In case of complex expression, start folding at the leaf nodes
+	// e.g.:  C = 3 + 2*4 - First fold 2*4 into 8, then 3+8 into 11
+	ConstantFoldNode(pNode->pLeft);
+	ConstantFoldNode(pNode->pRight);
+
+	// Can only fold if the operands are constants.
+	if (pNode->pLeft->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER &&
+		pNode->pLeft->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_FLOAT &&
+		pNode->pLeft->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING)
+	{
+		return FALSE;
+	}
+
+	// Only fold operations on same type. Expressions like "3.0f + 1" are not folded
+	if (pNode->pLeft->nOperation != pNode->pRight->nOperation)
+		return FALSE;
+
+	if (pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
+	{
+		int32_t result;
+		int32_t left = pNode->pLeft->nIntegerData;
+		int32_t right = pNode->pRight->nIntegerData;
+		switch (pNode->nOperation)
+		{
+			case CSCRIPTCOMPILER_OPERATION_LOGICAL_OR:          result = left || right; break;
+			case CSCRIPTCOMPILER_OPERATION_LOGICAL_AND:         result = left && right; break;
+			case CSCRIPTCOMPILER_OPERATION_INCLUSIVE_OR:        result = left |  right; break;
+			case CSCRIPTCOMPILER_OPERATION_EXCLUSIVE_OR:        result = left ^  right; break;
+			case CSCRIPTCOMPILER_OPERATION_BOOLEAN_AND:         result = left &  right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL:     result = left == right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_NOT_EQUAL: result = left != right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_GEQ:       result = left >= right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_GT:        result = left >  right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_LT:        result = left <  right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_LEQ:       result = left <= right; break;
+			case CSCRIPTCOMPILER_OPERATION_SHIFT_LEFT:          result = left << right; break;
+			case CSCRIPTCOMPILER_OPERATION_SHIFT_RIGHT:         result = left >> right; break;
+			case CSCRIPTCOMPILER_OPERATION_ADD:                 result = left +  right; break;
+			case CSCRIPTCOMPILER_OPERATION_SUBTRACT:            result = left -  right; break;
+			case CSCRIPTCOMPILER_OPERATION_MULTIPLY:            result = left *  right; break;
+			case CSCRIPTCOMPILER_OPERATION_DIVIDE:              result = left /  right; break;
+			case CSCRIPTCOMPILER_OPERATION_MODULUS:             result = left %  right; break;
+			default: return FALSE;
+		}
+		pNode->pLeft->Clean();
+		pNode->pRight->Clean();
+		pNode->Clean();
+		pNode->nOperation = CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER;
+		pNode->nIntegerData = result;
+		return TRUE;
+	}
+
+	if (pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_FLOAT)
+	{
+		float result;
+		int resultBool = -1;
+		float left = pNode->pLeft->fFloatData;
+		float right = pNode->pRight->fFloatData;
+		switch (pNode->nOperation)
+		{
+			case CSCRIPTCOMPILER_OPERATION_ADD:                 result = left +  right; break;
+			case CSCRIPTCOMPILER_OPERATION_SUBTRACT:            result = left -  right; break;
+			case CSCRIPTCOMPILER_OPERATION_MULTIPLY:            result = left *  right; break;
+			case CSCRIPTCOMPILER_OPERATION_DIVIDE:              result = left /  right; break;
+			// Relational ops on floats produce a bool result
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL:     resultBool = left == right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_NOT_EQUAL: resultBool = left != right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_GEQ:       resultBool = left >= right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_GT:        resultBool = left >  right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_LT:        resultBool = left <  right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_LEQ:       resultBool = left <= right; break;
+			default: return FALSE;
+		}
+		pNode->pLeft->Clean();
+		pNode->pRight->Clean();
+		pNode->Clean();
+		if (resultBool != -1)
+		{
+			pNode->nOperation = CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER;
+			pNode->nIntegerData = resultBool;
+		}
+		else
+		{
+			pNode->nOperation = CSCRIPTCOMPILER_OPERATION_CONSTANT_FLOAT;
+			pNode->fFloatData = result;
+		}
+		return TRUE;
+	}
+
+	if (pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING)
+	{
+		CExoString left = (pNode->pLeft->m_psStringData ? *pNode->pLeft->m_psStringData : CExoString(""));
+		CExoString right = (pNode->pRight->m_psStringData ? *pNode->pRight->m_psStringData : CExoString(""));
+		CExoString result;
+		int resultBool = -1;
+		switch (pNode->nOperation)
+		{
+			case CSCRIPTCOMPILER_OPERATION_ADD:                 result = left +  right; break;
+			// Relational ops on string produce a bool result
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL:     resultBool = left == right; break;
+			case CSCRIPTCOMPILER_OPERATION_CONDITION_NOT_EQUAL: resultBool = left != right; break;
+			default: return FALSE;
+		}
+		pNode->pLeft->Clean();
+		pNode->pRight->Clean();
+		pNode->Clean();
+		if (resultBool != -1)
+		{
+			pNode->nOperation = CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER;
+			pNode->nIntegerData = resultBool;
+		}
+		else
+		{
+			pNode->nOperation = CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING;
+			pNode->m_psStringData = new CExoString(result);
+		}
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+
 const char *TokenKeywordToString(int nTokenKeyword)
 {
 	switch (nTokenKeyword)

@@ -174,6 +174,8 @@
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_STRING                     114
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_LOCATION_INVALID                115
 
+const char *TokenKeywordToString(int nTokenKeyword);
+
 #define CSCRIPTCOMPILER_GRAMMAR_PROGRAM                            0
 #define CSCRIPTCOMPILER_GRAMMAR_FUNCTIONAL_UNIT                    1
 #define CSCRIPTCOMPILER_GRAMMAR_AFTER_PROGRAM                      2
@@ -210,6 +212,8 @@
 #define CSCRIPTCOMPILER_GRAMMAR_POST_EXPRESSION                   33
 #define CSCRIPTCOMPILER_GRAMMAR_PRIMARY_EXPRESSION                34
 #define CSCRIPTCOMPILER_GRAMMAR_CONSTANT                          35
+
+const char *GrammarToString(int nGrammar);
 
 #define CSCRIPTCOMPILER_OPERATION_COMPOUND_STATEMENT   0
 #define CSCRIPTCOMPILER_OPERATION_STATEMENT            1
@@ -304,6 +308,8 @@
 #define CSCRIPTCOMPILER_OPERATION_CONST_DECLARATION    90
 #define CSCRIPTCOMPILER_OPERATION_CONSTANT_JSON        91
 #define CSCRIPTCOMPILER_OPERATION_CONSTANT_LOCATION    92
+
+const char *OperationToString(int nOperation);
 
 #define CSCRIPTCOMPILER_IDENT_STATE_START_OF_LINE                     0
 #define CSCRIPTCOMPILER_IDENT_STATE_AFTER_TYPE_DECLARATION            1
@@ -534,6 +540,18 @@ public:
 		}
 	}
 
+    void DebugDump(const char *prefix = "", FILE *out = NULL)
+    {
+        if (!out) out = stdout;
+        fprintf(out, "%s[%p] (pLeft=%p, pRight=%p)\n", prefix, this, pLeft, pRight);
+        fprintf(out, "  Operation:         %s\n", OperationToString(nOperation));
+        fprintf(out, "  Type:              %s\n", TokenKeywordToString(nType));
+        fprintf(out, "  IntegerData:       %d %d %d %d\n", nIntegerData, nIntegerData2, nIntegerData3, nIntegerData4);
+        fprintf(out, "  FloatData:         %f %f %f %f\n", fFloatData, fVectorData[0], fVectorData[1], fVectorData[2]);
+        fprintf(out, "  StringData:        \"%s\"\n", m_psStringData ? m_psStringData->CStr() : "");
+        fprintf(out, "  TypeName:          \"%s\"\n", m_psTypeName ? m_psTypeName->CStr() : "");
+        fprintf(out, "  File/Line/Char/SP: %d %d %d %d\n", m_nFileReference, nLine, nChar, m_nStackPointer);
+    }
 };
 
 #define CSCRIPTCOMPILER_PARSETREENODEBLOCK_SIZE 4096

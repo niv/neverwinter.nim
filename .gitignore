@@ -14,6 +14,7 @@ testresults.html
 tests/megatest*
 tests/*/*
 tests/*/*.exe
+!tests/*/corpus
 !tests/*/*.*
 /outputExpected.txt
 /outputGotten.txt

@@ -7,3 +7,6 @@ nwn_*
 !nwn_*.nim
 !nwn_*.nim.cfg
 profile_results.txt
+.DS_Store
+.vscode
+Justfile

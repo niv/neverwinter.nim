@@ -1,5 +1,4 @@
 nimcache
-docs
 tests/fuzzing/results
 bin/nwn_*
 tests/test_*

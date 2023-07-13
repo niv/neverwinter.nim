@@ -301,7 +301,6 @@ CScriptCompiler::CScriptCompiler(RESTYPE nSource, RESTYPE nCompiled, RESTYPE nDe
 {
     m_cAPI = api;
 
-	m_nDebugSymbolicOutput = 0;
 	m_nGenerateDebuggerOutput = 1;
 
 	m_sLanguageSource = "";
@@ -1028,20 +1027,6 @@ void CScriptCompiler::DeleteParseTree(BOOL bStack, CScriptParseTreeNode *pNode)
 void CScriptCompiler::SetGenerateDebuggerOutput(int32_t nValue)
 {
 	m_nGenerateDebuggerOutput = nValue;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//  CScriptCompiler::SetCompileSymbolicOutput()
-///////////////////////////////////////////////////////////////////////////////
-//  Created By: Mark Brockington
-//  Created On: 07/27/99
-//  Description:  This routine will set whether the compiler should generate
-//                a symbolic output or a regular output.
-///////////////////////////////////////////////////////////////////////////////
-
-void CScriptCompiler::SetCompileSymbolicOutput(int32_t nValue)
-{
-	m_nDebugSymbolicOutput = nValue;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

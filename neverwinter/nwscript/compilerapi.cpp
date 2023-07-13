@@ -15,7 +15,6 @@ extern "C" CScriptCompiler* scriptCompApiNewCompiler(
     api.ResManLoadScriptSourceFile = ResManLoadScriptSourceFile;
     api.TlkResolve = TlkResolve;
     CScriptCompiler* instance = new CScriptCompiler(src, bin, dbg, api);
-    instance->SetCompileSymbolicOutput(0);
     instance->SetGenerateDebuggerOutput(writeDebug);
     instance->SetOptimizeBinaryCodeLength(0);
     instance->SetCompileConditionalOrMain(1);

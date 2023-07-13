@@ -640,7 +640,6 @@ void CScriptCompiler::Initialize( )
 	m_nStackCurrentDepth = 0;
 	m_bAssignmentToVariable = FALSE;
 	m_bInStructurePart = FALSE;
-	m_nBinaryCodeLength = 0;
 
 	ClearAllSymbolLists();
 

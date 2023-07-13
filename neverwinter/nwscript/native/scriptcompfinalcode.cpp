@@ -5179,6 +5179,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
 
 			// Add the "modify stack pointer" statement so that the return value is never used again.

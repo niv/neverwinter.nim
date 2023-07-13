@@ -1,0 +1,4 @@
+int StartingConditional()
+{
+    return TRUE;
+}

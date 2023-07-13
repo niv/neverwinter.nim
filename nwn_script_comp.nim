@@ -201,6 +201,11 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
     # so it can set up the include path for this.
     getThreadState().currentRMSearchPath = @[(pcDir, parts.dir), (pcFile, p)]
 
+    # Always remove the ndb file - in case of not generating it, it'd crash
+    # the game or confuse the disassember. And in case of generating, a correct
+    # version will come back.
+    removeFile(parts.dir / parts.name & "." & getResExt(LangSpecNWScript.dbg))
+
     let ret = compileFile(getThreadState().cNSS, parts.name)
 
     # This cast is here only to access globalState.

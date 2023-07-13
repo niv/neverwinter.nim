@@ -599,7 +599,6 @@ private:
 	char       *m_pchOutputCode;
 	int32_t         m_nOutputCodeSize;
 	int32_t         m_nOutputCodeLength;
-	int32_t         m_nBinaryCodeLength;
 
 	// Resolving code to its proper location ... some buffers!
 	char       *m_pchResolvedOutputBuffer;

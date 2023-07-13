@@ -99,57 +99,24 @@ int32_t CScriptCompiler::GenerateFinalCodeFromParseTree(CExoString sFileName)
 	}
 	else
 	{
-		if (m_nDebugSymbolicOutput == 0)
+		nReturnValue = DetermineLocationOfCode();
+		if (nReturnValue >= 0)
 		{
-			nReturnValue = DetermineLocationOfCode();
-			if (nReturnValue >= 0)
-			{
-				nReturnValue = ResolveLabels();
-			}
-			if (nReturnValue >= 0)
-			{
-				ResolveDebuggingInformation();
-
-				nReturnValue = WriteResolvedOutput();
-			}
-			if (nReturnValue >= 0)
-			{
-				nReturnValue = WriteDebuggerOutputToFile(sFileName);
-			}
-			if (nReturnValue < 0)
-			{
-				return CleanUpAfterCompile(nReturnValue,pNewReturnTree);
-			}
-
+			nReturnValue = ResolveLabels();
 		}
-		else
+		if (nReturnValue >= 0)
 		{
-			// We need to run the determine location of code call
-			// here to properly get the debugging information to
-			// work.  Note that we are not allowed to optimize for
-			// binary space when generating debug output!  ;-)
-			BOOL bTemp = m_bOptimizeBinarySpace;
-			m_bOptimizeBinarySpace = 0;
-			nReturnValue = DetermineLocationOfCode();
-			m_bOptimizeBinarySpace = bTemp;
+			ResolveDebuggingInformation();
 
-			if (nReturnValue >= 0)
-			{
-				nReturnValue = ResolveLabels();
-			}
-			if (nReturnValue >= 0)
-			{
-				ResolveDebuggingInformation();
-			}
-			if (nReturnValue >= 0)
-			{
-				nReturnValue = WriteDebuggerOutputToFile(sFileName);
-			}
-
-			if (nReturnValue < 0)
-			{
-				return CleanUpAfterCompile(nReturnValue,pNewReturnTree);
-			}
+			nReturnValue = WriteResolvedOutput();
+		}
+		if (nReturnValue >= 0)
+		{
+			nReturnValue = WriteDebuggerOutputToFile(sFileName);
+		}
+		if (nReturnValue < 0)
+		{
+			return CleanUpAfterCompile(nReturnValue,pNewReturnTree);
 		}
 		return CleanUpAfterCompile(0,pNewReturnTree);
 	}
@@ -173,14 +140,7 @@ void CScriptCompiler::InitializeFinalCode()
 	}
 
 	sprintf(m_pchOutputCode,"NCS V1.0");
-	if (m_nDebugSymbolicOutput == 0)
-	{
-		m_nOutputCodeLength = CVIRTUALMACHINE_BINARY_SCRIPT_HEADER;
-	}
-	else
-	{
-		m_nOutputCodeLength = 20;
-	}
+	m_nOutputCodeLength = CVIRTUALMACHINE_BINARY_SCRIPT_HEADER;
 	m_nBinaryCodeLength = CVIRTUALMACHINE_BINARY_SCRIPT_HEADER;
 }
 
@@ -195,19 +155,11 @@ void CScriptCompiler::InitializeFinalCode()
 
 void CScriptCompiler::FinalizeFinalCode()
 {
-	if (m_nDebugSymbolicOutput == 0)
-	{
-		m_pchOutputCode[8] = (char) 'B';
-		m_pchOutputCode[9] = (char) ((m_nOutputCodeLength >> 24) & 0xff);
-		m_pchOutputCode[10] = (char) ((m_nOutputCodeLength >> 16) & 0xff);
-		m_pchOutputCode[11] = (char) ((m_nOutputCodeLength >> 8) & 0xff);
-		m_pchOutputCode[12] = (char) ((m_nOutputCodeLength) & 0xff);
-	}
-	else
-	{
-		sprintf(m_pchOutputCode + 8,"T %08x\n",m_nOutputCodeLength);
-		m_pchOutputCode[19] = '\n';
-	}
+	m_pchOutputCode[8] = (char) 'B';
+	m_pchOutputCode[9] = (char) ((m_nOutputCodeLength >> 24) & 0xff);
+	m_pchOutputCode[10] = (char) ((m_nOutputCodeLength >> 16) & 0xff);
+	m_pchOutputCode[11] = (char) ((m_nOutputCodeLength >> 8) & 0xff);
+	m_pchOutputCode[12] = (char) ((m_nOutputCodeLength) & 0xff);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -226,7 +178,7 @@ int32_t CScriptCompiler::WriteFinalCodeToFile(const CExoString &sFileName)
 
     const int32_t ret = m_cAPI.ResManWriteToFile(
         sModifiedFileName.CStr(), m_nResTypeCompiled,
-        (const uint8_t*) m_pchOutputCode, m_nOutputCodeLength, m_nDebugSymbolicOutput == 0);
+        (const uint8_t*) m_pchOutputCode, m_nOutputCodeLength, true);
 
     if (ret != 0)
     {
@@ -608,82 +560,46 @@ int32_t CScriptCompiler::InstallLoader()
 		--m_nStackCurrentDepth;
 	}
 
-	if (m_nDebugSymbolicOutput == 0)
+	m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JSR;
+	m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+
+	// There is no point in expressing this yet, because we haven't decided on the
+	// locations of any of the final functions in the executable.  So, write
+	// the symbol into the table.
+
+	//CExoString sSymbolName;
+	int32_t nSymbolSubType1 = 0;
+	int32_t nSymbolSubType2 = 0;
+	if (bGlobalVariablesPresent)
 	{
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JSR;
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-		// There is no point in expressing this yet, because we haven't decided on the
-		// locations of any of the final functions in the executable.  So, write
-		// the symbol into the table.
-
-		//CExoString sSymbolName;
-		int32_t nSymbolSubType1 = 0;
-		int32_t nSymbolSubType2 = 0;
-		if (bGlobalVariablesPresent)
-		{
-			//sSymbolName.Format("FE_#globals");
-			nSymbolSubType2 = 1;
-		}
-		else
-		{
-			nSymbolSubType2 = 2;
-			/*
-			if (m_bCompileConditionalFile == TRUE)
-			{
-			    sSymbolName.Format("FE_StartingConditional");
-			}
-			else
-			{
-			    sSymbolName.Format("FE_main");
-			}
-			*/
-		}
-		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
-		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
-		                     nSymbolSubType1,nSymbolSubType2);
-
-		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		//sSymbolName.Format("FE_#globals");
+		nSymbolSubType2 = 1;
 	}
 	else
 	{
-		PrintBinaryAddress();
-		if (bGlobalVariablesPresent)
+		nSymbolSubType2 = 2;
+		/*
+		if (m_bCompileConditionalFile == TRUE)
 		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JSR FE_#globals\n");
-			m_nOutputCodeLength += 12 + 4 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
+		    sSymbolName.Format("FE_StartingConditional");
 		}
 		else
 		{
-			if (m_bCompileConditionalFile == FALSE)
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JSR FE_main\n");
-				m_nOutputCodeLength += 8 + 4 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
-			else
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JSR FE_StartingConditional\n");
-				m_nOutputCodeLength += 8 + 19 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+		    sSymbolName.Format("FE_main");
 		}
-
+		*/
 	}
+	AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
+	                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
+	                     nSymbolSubType1,nSymbolSubType2);
+
+	m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+
 	m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
-	if (m_nDebugSymbolicOutput == 0)
-	{
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-	}
-	else
-	{
-		// Add the RETN statement so we can abort the action
-		// passed in as a parameter!
-		PrintBinaryAddress();
-		sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RETN\n");
-		m_nOutputCodeLength += 5 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-	}
+	m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
+	m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+	m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 	m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -1100,27 +1016,18 @@ int32_t CScriptCompiler::TraverseTreeForSwitchLabels(CScriptParseTreeNode *pNode
 		int32_t nStackElementsDown = -4;
 		int32_t nSize = 4;
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
 
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
 
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength+ CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPTOPSP %08x,%04x\n",nStackElementsDown,nSize);
-			m_nOutputCodeLength += 22 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
@@ -1128,68 +1035,39 @@ int32_t CScriptCompiler::TraverseTreeForSwitchLabels(CScriptParseTreeNode *pNode
 		// Here, we have a "constant integer" op-code that would be added.
 		int32_t nIntegerData = nCaseValue;
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
 
-			// Enter the integer constant.
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
+		// Enter the integer constant.
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-			        "CONSTI %08x\n",nIntegerData);
-			m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		// CODE GENERATION
 		// Write an "condition EQUALII" operation.
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"EQUALII\n");
-			m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 		// CODE GENERATION
 		// Add the "JNZ _SC_nCaseValue_nSwitchIdentifier" operation.
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JNZ;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JNZ;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_SC_%08x_%08x",nCaseValue,m_nSwitchIdentifier); */
+		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
+		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_CASE,
+		                     nCaseValue,m_nSwitchIdentifier);
 
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_SC_%08x_%08x",nCaseValue,m_nSwitchIdentifier); */
-			AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
-			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_CASE,
-			                     nCaseValue,m_nSwitchIdentifier);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JNZ _SC_%08x_%08x\n",nCaseValue,m_nSwitchIdentifier);
-			m_nOutputCodeLength += 26 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -1224,25 +1102,16 @@ void CScriptCompiler::ClearSwitchLabelList()
 		// CODE GENERATION
 		// Add the "JMP _SC_DEFAULT_nSwitchIdentifier" operation.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_SC_DEFAULT_%08x",m_nSwitchIdentifier); */
-			AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
-			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_DEFAULT,
-			                     m_nSwitchIdentifier,0);
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_SC_DEFAULT_%08x",m_nSwitchIdentifier); */
+		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
+		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_DEFAULT,
+		                     m_nSwitchIdentifier,0);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP _SC_DEFAULT_%08x\n",m_nSwitchIdentifier);
-			m_nOutputCodeLength += 25 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 	}
@@ -1254,25 +1123,16 @@ void CScriptCompiler::ClearSwitchLabelList()
 		// CODE GENERATION
 		// Add the "JMP _BR_nSwitchIdentifier" operation.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			/*CExoString sSymbolName;
-			sSymbolName.Format("_BR_%08x",m_nSwitchIdentifier);*/
-			AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
-			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,
-			                     m_nSwitchIdentifier,0);
+		/*CExoString sSymbolName;
+		sSymbolName.Format("_BR_%08x",m_nSwitchIdentifier);*/
+		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
+		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,
+		                     m_nSwitchIdentifier,0);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP _BR_%08x\n",m_nSwitchIdentifier);
-			m_nOutputCodeLength += 17 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 	}
@@ -1507,21 +1367,6 @@ int32_t CScriptCompiler::WriteResolvedOutput()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  CScriptCompiler::PrintBinaryAddress()
-///////////////////////////////////////////////////////////////////////////////
-//  Created By: Mark Brockington
-//  Created On: 01/23/2000
-// Description: A standard function for printing out the addresses of
-//              our virtual machine instructions.  Allows us to change the
-//              format easily.
-///////////////////////////////////////////////////////////////////////////////
-
-void CScriptCompiler::PrintBinaryAddress()
-{
-	sprintf(m_pchOutputCode + m_nOutputCodeLength,"  %08x   ",m_nBinaryCodeLength);
-}
-
-///////////////////////////////////////////////////////////////////////////////
 //  CScriptCompiler::PreVisitGenerateCode()
 ///////////////////////////////////////////////////////////////////////////////
 //  Created By: Mark Brockington
@@ -1587,41 +1432,33 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pcIdentifierList[nIdentifier].m_nBinaryDestinationStart  = -1;
 			m_pcIdentifierList[nIdentifier].m_nBinaryDestinationFinish = -1;
 
-			if (m_nDebugSymbolicOutput == 0)
+			/* CExoString sSymbolName;
+			sSymbolName.Format("FE_%s",m_sFunctionImpName.CStr()); */
+			AddSymbolToLabelList(m_nOutputCodeLength,
+			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
+			                     nIdentifier,0);
+
+			int32_t nIdentifierLength = m_sFunctionImpName.GetLength();
+
+			if (m_bCompileConditionalFile == 0)
 			{
-				/* CExoString sSymbolName;
-				sSymbolName.Format("FE_%s",m_sFunctionImpName.CStr()); */
-				AddSymbolToLabelList(m_nOutputCodeLength,
-				                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
-				                     nIdentifier,0);
-
-				int32_t nIdentifierLength = m_sFunctionImpName.GetLength();
-
-				if (m_bCompileConditionalFile == 0)
+				if (m_sFunctionImpName.GetLength() == 4 &&
+				        strncmp(m_sFunctionImpName.CStr(),"main",4) == 0)
 				{
-					if (m_sFunctionImpName.GetLength() == 4 &&
-					        strncmp(m_sFunctionImpName.CStr(),"main",4) == 0)
-					{
-						AddSymbolToLabelList(m_nOutputCodeLength,
-						                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
-						                     0,2);
-					}
-				}
-				else
-				{
-					if (nIdentifierLength == 19 &&
-					        strncmp(m_sFunctionImpName.CStr(),"StartingConditional",19) == 0)
-					{
-						AddSymbolToLabelList(m_nOutputCodeLength,
-						                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
-						                     0,2);
-					}
+					AddSymbolToLabelList(m_nOutputCodeLength,
+					                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
+					                     0,2);
 				}
 			}
 			else
 			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"FE_%s:\n",m_sFunctionImpName.CStr());
-				m_nOutputCodeLength += m_sFunctionImpName.GetLength() + 5;
+				if (nIdentifierLength == 19 &&
+				        strncmp(m_sFunctionImpName.CStr(),"StartingConditional",19) == 0)
+				{
+					AddSymbolToLabelList(m_nOutputCodeLength,
+					                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
+					                     0,2);
+				}
 			}
 
 			//m_bFunctionImpHasReturn = FALSE;
@@ -1663,25 +1500,16 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pcIdentifierList[m_nOccupiedIdentifiers].m_nReturnType = CSCRIPTCOMPILER_TOKEN_VOID_IDENTIFIER;
 			HashManagerAdd(CSCRIPTCOMPILER_HASH_MANAGER_TYPE_IDENTIFIER, m_nOccupiedIdentifiers);
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				/* CExoString sSymbolName;
-				sSymbolName.Format("FE_#globals"); */
+			/* CExoString sSymbolName;
+			sSymbolName.Format("FE_#globals"); */
 
-				AddSymbolToLabelList(m_nOutputCodeLength,
-				                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
-				                     m_nOccupiedIdentifiers,0);
+			AddSymbolToLabelList(m_nOutputCodeLength,
+			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
+			                     m_nOccupiedIdentifiers,0);
 
-				AddSymbolToLabelList(m_nOutputCodeLength,
-				                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
-				                     0,1);
-
-			}
-			else
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"FE_#globals:\n");
-				m_nOutputCodeLength += 13;
-			}
+			AddSymbolToLabelList(m_nOutputCodeLength,
+			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
+			                     0,1);
 		}
 	}
 
@@ -1714,20 +1542,12 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		}
 
 		// Generate a label for the jump caused by the switch
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			/*CExoString sSymbolName;
-			sSymbolName.Format("_SC_%08x_%08x",nCaseValue,m_nSwitchIdentifier); */
+		/*CExoString sSymbolName;
+		sSymbolName.Format("_SC_%08x_%08x",nCaseValue,m_nSwitchIdentifier); */
 
-			AddSymbolToLabelList(m_nOutputCodeLength,
-			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_CASE,
-			                     nCaseValue,m_nSwitchIdentifier);
-		}
-		else
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_SC_%08x_%08x:\n",nCaseValue,m_nSwitchIdentifier);
-			m_nOutputCodeLength += 23;
-		}
+		AddSymbolToLabelList(m_nOutputCodeLength,
+		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_CASE,
+		                     nCaseValue,m_nSwitchIdentifier);
 
 		if (m_nSwitchStackDepth + 1 != m_nStackCurrentDepth)
 		{
@@ -1767,33 +1587,22 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// First, we add the STORE_IP instruction.
 		//
 
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_STORE_STATE;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = (CVIRTUALMACHINE_OPERATION_BASE_SIZE * 2 + 12);
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_STORE_STATE;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = (CVIRTUALMACHINE_OPERATION_BASE_SIZE * 2 + 12);
+		int32_t nIntegerData = m_nGlobalVariableSize;
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
 
-			int32_t nIntegerData = m_nGlobalVariableSize;
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
+		nIntegerData = m_nStackCurrentDepth * 4 - m_nGlobalVariableSize;
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nIntegerData) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nIntegerData) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+6] = (char) (((nIntegerData) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+7] = (char) (((nIntegerData)) & 0x0ff);
 
-			nIntegerData = m_nStackCurrentDepth * 4 - m_nGlobalVariableSize;
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nIntegerData) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nIntegerData) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+6] = (char) (((nIntegerData) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+7] = (char) (((nIntegerData)) & 0x0ff);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 8;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-			        "STORE_STATE %08x %08x %08x\n",(CVIRTUALMACHINE_OPERATION_BASE_SIZE * 2 + 12),m_nGlobalVariableSize,m_nStackCurrentDepth * 4 - m_nGlobalVariableSize);
-			m_nOutputCodeLength += CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + 39;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 8;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 8;
 
@@ -1801,27 +1610,16 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// Next, we add the JMP instruction.
 		//
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			// Save the current state of the binary code length for the purpose
-			// of generating a good jump over the code within this instruction in
-			// the PostVisitGenerateCode() call.
+		// Save the current state of the binary code length for the purpose
+		// of generating a good jump over the code within this instruction in
+		// the PostVisitGenerateCode() call.
 
-			pNode->nIntegerData = m_nOutputCodeLength;
+		pNode->nIntegerData = m_nOutputCodeLength;
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-			        "JMP _X%08x\n",m_nOutputCodeLength);
-			pNode->nIntegerData = m_nOutputCodeLength;
-			m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -1958,26 +1756,16 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 								// Here, we have a "constant integer" op-code that would be added.
 								int32_t nIntegerData = m_pcIdentifierList[nCount].m_pnOptionalParameterIntegerData[nCount2];
 
-								if (m_nDebugSymbolicOutput == 0)
-								{
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
 
-									// Enter the integer constant.
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
+								// Enter the integer constant.
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
 
-									m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-								}
-								else
-								{
-									PrintBinaryAddress();
-									sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-									        "CONSTI %08x\n",nIntegerData);
-									m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-								}
+								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 								m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -1992,41 +1780,31 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 								float fFloatData = m_pcIdentifierList[nCount].m_pfOptionalParameterFloatData[nCount2];
 
-								if (m_nDebugSymbolicOutput == 0)
-								{
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
 
-									// Enter the floating point constant.
+								// Enter the floating point constant.
 
-									///////////////////////////////////////////////////////////////////////////
-									// This may need some explaining.  The MacIntosh deals with floating point
-									// numbers in the same way as integers ... it reverses the bytes.  Thus, if
-									// we want to avoid doing byte swaps, what we should do is write the data
-									// out in the specified byte order, and then read it back in with the
-									// specified byte order.  However, you can't just "shift left" on floats,
-									// so we cast the data to an integer, and then write that out!  Tricky, but
-									// it should work.
-									//
-									// -- Mark Brockington, 01/22/2000
-									///////////////////////////////////////////////////////////////////////////
+								///////////////////////////////////////////////////////////////////////////
+								// This may need some explaining.  The MacIntosh deals with floating point
+								// numbers in the same way as integers ... it reverses the bytes.  Thus, if
+								// we want to avoid doing byte swaps, what we should do is write the data
+								// out in the specified byte order, and then read it back in with the
+								// specified byte order.  However, you can't just "shift left" on floats,
+								// so we cast the data to an integer, and then write that out!  Tricky, but
+								// it should work.
+								//
+								// -- Mark Brockington, 01/22/2000
+								///////////////////////////////////////////////////////////////////////////
 
 
-									int32_t *pFloatAsInt = (int32_t *) &fFloatData;
-									m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((*pFloatAsInt) >> 24) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((*pFloatAsInt) >> 16) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((*pFloatAsInt) >> 8) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
+								int32_t *pFloatAsInt = (int32_t *) &fFloatData;
+								m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((*pFloatAsInt) >> 24) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((*pFloatAsInt) >> 16) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((*pFloatAsInt) >> 8) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
 
-									m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-								}
-								else
-								{
-									PrintBinaryAddress();
-									sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-									        "CONSTF %19.9f\n",fFloatData);
-									m_nOutputCodeLength += 27 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-								}
+								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 								m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2044,27 +1822,18 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 								{
 									float fFloatData = m_pcIdentifierList[nCount].m_pfOptionalParameterVectorData[nCount2 * 3 + temp];
 
-									if (m_nDebugSymbolicOutput == 0)
-									{
-										m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-										m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
+									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
 
-										// Enter the floating point constant.
+									// Enter the floating point constant.
 
-										int32_t *pFloatAsInt = (int32_t *) &fFloatData;
-										m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((*pFloatAsInt) >> 24) & 0x0ff);
-										m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((*pFloatAsInt) >> 16) & 0x0ff);
-										m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((*pFloatAsInt) >> 8) & 0x0ff);
-										m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
+									int32_t *pFloatAsInt = (int32_t *) &fFloatData;
+									m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((*pFloatAsInt) >> 24) & 0x0ff);
+									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((*pFloatAsInt) >> 16) & 0x0ff);
+									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((*pFloatAsInt) >> 8) & 0x0ff);
+									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
 
-										m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-									}
-									else
-									{
-										PrintBinaryAddress();
-										sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CONSTF %19.9f\n",fFloatData);
-										m_nOutputCodeLength += 27 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-									}
+									m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 									m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2081,29 +1850,20 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 								CExoString sStringData = m_pcIdentifierList[nCount].m_psOptionalParameterStringData[nCount2];
 								int nLength = sStringData.GetLength();
 
-								if (m_nDebugSymbolicOutput == 0)
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_STRING;
+
+								// Enter the string constant.
+
+								m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nLength) >> 8) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nLength)) & 0x0ff);
+
+								int nCount3;
+								for (nCount3 = 0; nCount3 < nLength; nCount3++)
 								{
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_STRING;
-
-									// Enter the string constant.
-
-									m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nLength) >> 8) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nLength)) & 0x0ff);
-
-									int nCount3;
-									for (nCount3 = 0; nCount3 < nLength; nCount3++)
-									{
-										m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount3+2] = (sStringData.CStr())[nCount3];
-									}
-									m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
+									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount3+2] = (sStringData.CStr())[nCount3];
 								}
-								else
-								{
-									PrintBinaryAddress();
-									sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CONSTS %04x %s\n",nLength,sStringData.CStr());
-									m_nOutputCodeLength += (13 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + nLength);
-								}
+								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
 
 								m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
 
@@ -2117,27 +1877,18 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 								// Here, we have a "constant object" op-code that would be added.
 								OBJECT_ID oidObjectData = m_pcIdentifierList[nCount].m_poidOptionalParameterObjectData[nCount2];
 
-								if (m_nDebugSymbolicOutput == 0)
-								{
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_OBJECT;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_OBJECT;
 
-									// Enter the integer constant.
-									int32_t nIntegerData = (int32_t) oidObjectData;
+								// Enter the integer constant.
+								int32_t nIntegerData = (int32_t) oidObjectData;
 
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
 
-									m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-								}
-								else
-								{
-									PrintBinaryAddress();
-									sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CONSTO %08x\n",oidObjectData);
-									m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-								}
+								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 								m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2157,26 +1908,16 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
                                     return OutputWalkTreeError(STRREF_CVIRTUALMACHINE_ERROR_INVALID_EXTRA_DATA_ON_OP_CODE, pNode);
                                 }
 
-								if (m_nDebugSymbolicOutput == 0)
-								{
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST2;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST2;
 
-									// Enter the integer constant.
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
+								// Enter the integer constant.
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
 
-									m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-								}
-								else
-								{
-									PrintBinaryAddress();
-									sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-									        "CONSTLOC %08x\n",nIntegerData);
-									m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-								}
+								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 								m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2197,31 +1938,20 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 
                                 const uint16_t nLength = sStringData.GetLength();
 
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST7;
 
-                                if (m_nDebugSymbolicOutput == 0)
+								// Enter the jsonified string constant.
+
+								m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nLength) >> 8) & 0x0ff);
+								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nLength)) & 0x0ff);
+
+								int nCount3;
+								for (nCount3 = 0; nCount3 < nLength; nCount3++)
 								{
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-									m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST7;
-
-									// Enter the jsonified string constant.
-
-									m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nLength) >> 8) & 0x0ff);
-									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nLength)) & 0x0ff);
-
-									int nCount3;
-									for (nCount3 = 0; nCount3 < nLength; nCount3++)
-									{
-										m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount3+2] = (sStringData.CStr())[nCount3];
-									}
-									m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
+									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount3+2] = (sStringData.CStr())[nCount3];
 								}
-								else
-								{
-									PrintBinaryAddress();
-									sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-                                        "CONSTJSON %04x %s\n",nLength,sStringData.CStr());
-									m_nOutputCodeLength += (13 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + nLength);
-								}
+								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
 
 								m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
 
@@ -2258,12 +1988,6 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// part of the code.
 
 		pNode->nIntegerData = m_nOutputCodeLength;
-
-		if (m_nDebugSymbolicOutput != 0)
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_W1_%08x:\n",m_nOutputCodeLength);
-			m_nOutputCodeLength += 14;
-		}
 
 		if (m_nGenerateDebuggerOutput != 0)
 		{
@@ -2303,13 +2027,6 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// part of the code.
 
 		pNode->nIntegerData = m_nOutputCodeLength;
-
-		if (m_nDebugSymbolicOutput != 0)
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_DW1_%08x:\n",m_nOutputCodeLength);
-			m_nOutputCodeLength += 15;
-		}
-
 	}
 
 	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_IF_CHOICE)
@@ -2326,23 +2043,14 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		}
 		--m_nStackCurrentDepth;
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			// Save the current state of the binary code length for the purpose
-			// of generating a good jump over the code within this instruction in
-			// the PostVisitGenerateCode() call.
+		// Save the current state of the binary code length for the purpose
+		// of generating a good jump over the code within this instruction in
+		// the PostVisitGenerateCode() call.
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JZ _I1_%08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2362,23 +2070,14 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		}
 		--m_nStackCurrentDepth;
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			// Save the current state of the binary code length for the purpose
-			// of generating a good jump over the code within this instruction in
-			// the PostVisitGenerateCode() call.
+		// Save the current state of the binary code length for the purpose
+		// of generating a good jump over the code within this instruction in
+		// the PostVisitGenerateCode() call.
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JZ _CH1_%08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 17 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 	}
@@ -2402,45 +2101,25 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// For writing out the code, just store a blank location.
 		int32_t nStackElementsDown = 0;
 
-		if (m_nDebugSymbolicOutput == 0)
+		if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_PRE_INCREMENT)
 		{
-			if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_PRE_INCREMENT)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCREMENT;
-			}
-			else
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DECREMENT;
-			}
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
-
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
-
-			// The address for the "blank" address should be stored in pNode->nIntegerData2;
-			pNode->nIntegerData2 = m_nOutputCodeLength;
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCREMENT;
 		}
 		else
 		{
-			PrintBinaryAddress();
-			if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_PRE_INCREMENT)
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"INCISP %08x\n",nStackElementsDown);
-			}
-			else
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"DECISP %08x\n",nStackElementsDown);
-			}
-
-			// The address for the "blank" address should be stored in pNode->nIntegerData2;
-			pNode->nIntegerData2 = m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-			m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DECREMENT;
 		}
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
+
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+
+		// The address for the "blank" address should be stored in pNode->nIntegerData2;
+		pNode->nIntegerData2 = m_nOutputCodeLength;
+
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2492,12 +2171,6 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pcStructList[m_nMaxStructures].m_nByteSize  = 0;
 		m_pcStructList[m_nMaxStructures].m_nFieldStart = m_nMaxStructureFields;
 		m_pcStructList[m_nMaxStructures].m_nFieldEnd   = -1;
-
-		if (m_nDebugSymbolicOutput != 0)
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"Start Struct t%s\n",m_pcStructList[m_nMaxStructures].m_psName.CStr());
-			m_nOutputCodeLength += 15 + (int32_t)strlen(m_pcStructList[m_nMaxStructures].m_psName.CStr());
-		}
 
 		m_nStructureDefinitionFieldStart = m_nMaxStructureFields;
 
@@ -2558,25 +2231,16 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		if (pNode->nIntegerData != 0)
 		{
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// Enter the location of the variable to write to.
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
+			// Enter the location of the variable to write to.
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MOVSP %08x\n",pNode->nIntegerData);
-				m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		}
@@ -2611,23 +2275,14 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 		}
 		--m_nStackCurrentDepth;
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			// Save the current state of the binary code length for the purpose
-			// of generating a good jump over the code within this instruction in
-			// the PostVisitGenerateCode() call.
+		// Save the current state of the binary code length for the purpose
+		// of generating a good jump over the code within this instruction in
+		// the PostVisitGenerateCode() call.
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JZ _W2_%08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2644,37 +2299,21 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// Here, we implement the skip-ahead to _I2_ and install the
 		// label at _I1_.
 
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		// Here, we go back and add the relative offset to get beyond this return
+		// statement to the JZ command we gave earlier during
+		// the PreVisit() [code located at pNode->nIntegerdata].
+		// This is an awfully good thing to do.
 
-			// Here, we go back and add the relative offset to get beyond this return
-			// statement to the JZ command we gave earlier during
-			// the PreVisit() [code located at pNode->nIntegerdata].
-			// This is an awfully good thing to do.
-
-			int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
-		}
-		else
-		{
-			// Add the JMP statement so we can abort the action
-			// passed in as a parameter!
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP _I2_%08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 17 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-			// Add the label for where we are supposed to jump to.
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_I1_%08x:\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 14;
-		}
+		int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2687,21 +2326,10 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 				StartLineNumberAtBinaryInstruction(pNode->m_nFileReference,pNode->nLine,m_nBinaryCodeLength);
 			}
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NO_OPERATION;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NO_OPERATION;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-			}
-			else
-			{
-				PrintBinaryAddress();
-                // LauraG: Removed the argument pNode->nIntegerData to the below function call as the format string did not use it.
-                // This might be a separate bug; the surrounding code isn't clear.
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NOP\n");
-				m_nOutputCodeLength += 4 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -2723,36 +2351,21 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// Here, we implement the skip-ahead to _CH2_ and install the
 		// label at _CH1_.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
-			// Here, we go back and add the relative offset to get beyond this return
-			// statement to the JZ command we gave earlier during
-			// the PreVisit() [code located at pNode->nIntegerdata].
-			// This is an awfully good thing to do.
+		// Here, we go back and add the relative offset to get beyond this return
+		// statement to the JZ command we gave earlier during
+		// the PreVisit() [code located at pNode->nIntegerdata].
+		// This is an awfully good thing to do.
 
-			int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
-		}
-		else
-		{
-			// Add the JMP statement so we can abort the action
-			// passed in as a parameter!
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP _CH2_%08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 18 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-			// Add the label for where we are supposed to jump to.
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_CH1_%08x:\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 15;
-		}
+		int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2796,27 +2409,18 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			int32_t nStackElementsDown = -4;
 			int32_t nSize = 4;
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
 
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
 
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength+ CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPTOPSP %08x,%04x\n",nStackElementsDown,nSize);
-				m_nOutputCodeLength += 22 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
@@ -2833,22 +2437,13 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			}
 			--m_nStackCurrentDepth;
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// The jump length is over this instruction and the jmp instruction, both of
-				// which are OPERATION_BASE_SIZE + 4 (for the address).
+			// The jump length is over this instruction and the jmp instruction, both of
+			// which are OPERATION_BASE_SIZE + 4 (for the address).
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JZ _ILA_%08x\n",pNode->nIntegerData);
-				m_nOutputCodeLength += 17 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2872,27 +2467,18 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			int32_t nStackElementsDown = -4;
 			int32_t nSize = 4;
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
 
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
 
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength+ CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPTOPSP %08x,%04x\n",nStackElementsDown,nSize);
-				m_nOutputCodeLength += 22 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
@@ -2908,29 +2494,20 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			}
 			--m_nStackCurrentDepth;
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// The jump length is over this instruction and the jmp instruction, and
-				// the copy top instruction (an additional 4+6+4 bytes above the BASE_SIZE
-				// operations).
+			// The jump length is over this instruction and the jmp instruction, and
+			// the copy top instruction (an additional 4+6+4 bytes above the BASE_SIZE
+			// operations).
 
-				int32_t nJmpLength = (CVIRTUALMACHINE_OPERATION_BASE_SIZE * 3) + 4 + 6 + 4;
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION]   = (char) (((nJmpLength) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nJmpLength) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
+			int32_t nJmpLength = (CVIRTUALMACHINE_OPERATION_BASE_SIZE * 3) + 4 + 6 + 4;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION]   = (char) (((nJmpLength) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nJmpLength) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JZ _ILO1_%08x\n",m_nOutputCodeLength + 18 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + 22 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH);
-				m_nOutputCodeLength += 18 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -2944,27 +2521,18 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			nStackElementsDown = -4;
 			nSize = 4;
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
 
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
 
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength+ CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPTOPSP %08x,%04x\n",nStackElementsDown,nSize);
-				m_nOutputCodeLength += 22 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
@@ -2974,25 +2542,13 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 			pNode->nIntegerData = m_nOutputCodeLength;
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// The jump length is over this instruction and the jmp instruction, both of
-				// which are OPERATION_BASE_SIZE + 4 (for the address).
+			// The jump length is over this instruction and the jmp instruction, both of
+			// which are OPERATION_BASE_SIZE + 4 (for the address).
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP _ILO2_%08x\n",pNode->nIntegerData);
-				m_nOutputCodeLength += 19 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"_ILO1_%08x:\n",pNode->nIntegerData);
-				m_nOutputCodeLength += 16;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -3014,19 +2570,11 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			StartLineNumberAtBinaryInstruction(pNode->m_nFileReference,pNode->nLine,m_nBinaryCodeLength);
 		}
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_CN_%08x",m_nLoopIdentifier); */
-			AddSymbolToLabelList(m_nOutputCodeLength,
-			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_CONTINUE,
-			                     m_nLoopIdentifier);
-		}
-		else
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_CN_%08x:\n",m_nLoopIdentifier);
-			m_nOutputCodeLength += 14;
-		}
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_CN_%08x",m_nLoopIdentifier); */
+		AddSymbolToLabelList(m_nOutputCodeLength,
+		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_CONTINUE,
+		                     m_nLoopIdentifier);
 	}
 
 	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_STATEMENT)
@@ -3104,44 +2652,26 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					nStackElementsDown = pNode->pRight->nIntegerData - (m_nGlobalVariableSize);
 				}
 
-				if (m_nDebugSymbolicOutput == 0)
+				if (bOperateOnStackPointer == TRUE)
 				{
-					if (bOperateOnStackPointer == TRUE)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ASSIGNMENT;
-					}
-					else
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ASSIGNMENT_BASE;
-					}
-
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
-
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
-
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
-
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ASSIGNMENT;
 				}
 				else
 				{
-					PrintBinaryAddress();
-
-					if (bOperateOnStackPointer == TRUE)
-					{
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPDOWNSP %08x,%04x\n",nStackElementsDown,nSize);
-					}
-					else
-					{
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPDOWNBP %08x,%04x\n",nStackElementsDown,nSize);
-					}
-
-					m_nOutputCodeLength += 23 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ASSIGNMENT_BASE;
 				}
+
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 				m_bAssignmentToVariable = FALSE;
@@ -3329,47 +2859,6 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pcStructFieldList[m_nMaxStructureFields].m_psVarName = *(pNode->m_psStringData);
 				m_pcStructFieldList[m_nMaxStructureFields].m_nLocation = 0;
 
-				// MGB - For Scripting Debugger
-				if (m_nDebugSymbolicOutput != 0)
-				{
-					CExoString *pVariableName = pNode->m_psStringData;
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"Struct Var In! %s at %08x:Loc %05d\n",pVariableName->CStr(),m_nBinaryCodeLength,m_nStackCurrentDepth*4-m_nGlobalVariableSize);
-					m_nOutputCodeLength += 38 + (int32_t)strlen(pVariableName->CStr());
-
-					if (m_pcStructFieldList[m_nMaxStructureFields].m_pchType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT)
-					{
-						CExoString *pStructureName = &(m_sVarStackVariableTypeName);
-						sprintf(m_pchOutputCode + m_nOutputCodeLength,"Struct Var Type: t%s\n",pStructureName->CStr());
-						m_nOutputCodeLength += 19 + (int32_t)strlen(pStructureName->CStr());
-					}
-					else if (m_pcStructFieldList[m_nMaxStructureFields].m_pchType >= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 &&
-					         m_pcStructFieldList[m_nMaxStructureFields].m_pchType <= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE9)
-					{
-						char nVariableType = (char) ((int32_t) m_pcStructFieldList[m_nMaxStructureFields].m_pchType - CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 + '0');
-						sprintf(m_pchOutputCode + m_nOutputCodeLength,"Struct Var Type: e%c\n",nVariableType);
-						m_nOutputCodeLength += 20;
-					}
-					else
-					{
-						char nVariableType = 'i';
-						if (m_pcStructFieldList[m_nMaxStructureFields].m_pchType == CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT)
-						{
-							nVariableType = 'f';
-						}
-						else if (m_pcStructFieldList[m_nMaxStructureFields].m_pchType == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT)
-						{
-							nVariableType = 'o';
-						}
-						else if (m_pcStructFieldList[m_nMaxStructureFields].m_pchType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRING)
-						{
-							nVariableType = 's';
-						}
-						sprintf(m_pchOutputCode + m_nOutputCodeLength,"Var Type: %c\n",nVariableType);
-						m_nOutputCodeLength += 12;
-					}
-				}
-				// MGB - !For Scripting Debugger
-
 				++m_nMaxStructureFields;
 			}
 		}
@@ -3442,43 +2931,26 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 							nStackElementsDown = pNode->nIntegerData - (m_nGlobalVariableSize);
 						}
 
-						if (m_nDebugSymbolicOutput == 0)
+						if (bOperateOnStackPointer == TRUE)
 						{
-							if (bOperateOnStackPointer == TRUE)
-							{
-								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
-							}
-							else
-							{
-								m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY_BASE;
-							}
-
-							m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
-
-							m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-							m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-							m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-							m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
-
-							m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-							m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
-
-							m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+							m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
 						}
 						else
 						{
-							PrintBinaryAddress();
-							if (bOperateOnStackPointer == TRUE)
-							{
-								sprintf(m_pchOutputCode + m_nOutputCodeLength+ CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPTOPSP %08x,%04x\n",nStackElementsDown,nSize);
-							}
-							else
-							{
-								sprintf(m_pchOutputCode + m_nOutputCodeLength+ CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPTOPBP %08x,%04x\n",nStackElementsDown,nSize);
-							}
-
-							m_nOutputCodeLength += 22 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
+							m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY_BASE;
 						}
+
+						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+
+						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+
+						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+
+						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
 						m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
@@ -3503,25 +2975,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// CODE GENERATION
 		// Here, we have a "constant integer" op-code that would be added.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
 
-			// Enter the integer constant.
-			m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
+		// Enter the integer constant.
+		m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CONSTI %08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -3537,26 +3000,17 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// CODE GENERATION
 		// Here, we have a "constant object" op-code that would be added.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_OBJECT;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_OBJECT;
 
-			// Enter the integer constant, since that is where we stored
-			// the value.  :-)
-			m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
+		// Enter the integer constant, since that is where we stored
+		// the value.  :-)
+		m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CONSTO %08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -3571,7 +3025,46 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 	{
 		// CODE GENERATION
 		// Here, we have a "constant float" op-code that would be added.
-		if (m_nDebugSymbolicOutput == 0)
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
+
+		// Enter the floating point constant.
+
+		///////////////////////////////////////////////////////////////////////////
+		// This may need some explaining.  The MacIntosh deals with floating point
+		// numbers in the same way as integers ... it reverses the bytes.  Thus, if
+		// we want to avoid doing byte swaps, what we should do is write the data
+		// out in the specified byte order, and then read it back in with the
+		// specified byte order.  However, you can't just "shift left" on floats,
+		// so we cast the data to an integer, and then write that out!  Tricky, but
+		// it should work.
+		//
+		// -- Mark Brockington, 01/22/2000
+		///////////////////////////////////////////////////////////////////////////
+
+		int32_t *pFloatAsInt = (int32_t *) &pNode->fFloatData;
+		m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((*pFloatAsInt) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((*pFloatAsInt) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((*pFloatAsInt) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
+
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+
+		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+
+		pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT;
+		m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
+		++m_nStackCurrentDepth;
+
+		return 0;
+	}
+
+	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_VECTOR)
+	{
+		// CODE GENERATION
+		// Here, we have a "constant float" op-code that would be added.
+
+		for (int32_t nCount = 0; nCount < 3; nCount++)
 		{
 			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
 			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
@@ -3590,70 +3083,13 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			// -- Mark Brockington, 01/22/2000
 			///////////////////////////////////////////////////////////////////////////
 
-			int32_t *pFloatAsInt = (int32_t *) &pNode->fFloatData;
+			int32_t *pFloatAsInt = (int32_t *) &(pNode->fVectorData[nCount]);
 			m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((*pFloatAsInt) >> 24) & 0x0ff);
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((*pFloatAsInt) >> 16) & 0x0ff);
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((*pFloatAsInt) >> 8) & 0x0ff);
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CONSTF %19.9f\n",pNode->fFloatData);
-			m_nOutputCodeLength += 27 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
-
-		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-
-		pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT;
-		m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
-		++m_nStackCurrentDepth;
-
-		return 0;
-	}
-
-	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_VECTOR)
-	{
-		// CODE GENERATION
-		// Here, we have a "constant float" op-code that would be added.
-
-		for (int32_t nCount = 0; nCount < 3; nCount++)
-		{
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
-
-				// Enter the floating point constant.
-
-				///////////////////////////////////////////////////////////////////////////
-				// This may need some explaining.  The MacIntosh deals with floating point
-				// numbers in the same way as integers ... it reverses the bytes.  Thus, if
-				// we want to avoid doing byte swaps, what we should do is write the data
-				// out in the specified byte order, and then read it back in with the
-				// specified byte order.  However, you can't just "shift left" on floats,
-				// so we cast the data to an integer, and then write that out!  Tricky, but
-				// it should work.
-				//
-				// -- Mark Brockington, 01/22/2000
-				///////////////////////////////////////////////////////////////////////////
-
-				int32_t *pFloatAsInt = (int32_t *) &(pNode->fVectorData[nCount]);
-				m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((*pFloatAsInt) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((*pFloatAsInt) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((*pFloatAsInt) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
-
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CONSTF %19.9f\n",pNode->fFloatData);
-				m_nOutputCodeLength += 27 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 			m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
@@ -3673,28 +3109,19 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		int nLength = pNode->m_psStringData->GetLength();
 
-		if (m_nDebugSymbolicOutput == 0)
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_STRING;
+
+		// Enter the string constant.
+
+		m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nLength) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nLength)) & 0x0ff);
+
+		for (nCount = 0; nCount < nLength; nCount++)
 		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_STRING;
-
-			// Enter the string constant.
-
-			m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nLength) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nLength)) & 0x0ff);
-
-			for (nCount = 0; nCount < nLength; nCount++)
-			{
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount+2] = (pNode->m_psStringData->CStr())[nCount];
-			}
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount+2] = (pNode->m_psStringData->CStr())[nCount];
 		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CONSTS %04x %s\n",nLength,pNode->m_psStringData->CStr());
-			m_nOutputCodeLength += (13 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + nLength);
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
 
@@ -3710,25 +3137,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// CODE GENERATION
 		// Here, we have a "constant location" op-code that would be added.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST2;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST2;
 
-			// Enter the integer constant.
-			m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
+		// Enter the integer constant.
+		m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CONSTLOC %08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -3746,29 +3164,19 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		int nLength = pNode->m_psStringData->GetLength();
 
-		if (m_nDebugSymbolicOutput == 0)
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST7;
+
+		// Enter the string constant.
+
+		m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nLength) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nLength)) & 0x0ff);
+
+		for (nCount = 0; nCount < nLength; nCount++)
 		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST7;
-
-			// Enter the string constant.
-
-			m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nLength) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nLength)) & 0x0ff);
-
-			for (nCount = 0; nCount < nLength; nCount++)
-			{
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount+2] = (pNode->m_psStringData->CStr())[nCount];
-			}
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount+2] = (pNode->m_psStringData->CStr())[nCount];
 		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-                "CONSTJSON %04x %s\n",nLength,pNode->m_psStringData->CStr());
-			m_nOutputCodeLength += (13 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + nLength);
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
 
@@ -3829,34 +3237,19 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// since we have to abort out of whatever statement we're in the middle
 		// of.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
-			// Here, we go back and add the relative offset to get beyond this return
-			// statement to the JMP command we gave earlier.  This is an awfully good
-			// thing to do.
+		// Here, we go back and add the relative offset to get beyond this return
+		// statement to the JMP command we gave earlier.  This is an awfully good
+		// thing to do.
 
-			int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
-		}
-		else
-		{
-			// Add the RETN statement so we can abort the action
-			// passed in as a parameter!
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RETN\n");
-			m_nOutputCodeLength += 5 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-			// Add the label for where we are supposed to jump to.
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_X%08x:\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 12;
-		}
+		int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -4044,24 +3437,15 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					int32_t nIdentifierOrder = m_pcIdentifierList[nCount].m_nIdIdentifier;
 
 					// Write the command that calls a predefined function.
-					if (m_nDebugSymbolicOutput == 0)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EXECUTE_COMMAND;
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EXECUTE_COMMAND;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-						// Enter the integer constant.
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) ((nIdentifierOrder >> 8) & 0x0ff);
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (nIdentifierOrder & 0x0ff);
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (m_pcIdentifierList[nCount].m_nParameters & 0x0ff);
+					// Enter the integer constant.
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) ((nIdentifierOrder >> 8) & 0x0ff);
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (nIdentifierOrder & 0x0ff);
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (m_pcIdentifierList[nCount].m_nParameters & 0x0ff);
 
-						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 3;
-					}
-					else
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"ACTION %04x %02x\n",(uint16_t) nIdentifierOrder, (uint16_t) m_pcIdentifierList[nCount].m_nParameters);
-						m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
+					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 3;
 					m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 3;
 				}
 				else
@@ -4070,29 +3454,20 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 					// Here, we will need to write a symbol into the code and
 					// mark the location for updating during the label generation pass.
-					if (m_nDebugSymbolicOutput == 0)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JSR;
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JSR;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-						// There is no point in expressing this yet, because we haven't decided on the
-						// locations of any of the final functions in the executable.  So, write
-						// the symbol into the table.
+					// There is no point in expressing this yet, because we haven't decided on the
+					// locations of any of the final functions in the executable.  So, write
+					// the symbol into the table.
 
-						/* CExoString sSymbolName;
-						sSymbolName.Format("FE_%s",m_pcIdentifierList[nCount].m_psIdentifier.CStr()); */
-						AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
-						                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
-						                     nCount,0);
+					/* CExoString sSymbolName;
+					sSymbolName.Format("FE_%s",m_pcIdentifierList[nCount].m_psIdentifier.CStr()); */
+					AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
+					                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,
+					                     nCount,0);
 
-						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-					}
-					else
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JSR FE_%s\n",m_pcIdentifierList[nCount].m_psIdentifier.CStr());
-						m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + m_pcIdentifierList[nCount].m_psIdentifier.GetLength();
-					}
+					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 					m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 				}
 
@@ -4152,25 +3527,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		if (nStackModifier != 0)
 		{
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// Enter the location of the variable to write to.
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackModifier) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackModifier) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackModifier) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackModifier)) & 0x0ff);
+			// Enter the location of the variable to write to.
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackModifier) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackModifier) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackModifier) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackModifier)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MOVSP %08x\n",nStackModifier);
-				m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		}
@@ -4279,19 +3645,11 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// MGB - 12/06/2004 - END FIX
 
 		// Generate a label for the end of the function (used by the break keyword)
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_BR_%08x",m_nSwitchIdentifier); */
-			AddSymbolToLabelList(m_nOutputCodeLength,
-			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,
-			                     m_nSwitchIdentifier);
-		}
-		else
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_BR_%08x:\n",m_nSwitchIdentifier);
-			m_nOutputCodeLength += 14;
-		}
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_BR_%08x",m_nSwitchIdentifier); */
+		AddSymbolToLabelList(m_nOutputCodeLength,
+		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,
+		                     m_nSwitchIdentifier);
 
 		// Restore the old values of switch level and the switch identifier.
 		--m_nSwitchLevel;
@@ -4307,53 +3665,32 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// Here, we implement the loop back to location _W1_ and insert
 		// the information on jumping to _W2_ at this point.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			int32_t nJmpLength = pNode->nIntegerData - m_nOutputCodeLength;
-			m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nJmpLength) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nJmpLength) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
+		int32_t nJmpLength = pNode->nIntegerData - m_nOutputCodeLength;
+		m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nJmpLength) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nJmpLength) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
-			// Here, we go back and add the relative offset to get beyond this return
-			// statement to the JZ command we gave earlier during
-			// the InVisit() [code located at pNode->nIntegerdata2].
-			// This is an awfully good thing to do.
+		// Here, we go back and add the relative offset to get beyond this return
+		// statement to the JZ command we gave earlier during
+		// the InVisit() [code located at pNode->nIntegerdata2].
+		// This is an awfully good thing to do.
 
-			nJmpLength = m_nOutputCodeLength - pNode->nIntegerData2;
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
+		nJmpLength = m_nOutputCodeLength - pNode->nIntegerData2;
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
 
-			// Generate a label for the end of the function (used by the break keyword)
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_BR_%08x",m_nLoopIdentifier); */
-			AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,m_nLoopIdentifier,0);
-
-		}
-		else
-		{
-			// Add the JMP statement so we can abort the action
-			// passed in as a parameter!
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP _W1_%08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 17 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-			// Add the label for where we are supposed to jump to.
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_W2_%08x:\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 14;
-
-			// Generate a label for the end of the function (used by the break keyword)
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_BR_%08x:\n",m_nLoopIdentifier);
-			m_nOutputCodeLength += 14;
-
-		}
+		// Generate a label for the end of the function (used by the break keyword)
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_BR_%08x",m_nLoopIdentifier); */
+		AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,m_nLoopIdentifier,0);
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -4399,28 +3736,19 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		}
 		--m_nStackCurrentDepth;
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JZ;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			// The jump length is over this instruction and the jmp instruction, both of
-			// which are OPERATION_BASE_SIZE + 4 (for the address).
+		// The jump length is over this instruction and the jmp instruction, both of
+		// which are OPERATION_BASE_SIZE + 4 (for the address).
 
-			int32_t nJmpLength = (CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4) << 1;
-			m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nJmpLength) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nJmpLength) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
+		int32_t nJmpLength = (CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4) << 1;
+		m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nJmpLength) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nJmpLength) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JZ _DW2_%08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 17 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -4428,44 +3756,25 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// And now, the JMP instruction.
 		//
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			// The jmp length is back to the beginning of the do/while loop,
-			// which is stored in pNode->nIntegerData;
-			// which are OPERATION_BASE_SIZE + 4 (for the address).
+		// The jmp length is back to the beginning of the do/while loop,
+		// which is stored in pNode->nIntegerData;
+		// which are OPERATION_BASE_SIZE + 4 (for the address).
 
-			int32_t nJmpLength = pNode->nIntegerData - m_nOutputCodeLength;
-			m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nJmpLength) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nJmpLength) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
+		nJmpLength = pNode->nIntegerData - m_nOutputCodeLength;
+		m_pchOutputCode[m_nOutputCodeLength+ CVIRTUALMACHINE_EXTRA_DATA_LOCATION ] = (char) (((nJmpLength) >> 24) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nJmpLength) >> 8) & 0x0ff);
+		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
-			// Generate a label for the end of the function (used by the break keyword)
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_BR_%08x",m_nLoopIdentifier); */
-			AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,m_nLoopIdentifier);
-
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP _DW1_%08x\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 18 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-			// Add the label for where we are supposed to jump to.
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_DW2_%08x:\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 15;
-
-			// Generate a label for the end of the function (used by the break keyword)
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_BR_%08x:\n",m_nLoopIdentifier);
-			m_nOutputCodeLength += 14;
-
-		}
+		// Generate a label for the end of the function (used by the break keyword)
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_BR_%08x",m_nLoopIdentifier); */
+		AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,m_nLoopIdentifier);
 
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
@@ -4496,25 +3805,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// Here, we implement the loop back to location _W1_ and insert
 		// the information on jumping to _W2_ at this point.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			// Here, we go back and add the relative offset to get beyond this return
-			// statement to the JMP command we gave earlier during
-			// the InVisit() [code located at pNode->nIntegerdata2].
-			// This is an awfully good thing to do.
+		// Here, we go back and add the relative offset to get beyond this return
+		// statement to the JMP command we gave earlier during
+		// the InVisit() [code located at pNode->nIntegerdata2].
+		// This is an awfully good thing to do.
 
-			int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData2;
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
-		}
-		else
-		{
-			// Add the label for where we are supposed to jump to (from InVisit())
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_I2_%08x:\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 14;
-		}
+		int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData2;
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
 
 		// FOR TESTING PURPOSES
 		// We do nothing.  Why?  It's been done in pregenerate code
@@ -4534,25 +3834,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// Here, we implement the loop back to location _CH1_ and insert
 		// the information on jumping to _CH2_ at this point.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			// Here, we go back and add the relative offset to get beyond this return
-			// statement to the JMP command we gave earlier during
-			// the InVisit() [code located at pNode->nIntegerdata2].
-			// This is an awfully good thing to do.
+		// Here, we go back and add the relative offset to get beyond this return
+		// statement to the JMP command we gave earlier during
+		// the InVisit() [code located at pNode->nIntegerdata2].
+		// This is an awfully good thing to do.
 
-			int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData2;
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
-			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
-		}
-		else
-		{
-			// Add the label for where we are supposed to jump to (from InVisit())
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_CH2_%08x:\n",pNode->nIntegerData);
-			m_nOutputCodeLength += 15;
-		}
+		int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData2;
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
+		m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
 
 		// FOR TESTING PURPOSES
 		// Check to see if the types are the same.
@@ -4658,18 +3949,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a "logical AND of two ints" operation.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LOGICAL_AND;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"LOGANDII\n");
-					m_nOutputCodeLength += 9 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LOGICAL_AND;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -4681,25 +3963,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// to on a "short cut".
 				pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_INT;
 
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					// Here, we go back and add the relative offset to get beyond this return
-					// statement to the JZ command we gave earlier during
-					// the InVisit() [code located at pNode->nIntegerData].
-					// This is an awfully good thing to do.
+				// Here, we go back and add the relative offset to get beyond this return
+				// statement to the JZ command we gave earlier during
+				// the InVisit() [code located at pNode->nIntegerData].
+				// This is an awfully good thing to do.
 
-					int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
-					m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
-					m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-					m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
-					m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
-				}
-				else
-				{
-					// Add the label for where we are supposed to jump to.
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"_ILA_%08x:\n",pNode->nIntegerData);
-					m_nOutputCodeLength += 15;
-				}
+				int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
+				m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
+				m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+				m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
+				m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
 
 				return 0;
 			}
@@ -4718,40 +3991,22 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// to on a "short cut".
 				pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_INT;
 
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					// Here, we go back and add the relative offset to get beyond this return
-					// statement to the JMP command we gave earlier during
-					// the InVisit() [code located at pNode->nIntegerData].
-					// This is an awfully good thing to do.
+				// Here, we go back and add the relative offset to get beyond this return
+				// statement to the JMP command we gave earlier during
+				// the InVisit() [code located at pNode->nIntegerData].
+				// This is an awfully good thing to do.
 
-					int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
-					m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
-					m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
-					m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
-					m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
-				}
-				else
-				{
-					// Add the label for where we are supposed to jump to.
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"_ILO2_%08x:\n",pNode->nIntegerData);
-					m_nOutputCodeLength += 16;
-				}
+				int32_t nJmpLength = m_nOutputCodeLength - pNode->nIntegerData;
+				m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nJmpLength) >> 24) & 0x0ff);
+				m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nJmpLength) >> 16) & 0x0ff);
+				m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nJmpLength) >> 8 ) & 0x0ff);
+				m_pchOutputCode[pNode->nIntegerData + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nJmpLength)      ) & 0x0ff);
 
 				// CODE GENERATION
 				// Write a "logical OR of two ints" operation.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LOGICAL_OR;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"LOGORII\n");
-					m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LOGICAL_OR;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -4776,18 +4031,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write an "inclusive OR of two ints" operation.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCLUSIVE_OR;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"INCORII\n");
-					m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCLUSIVE_OR;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -4811,18 +4057,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write an "exclusive OR of two ints" operation.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EXCLUSIVE_OR;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"EXCORII\n");
-					m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EXCLUSIVE_OR;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -4846,18 +4083,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write an "boolean AND of two ints" operation.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_BOOLEAN_AND;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"BOOLANDII\n");
-					m_nOutputCodeLength += 10 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_BOOLEAN_AND;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -4882,34 +4110,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write an "condition EQUAL/NOT EQUAL of two ints" operation.
-				if (m_nDebugSymbolicOutput == 0)
+				if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
-					}
-					else
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
-					}
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
 				}
 				else
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"EQUALII\n");
-						m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
-					else
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NEQUALII\n");
-						m_nOutputCodeLength += 9 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
 				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -4925,34 +4135,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write an "condition EQUAL/NOT EQUAL of two floats" operation.
-				if (m_nDebugSymbolicOutput == 0)
+				if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
-					}
-					else
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
-					}
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_FLOAT;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
 				}
 				else
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"EQUALFF\n");
-						m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
-					else
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NEQUALFF\n");
-						m_nOutputCodeLength += 9 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
 				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_FLOAT;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -4970,34 +4162,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write an "condition EQUAL/NOT EQUAL of two objects" operation.
-				if (m_nDebugSymbolicOutput == 0)
+				if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
-					}
-					else
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
-					}
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_OBJECT_OBJECT;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
 				}
 				else
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"EQUALOO\n");
-						m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
-					else
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NEQUALOO\n");
-						m_nOutputCodeLength += 9 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
 				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_OBJECT_OBJECT;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -5015,34 +4189,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write an "condition EQUAL/NOT EQUAL of two strings" operation.
-				if (m_nDebugSymbolicOutput == 0)
+				if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
-					}
-					else
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
-					}
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_STRING_STRING;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
 				}
 				else
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"EQUALSS\n");
-						m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
-					else
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NEQUALSS\n");
-						m_nOutputCodeLength += 9 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
 				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_STRING_STRING;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -5065,34 +4221,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 				// CODE GENERATION
 				// Write an "condition EQUAL/NOT EQUAL of two strings" operation.
-				if (m_nDebugSymbolicOutput == 0)
+				if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
-					}
-					else
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
-					}
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = (char) (CVIRTUALMACHINE_AUXCODE_TYPETYPE_ENGST0_ENGST0 + nEngineStructureNumber);
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
 				}
 				else
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"EQUALP%1dP%1d\n", nEngineStructureNumber, nEngineStructureNumber);
-						m_nOutputCodeLength += 10 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
-					else
-					{
-						PrintBinaryAddress();
-						sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NEQUALP%1dP%1d\n", nEngineStructureNumber, nEngineStructureNumber);
-						m_nOutputCodeLength += 11 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
 				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = (char) (CVIRTUALMACHINE_AUXCODE_TYPETYPE_ENGST0_ENGST0 + nEngineStructureNumber);
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -5115,38 +4253,20 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 					// CODE GENERATION
 					// Write an "condition EQUAL/NOT EQUAL of two strings" operation.
-					if (m_nDebugSymbolicOutput == 0)
+					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
 					{
-						if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-						{
-							m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
-						}
-						else
-						{
-							m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
-						}
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_STRUCT_STRUCT;
-
-						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+0] = (char) (((nSize) >> 8) & 0x0ff);
-						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nSize)) & 0x0ff);
-
-						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 2;
+						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
 					}
 					else
 					{
-						if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL)
-						{
-							PrintBinaryAddress();
-							sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"EQUALTT %04x\n",nSize);
-							m_nOutputCodeLength += 13 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-						}
-						else
-						{
-							PrintBinaryAddress();
-							sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NEQUALTT %04x\n",nSize);
-							m_nOutputCodeLength += 14 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-						}
+						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NOT_EQUAL;
 					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_STRUCT_STRUCT;
+
+					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+0] = (char) (((nSize) >> 8) & 0x0ff);
+					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nSize)) & 0x0ff);
+
+					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 2;
 
 					m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 2;
 
@@ -5179,51 +4299,21 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// CODE GENERATION
 		// Write the base of the arithmetic operation.
 
-		if (m_nDebugSymbolicOutput == 0)
+		if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_GEQ)
 		{
-			if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_GEQ)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_GEQ;
-			}
-			else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_GT)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_GT;
-			}
-			else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_LT)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LT;
-			}
-			else
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LEQ;
-			}
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_GEQ;
+		}
+		else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_GT)
+		{
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_GT;
+		}
+		else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_LT)
+		{
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LT;
 		}
 		else
 		{
-			PrintBinaryAddress();
-			m_nOutputCodeLength += CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-			if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_GEQ)
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"GEQ");
-				m_nOutputCodeLength += 3;
-			}
-			else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_GT)
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"GT");
-				m_nOutputCodeLength += 2;
-			}
-			else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_LT)
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"LT");
-				m_nOutputCodeLength += 2;
-			}
-			else
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"LEQ");
-				m_nOutputCodeLength += 3;
-			}
-
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LEQ;
 		}
 
 		if (pNode->pLeft != NULL && pNode->pRight != NULL)
@@ -5232,17 +4322,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write an "condition GEQ/GT/LT/LEQ of two ints" operation.
-				if (m_nDebugSymbolicOutput == 0)
-
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"II\n");
-					m_nOutputCodeLength += 3;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				// FOR TESTING PURPOSES
@@ -5257,16 +4338,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write an "condition GEQ/GT/LT/LEQ of two floats" operation.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_FLOAT;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"FF\n");
-					m_nOutputCodeLength += 3;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_FLOAT;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				// FOR TESTING PURPOSES
@@ -5298,46 +4371,21 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// CODE GENERATION
 				// Write an "<</>>/>>> of two ints" operation.
 
-				if (m_nDebugSymbolicOutput == 0)
+				if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_SHIFT_LEFT)
 				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_SHIFT_LEFT)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_SHIFT_LEFT;
-					}
-					else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_SHIFT_RIGHT)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_SHIFT_RIGHT;
-					}
-					else
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_USHIFT_RIGHT;
-					}
-
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_SHIFT_LEFT;
+				}
+				else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_SHIFT_RIGHT)
+				{
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_SHIFT_RIGHT;
 				}
 				else
 				{
-					PrintBinaryAddress();
-					m_nOutputCodeLength += CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_SHIFT_LEFT)
-					{
-						sprintf(m_pchOutputCode + m_nOutputCodeLength,"SHLEFT\n");
-						m_nOutputCodeLength += 7;
-					}
-					else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CONDITION_GT)
-					{
-						sprintf(m_pchOutputCode + m_nOutputCodeLength,"SHRIGHT\n");
-						m_nOutputCodeLength += 8;
-					}
-					else
-					{
-						sprintf(m_pchOutputCode + m_nOutputCodeLength,"USHRIGHTII\n");
-						m_nOutputCodeLength += 11;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_USHIFT_RIGHT;
 				}
+
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -5363,52 +4411,21 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		// CODE GENERATION
 		// Write the base of the arithmetic operation.
-
-		if (m_nDebugSymbolicOutput == 0)
+		if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_ADD)
 		{
-			if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_ADD)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ADD;
-			}
-			else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_SUBTRACT)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_SUB;
-			}
-			else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_MULTIPLY)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MUL;
-			}
-			else
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DIV;
-			}
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ADD;
+		}
+		else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_SUBTRACT)
+		{
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_SUB;
+		}
+		else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_MULTIPLY)
+		{
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MUL;
 		}
 		else
 		{
-			PrintBinaryAddress();
-			m_nOutputCodeLength += CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-
-			if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_ADD)
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"ADD");
-				m_nOutputCodeLength += 3;
-			}
-			else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_SUBTRACT)
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"SUB");
-				m_nOutputCodeLength += 3;
-			}
-			else if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_MULTIPLY)
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"MUL");
-				m_nOutputCodeLength += 3;
-			}
-			else
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength,"DIV");
-				m_nOutputCodeLength += 3;
-			}
-
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DIV;
 		}
 
 		if (pNode->pLeft != NULL && pNode->pRight != NULL)
@@ -5417,16 +4434,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a +-*/ operation on two ints.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"II\n");
-					m_nOutputCodeLength += 3;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				// For TESTING PURPOSES
@@ -5443,16 +4452,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a +-*/ operation on a float and a PROMOTED int.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"FI\n");
-					m_nOutputCodeLength += 3;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -5470,16 +4471,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a +-*/ operation on a PROMOTED int and a float.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_FLOAT;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"IF\n");
-					m_nOutputCodeLength += 3;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_FLOAT;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -5497,16 +4490,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a +-*/ operation on a PROMOTED int and a float.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_FLOAT;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"FF\n");
-					m_nOutputCodeLength += 3;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_FLOAT;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
@@ -5529,16 +4514,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				}
 				// CODE GENERATION
 				// Write a s+s operation on two strings.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_STRING_STRING;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength,"SS\n");
-					m_nOutputCodeLength += 3;
-				}
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_STRING_STRING;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				// For TESTING PURPOSES
@@ -5560,16 +4537,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					}
 					// CODE GENERATION
 					// Write a v+-v operation on two vectors.
-					if (m_nDebugSymbolicOutput == 0)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_VECTOR_VECTOR;
-						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-					}
-					else
-					{
-						sprintf(m_pchOutputCode + m_nOutputCodeLength,"VV\n");
-						m_nOutputCodeLength += 3;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_VECTOR_VECTOR;
+					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 					m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 					// For TESTING PURPOSES
@@ -5598,16 +4567,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					}
 					// CODE GENERATION
 					// Write a v*/f operation on two vectors.
-					if (m_nDebugSymbolicOutput == 0)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_VECTOR_FLOAT;
-						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-					}
-					else
-					{
-						sprintf(m_pchOutputCode + m_nOutputCodeLength,"VF\n");
-						m_nOutputCodeLength += 3;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_VECTOR_FLOAT;
+					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 					m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 					// For TESTING PURPOSES
@@ -5637,16 +4598,8 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 					// CODE GENERATION
 					// Write a f*v operation.
-					if (m_nDebugSymbolicOutput == 0)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_VECTOR;
-						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-					}
-					else
-					{
-						sprintf(m_pchOutputCode + m_nOutputCodeLength,"FV\n");
-						m_nOutputCodeLength += 3;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_VECTOR;
+					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 					m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 					// For TESTING PURPOSES
@@ -5676,19 +4629,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a % operation on two ints.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODULUS;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MODII\n");
-					m_nOutputCodeLength += 6 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODULUS;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				// For TESTING PURPOSES
@@ -5713,19 +4656,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a negation operation on an int.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NEGATION;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NEGI\n");
-					m_nOutputCodeLength += 5 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NEGATION;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				// For TESTING PURPOSES
@@ -5739,19 +4672,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a negation operation on a float.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NEGATION;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NEGF\n");
-					m_nOutputCodeLength += 5 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NEGATION;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				// For TESTING PURPOSES
 				// Do nothing.
@@ -5773,19 +4696,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a negation operation on an int.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ONES_COMPLEMENT;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"COMPI\n");
-					m_nOutputCodeLength += 6 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ONES_COMPLEMENT;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				// For TESTING PURPOSES
@@ -5808,19 +4721,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				// CODE GENERATION
 				// Write a negation operation on an int.
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_BOOLEAN_NOT;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"NOTI\n");
-					m_nOutputCodeLength += 5 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_BOOLEAN_NOT;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 				// For TESTING PURPOSES
@@ -5844,12 +4747,6 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		if (m_nStructureDefinition != 2)
 		{
 			return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER,pNode);
-		}
-
-		if (m_nDebugSymbolicOutput != 0)
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"End Struct t%s\n",m_pcStructList[m_nMaxStructures].m_psName.CStr());
-			m_nOutputCodeLength += 13 + (int32_t)strlen(m_pcStructList[m_nMaxStructures].m_psName.CStr());
 		}
 
 		// Set where the last field for this structure is located.
@@ -5966,27 +4863,18 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 				int32_t nStartComponent = m_pcStructFieldList[nValue].m_nLocation;
 
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DE_STRUCT;
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DE_STRUCT;
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
 
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nSizeOriginal) >> 8) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nSizeOriginal)) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStartComponent) >> 8) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStartComponent)) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nSizeOriginal) >> 8) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nSizeOriginal)) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStartComponent) >> 8) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStartComponent)) & 0x0ff);
 
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"DESTRUCT %04x,%04x,%04x\n",nSizeOriginal,nStartComponent,nSize);
-					m_nOutputCodeLength += 24 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
 				// Okay, now we have to actually apply the de-struct information.
@@ -6096,23 +4984,15 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// in the run-time stack.
 
 		// Generate a label for the end of the function (used by the RETURN keyword)
-		if (m_nDebugSymbolicOutput == 0)
+		/* CExoString sSymbolName;
+		sSymbolName.Format("FX_%s",m_sFunctionImpName.CStr()); */
+		int32_t nIdentifier = GetIdentifierByName(m_sFunctionImpName);
+		if (nIdentifier == STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER)
 		{
-			/* CExoString sSymbolName;
-			sSymbolName.Format("FX_%s",m_sFunctionImpName.CStr()); */
-			int32_t nIdentifier = GetIdentifierByName(m_sFunctionImpName);
-			if (nIdentifier == STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER)
-			{
-				return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER,pNode);
-			}
+			return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER,pNode);
+		}
 
-			AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_EXIT, nIdentifier, 0);
-		}
-		else
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"FX_%s:\n",m_sFunctionImpName.CStr());
-			m_nOutputCodeLength += m_sFunctionImpName.GetLength() + 5;
-		}
+		AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_EXIT, nIdentifier, 0);
 
 		// Move the stack to update the current location of the code.
 
@@ -6120,26 +5000,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		if (nStackModifier != 0)
 		{
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// Enter the location of the variable to write to.
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackModifier) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackModifier) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackModifier) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackModifier)) & 0x0ff);
+			// Enter the location of the variable to write to.
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackModifier) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackModifier) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackModifier) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackModifier)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MOVSP %08x\n",nStackModifier);
-				m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
-
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		}
 
@@ -6164,20 +5034,10 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		}
 
 		// Add the RET statement
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE ;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RET\n");
-			m_nOutputCodeLength += 4 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
-
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE ;
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 		// Remove the last variable (#retval), and reset the state of the
@@ -6212,7 +5072,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		--m_nVarStackRecursionLevel;
 
-		int32_t nIdentifier = GetIdentifierByName(m_sFunctionImpName);
+		nIdentifier = GetIdentifierByName(m_sFunctionImpName);
 
 		if (nIdentifier < 0)
 		{
@@ -6237,19 +5097,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		// Add the SAVE_BASE_POINTER statement so that these globals can be used.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_SAVE_BASE_POINTER;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"SAVEBP\n");
-			m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
-
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_SAVE_BASE_POINTER;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 		////////////////////////////////////////////////////
@@ -6259,19 +5109,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		if (m_bCompileConditionalFile == TRUE)
 		{
 			// Write the integer that we're going to store the return value into!
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD;
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength+ CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RSADDI\n");
-				m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
-
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 		}
 
@@ -6282,47 +5122,29 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// Write the JSR FE_main instruction that is guaranteed to be successful
 		// because of the checks in InstallLoader().
 
-		if (m_nDebugSymbolicOutput == 0)
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JSR;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+
+		// There is no point in expressing this yet, because we haven't decided on the
+		// locations of any of the final functions in the executable.  So, write
+		// the symbol into the table.
+
+		/*
+		CExoString sSymbolName;
+		if (m_bCompileConditionalFile == FALSE)
 		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JSR;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-			// There is no point in expressing this yet, because we haven't decided on the
-			// locations of any of the final functions in the executable.  So, write
-			// the symbol into the table.
-
-			/*
-			CExoString sSymbolName;
-			if (m_bCompileConditionalFile == FALSE)
-			{
-			    sSymbolName.Format("FE_main");
-			}
-			else
-			{
-			    sSymbolName.Format("FE_StartingConditional");
-			}
-			*/
-
-			AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
-			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,0,2);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		    sSymbolName.Format("FE_main");
 		}
 		else
 		{
-			PrintBinaryAddress();
-			if (m_bCompileConditionalFile == FALSE)
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JSR FE_main\n");
-				m_nOutputCodeLength += 8 + 4 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
-			else
-			{
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JSR FE_StartingConditional\n");
-				m_nOutputCodeLength += 8 + 19 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+		    sSymbolName.Format("FE_StartingConditional");
 		}
+		*/
 
+		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
+		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,0,2);
+
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 
@@ -6345,53 +5167,33 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				nSize = GetStructureSize(m_sFunctionImpReturnStructureName);
 			}
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ASSIGNMENT;
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ASSIGNMENT;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
 
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
 
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPDOWNSP %08x,%04x\n",nStackElementsDown,nSize);
-				m_nOutputCodeLength += 23 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
-
-			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 
 
 			// Add the "modify stack pointer" statement so that the return value is never used again.
 			int32_t nStackPointer = -4;
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// Enter the location of the variable to write to.
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackPointer) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackPointer) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackPointer) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackPointer)) & 0x0ff);
+			// Enter the location of the variable to write to.
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackPointer) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackPointer) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackPointer) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackPointer)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MOVSP %08x\n",nStackPointer);
-				m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		}
@@ -6402,18 +5204,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		// Add the RESTORE_BASE_POINTER statement so that these globals can be popped off.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RESTORE_BASE_POINTER;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RESTOREBP\n");
-			m_nOutputCodeLength += 10 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RESTORE_BASE_POINTER;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 		////////////////////////////////////////////////////
@@ -6429,26 +5222,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// to be moved at all!
 		if (nStackPointer != 0)
 		{
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// Enter the location of the variable to write to.
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackPointer) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackPointer) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackPointer) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackPointer)) & 0x0ff);
+			// Enter the location of the variable to write to.
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackPointer) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackPointer) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackPointer) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackPointer)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MOVSP %08x\n",nStackPointer);
-				m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
-
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		}
 
@@ -6460,19 +5243,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		// Finally, add the RET statement so that we can bail out of this routine.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RET\n");
-			m_nOutputCodeLength += 4 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
-
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 
 		// Last, but not least, add a function to the user-defined identifier list
@@ -6762,28 +5535,18 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				nSize = GetStructureSize(m_sFunctionImpReturnStructureName);
 			}
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ASSIGNMENT;
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ASSIGNMENT;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
 
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
 
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"CPDOWNSP %08x,%04x\n",nStackElementsDown,nSize);
-				m_nOutputCodeLength += 23 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
-
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
 		}
 
@@ -6794,26 +5557,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		if (pNode->nIntegerData != 0)
 		{
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// Enter the location of the variable to write to.
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
+			// Enter the location of the variable to write to.
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MOVSP %08x\n",pNode->nIntegerData);
-				m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
-
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		}
 
@@ -6821,33 +5574,24 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		// Here, we will need to write a symbol into the code and
 		// mark the location for updating during the label generation pass.
-		if (m_nDebugSymbolicOutput == 0)
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+
+		// There is no point in expressing this yet, because we haven't decided on the
+		// locations of any of the final functions in the executable.  So, write
+		// the symbol into the table.
+
+		/* CExoString sSymbolName;
+		sSymbolName.Format("FX_%s",m_sFunctionImpName.CStr()); */
+		int32_t nIdentifier = GetIdentifierByName(m_sFunctionImpName);
+		if (nIdentifier == STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER)
 		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-			// There is no point in expressing this yet, because we haven't decided on the
-			// locations of any of the final functions in the executable.  So, write
-			// the symbol into the table.
-
-			/* CExoString sSymbolName;
-			sSymbolName.Format("FX_%s",m_sFunctionImpName.CStr()); */
-			int32_t nIdentifier = GetIdentifierByName(m_sFunctionImpName);
-			if (nIdentifier == STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER)
-			{
-				return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER,pNode);
-			}
-
-			AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_EXIT, nIdentifier, 0);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER,pNode);
 		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP FX_%s\n",m_sFunctionImpName.CStr());
-			m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + m_sFunctionImpName.GetLength();
-		}
+
+		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_EXIT, nIdentifier, 0);
+
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		return 0;
@@ -6897,53 +5641,26 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			// And now, fill in the appropriate code (pNode->nIntegerData2 points to the location
 			// of the EXTRA_DATA that we reserved for the data pointer!)
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				// MGB - August 10, 2001
-				// NOTE that we only write data into the opcode if we are not using the stack pointer,
-				// since the code has already been written for using the stack pointer in the PreIncrement
-				// call.
-				if (bOperateOnStackPointer == FALSE)
-				{
-					if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_PRE_INCREMENT)
-					{
-						m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCREMENT_BASE;
-					}
-					else
-					{
-						m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DECREMENT_BASE;
-					}
-				}
-
-				m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-				m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-				m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-				m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nStackElementsDown)) & 0x0ff);
-			}
-			else
+			// MGB - August 10, 2001
+			// NOTE that we only write data into the opcode if we are not using the stack pointer,
+			// since the code has already been written for using the stack pointer in the PreIncrement
+			// call.
+			if (bOperateOnStackPointer == FALSE)
 			{
 				if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_PRE_INCREMENT)
 				{
-					sprintf(m_pchOutputCode + pNode->nIntegerData2,"INCI");
+					m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCREMENT_BASE;
 				}
 				else
 				{
-					sprintf(m_pchOutputCode + pNode->nIntegerData2,"DECI");
+					m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DECREMENT_BASE;
 				}
-				if (bOperateOnStackPointer == TRUE)
-				{
-					sprintf(m_pchOutputCode + pNode->nIntegerData2 + 4,"SP ");
-				}
-				else
-				{
-					sprintf(m_pchOutputCode + pNode->nIntegerData2 + 4,"BP ");
-				}
-
-				sprintf(m_pchOutputCode + pNode->nIntegerData2 + 7,"%08x\n",nStackElementsDown);
-				// MGB - 02/20/2000 - To fix up a gap in a bad spot in the debug output.
-				m_pchOutputCode[pNode->nIntegerData2 + 16] = ' ';
-
 			}
+
+			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]     = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+			m_pchOutputCode[pNode->nIntegerData2 + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 3] = (char) (((nStackElementsDown)) & 0x0ff);
 
 			return 0;
 		}
@@ -6981,64 +5698,36 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				nStackElementsDown = pNode->pLeft->nIntegerData - (m_nGlobalVariableSize);
 			}
 
-			if (m_nDebugSymbolicOutput == 0)
+			if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_POST_INCREMENT)
 			{
-				if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_POST_INCREMENT)
+				if (bOperateOnStackPointer == TRUE)
 				{
-					if (bOperateOnStackPointer == TRUE)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCREMENT;
-					}
-					else
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCREMENT_BASE;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCREMENT;
 				}
 				else
 				{
-					if (bOperateOnStackPointer == TRUE)
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DECREMENT;
-					}
-					else
-					{
-						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DECREMENT_BASE;
-					}
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCREMENT_BASE;
 				}
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
-
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
-
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 			}
 			else
 			{
-				PrintBinaryAddress();
-				if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_POST_INCREMENT)
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"INCI");
-				}
-				else
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"DECI");
-				}
 				if (bOperateOnStackPointer == TRUE)
 				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + 4,"SP ");
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DECREMENT;
 				}
 				else
 				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + 4,"BP ");
+					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_DECREMENT_BASE;
 				}
-
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH + 7, "%08x\n",nStackElementsDown);
-
-				m_nOutputCodeLength += 16 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
 			}
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
 
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 			return 0;
@@ -7057,17 +5746,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_DEFAULT)
 	{
 		// Generate a label for the jump caused by the switch
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_SC_DEFAULT_%08x",m_nSwitchIdentifier); */
-			AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_DEFAULT,m_nSwitchIdentifier,0);
-		}
-		else
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_SC_DEFAULT_%08x:\n",m_nSwitchIdentifier);
-			m_nOutputCodeLength += 22;
-		}
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_SC_DEFAULT_%08x",m_nSwitchIdentifier); */
+		AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_DEFAULT,m_nSwitchIdentifier,0);
 
 		if (m_nSwitchStackDepth + 1 != m_nStackCurrentDepth)
 		{
@@ -7125,26 +5806,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				int32_t nStackChange = (m_nLoopStackDepth - m_nStackCurrentDepth) * 4;
 
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-					// Enter the location of the variable to write to.
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackChange) >> 24) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackChange) >> 16) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackChange) >> 8 ) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
+				// Enter the location of the variable to write to.
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackChange) >> 24) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackChange) >> 16) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackChange) >> 8 ) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
 
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MOVSP %08x\n",nStackChange);
-					m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 			}
 		}
@@ -7157,50 +5828,30 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			{
 				int32_t nStackChange = ((m_nSwitchStackDepth + 1) - m_nStackCurrentDepth) * 4;
 
-				if (m_nDebugSymbolicOutput == 0)
-				{
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-					// Enter the location of the variable to write to.
-					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackChange) >> 24) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackChange) >> 16) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackChange) >> 8 ) & 0x0ff);
-					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
+				// Enter the location of the variable to write to.
+				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackChange) >> 24) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackChange) >> 16) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackChange) >> 8 ) & 0x0ff);
+				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
 
-					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-				}
-				else
-				{
-					PrintBinaryAddress();
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MOVSP %08x\n",nStackChange);
-					m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-
+				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 				m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 			}
 		}
 		// MGB - November 8, 2002 - End Change
 		// MGB - October 15, 2002 - End Change
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_BR_%08x",nIdentifierBreak); */
-			AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,nIdentifierBreak,0);
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_BR_%08x",nIdentifierBreak); */
+		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,nIdentifierBreak,0);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP _BR_%08x\n",nIdentifierBreak);
-			m_nOutputCodeLength += 17 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
-
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		return 0;
@@ -7215,26 +5866,16 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		{
 			int32_t nStackChange = (m_nLoopStackDepth - m_nStackCurrentDepth) * 4;
 
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-				// Enter the location of the variable to write to.
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackChange) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackChange) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackChange) >> 8 ) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
+			// Enter the location of the variable to write to.
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackChange) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackChange) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackChange) >> 8 ) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
 
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			}
-			else
-			{
-				PrintBinaryAddress();
-				sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"MOVSP %08x\n",nStackChange);
-				m_nOutputCodeLength += 15 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-			}
-
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		}
 		// MGB - October 15, 2002 - End Change
@@ -7242,24 +5883,14 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// CODE GENERATION
 		// Add the "JMP _CN_nLoopIdentifier" operation.
 
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JMP;
+		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_CN_%08x",m_nLoopIdentifier); */
-			AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_CONTINUE,m_nLoopIdentifier,0);
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_CN_%08x",m_nLoopIdentifier); */
+		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_CONTINUE,m_nLoopIdentifier,0);
 
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		}
-		else
-		{
-			PrintBinaryAddress();
-			sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"JMP _CN_%08x\n",m_nLoopIdentifier);
-			m_nOutputCodeLength += 17 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-		}
-
+		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 		m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
 
 		return 0;
@@ -7268,17 +5899,9 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_WHILE_CONTINUE)
 	{
 		// Generate a label for the continue keyword.for a while loop.
-		if (m_nDebugSymbolicOutput == 0)
-		{
-			/* CExoString sSymbolName;
-			sSymbolName.Format("_CN_%08x",m_nLoopIdentifier); */
-			AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_CONTINUE, m_nLoopIdentifier, 0);
-		}
-		else
-		{
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"_CN_%08x:\n",m_nLoopIdentifier);
-			m_nOutputCodeLength += 14;
-		}
+		/* CExoString sSymbolName;
+		sSymbolName.Format("_CN_%08x",m_nLoopIdentifier); */
+		AddSymbolToLabelList(m_nOutputCodeLength, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_CONTINUE, m_nLoopIdentifier, 0);
 		return 0;
 	}
 
@@ -7526,46 +6149,9 @@ void CScriptCompiler::AddVariableToStack(int32_t nVariableType, CExoString *psVa
 		if (bGenerateCode == TRUE)
 		{
 			// CODE GENERATION
-			if (m_nDebugSymbolicOutput == 0)
-			{
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD;
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = (char) nAuxCodeType;
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-			}
-			else
-			{
-				PrintBinaryAddress();
-
-				if (nVariableType == CSCRIPTCOMPILER_TOKEN_KEYWORD_INT)
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength+ CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RSADDI\n");
-					m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-				else if (nVariableType == CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT)
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength+ CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RSADDF\n");
-					m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-				else if (nVariableType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRING)
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RSADDS\n");
-					m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-				else if (nVariableType == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT)
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RSADDO\n");
-					m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-				else if (nVariableType >= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 &&
-				         nVariableType <= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE9)
-				{
-					sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-					        "RSADDP%1d\n", nVariableType - CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0);
-					m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-				}
-
-
-			}
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = (char) nAuxCodeType;
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 			m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 		}
 	}
@@ -7635,46 +6221,9 @@ void CScriptCompiler::AddStructureToStack(const CExoString &sStructureName, BOOL
 					// CODE GENERATION
 					if (bGenerateCode == TRUE)
 					{
-						if (m_nDebugSymbolicOutput == 0)
-						{
-							m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD;
-							m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = (char) nAuxCodeType;
-							m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-						}
-						else
-						{
-							PrintBinaryAddress();
-
-							if (nFieldType == CSCRIPTCOMPILER_TOKEN_KEYWORD_INT)
-							{
-								sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RSADDI\n");
-								m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-							}
-							else if (nFieldType == CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT)
-							{
-								sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RSADDF\n");
-								m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-							}
-							else if (nFieldType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRING)
-							{
-								sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RSADDS\n");
-								m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-							}
-							else if (nFieldType == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT)
-							{
-								sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,"RSADDO\n");
-								m_nOutputCodeLength += 7 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-							}
-							else if (nFieldType >= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 &&
-							         nFieldType <= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE9)
-							{
-								sprintf(m_pchOutputCode + m_nOutputCodeLength + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH,
-								        "RSADDP%1d\n", nFieldType - CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0);
-								m_nOutputCodeLength += 8 + CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH;
-							}
-
-
-						}
+						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD;
+						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = (char) nAuxCodeType;
+						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 						m_nBinaryCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
 					}
 				}
@@ -7928,13 +6477,6 @@ int32_t CScriptCompiler::WalkParseTree(CScriptParseTreeNode *pNode)
 ///////////////////////////////////////////////////////////////////////////////
 void CScriptCompiler::StartLineNumberAtBinaryInstruction(int32_t nFileReference, int32_t nLineNumber, int32_t nBinaryInstruction)
 {
-
-	if (m_nDebugSymbolicOutput != 0)
-	{
-		sprintf(m_pchOutputCode + m_nOutputCodeLength,"Line %05d Starts Here\n",nLineNumber);
-		m_nOutputCodeLength += 23;
-	}
-
 	if (m_nCurrentLineNumber != nLineNumber ||
 	        m_nCurrentLineNumberFileReference != nFileReference)
 	{
@@ -7958,13 +6500,6 @@ void CScriptCompiler::StartLineNumberAtBinaryInstruction(int32_t nFileReference,
 ///////////////////////////////////////////////////////////////////////////////
 void CScriptCompiler::EndLineNumberAtBinaryInstruction(int32_t nFileReference, int32_t nLineNumber, int32_t nBinaryInstruction)
 {
-
-	if (m_nDebugSymbolicOutput != 0)
-	{
-		sprintf(m_pchOutputCode + m_nOutputCodeLength,"Line %05d Ends Here\n",nLineNumber);
-		m_nOutputCodeLength += 21;
-	}
-
 	// If we've received an end of line for something that we haven't started,
 	// this is a bug, so let's not write anything into the table.
 	if (m_nCurrentLineNumber != nLineNumber ||
@@ -8050,45 +6585,6 @@ void CScriptCompiler::EndLineNumberAtBinaryInstruction(int32_t nFileReference, i
 
 void CScriptCompiler::AddToSymbolTableVarStack(int32_t nOccupiedVariables, int32_t nStackCurrentDepth, int32_t nGlobalVariableSize)
 {
-	if (m_nDebugSymbolicOutput != 0)
-	{
-		CExoString *pVariableName = &(m_pcVarStackList[nOccupiedVariables].m_psVarName);
-		sprintf(m_pchOutputCode + m_nOutputCodeLength,"Var In! %s at %08x:Loc %05d\n",pVariableName->CStr(),m_nBinaryCodeLength,nStackCurrentDepth * 4 - nGlobalVariableSize);
-		m_nOutputCodeLength += 31 + (int32_t)strlen(pVariableName->CStr());
-
-		if (m_pcVarStackList[nOccupiedVariables].m_nVarType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT)
-		{
-			CExoString *pStructureName = &(m_pcVarStackList[nOccupiedVariables].m_sVarStructureName);
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"Var Type: t%s\n",pStructureName->CStr());
-            m_nOutputCodeLength += 12 + (int32_t)strlen(pStructureName->CStr());
-		}
-		else if (m_pcVarStackList[nOccupiedVariables].m_nVarType >= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 &&
-		         m_pcVarStackList[nOccupiedVariables].m_nVarType <= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE9)
-		{
-			char nVariableType = (char) (m_pcVarStackList[nOccupiedVariables].m_nVarType-CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 + '0');
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"Var Type: e%c\n",nVariableType);
-			m_nOutputCodeLength += 13;
-		}
-		else
-		{
-			char nVariableType = 'i';
-			if (m_pcVarStackList[nOccupiedVariables].m_nVarType == CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT)
-			{
-				nVariableType = 'f';
-			}
-			else if (m_pcVarStackList[nOccupiedVariables].m_nVarType == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT)
-			{
-				nVariableType = 'o';
-			}
-			else if (m_pcVarStackList[nOccupiedVariables].m_nVarType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRING)
-			{
-				nVariableType = 's';
-			}
-			sprintf(m_pchOutputCode + m_nOutputCodeLength,"Var Type: %c\n",nVariableType);
-			m_nOutputCodeLength += 12;
-		}
-	}
-
 	if (m_nGenerateDebuggerOutput != 0)
 	{
 		if (m_pnSymbolTableVarType.size() == m_nSymbolTableVariables)
@@ -8135,13 +6631,6 @@ void CScriptCompiler::AddToSymbolTableVarStack(int32_t nOccupiedVariables, int32
 
 void CScriptCompiler::RemoveFromSymbolTableVarStack(int32_t nOccupiedVariables, int32_t nStackCurrentDepth, int32_t nGlobalVariableSize)
 {
-	if (m_nDebugSymbolicOutput != 0)
-	{
-		CExoString *pString = &(m_pcVarStackList[nOccupiedVariables].m_psVarName);
-		sprintf(m_pchOutputCode + m_nOutputCodeLength,"Var Out %s at %08x:Loc %05d\n",pString->CStr(),m_nBinaryCodeLength,(nStackCurrentDepth * 4 - nGlobalVariableSize));
-        m_nOutputCodeLength += 31 + (int32_t)strlen(pString->CStr());
-	}
-
 	if (m_nGenerateDebuggerOutput != 0)
 	{
 

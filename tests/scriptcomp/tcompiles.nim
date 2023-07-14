@@ -5,13 +5,13 @@ import std/os
 import neverwinter/[resman, resdir, resfile, restype, nwscript/compiler]
 
 const
-  LangSpecNWScript* = ("nwscript", ResType 2009, ResType 2010, ResType 2064).LangSpec
+  LangSpecNWTestScript = ("nwtestvmscript", ResType 2009, ResType 2010, ResType 2064).LangSpec
   DebugSymbols = true
 
 let cwd = currentSourcePath().splitFile().dir
 
 let rm = newResMan()
-rm.add newResFile(cwd / "nwscript.nss")
+rm.add newResFile(cwd / "nwtestvmscript.nss")
 rm.add newResDir(cwd / "corpus")
 
 var resolveFileBuf: string
@@ -39,7 +39,7 @@ proc writeFile(fn: cstring, resType: uint16, pData: ptr uint8, size: csize_t, bi
     wroteDebug = true
   else: raise newException(ValueError, "wrote unexpected file " & $fn & "." & $resType)
 
-let cNSS = newCompiler(LangSpecNWScript, DebugSymbols, writeFile, resolveFile)
+let cNSS = newCompiler(LangSpecNWTestScript, DebugSymbols, writeFile, resolveFile)
 
 var anyRan = false
 for file in walkFiles(cwd / "corpus" / "*.nss"):

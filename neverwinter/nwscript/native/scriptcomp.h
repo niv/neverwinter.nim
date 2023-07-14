@@ -386,6 +386,11 @@ private:
 	int32_t InVisitGenerateCode(CScriptParseTreeNode *pNode);
 	int32_t PostVisitGenerateCode(CScriptParseTreeNode *pNode);
 
+	void WriteByteSwap32(char *buffer, int32_t value);
+	int32_t ReadByteSwap32(char *buffer);
+	char *EmitInstruction(uint8_t nOpCode, uint8_t nAuxCode = 0, int32_t nDataSize = 0);
+	void EmitModifyStackPointer(int32_t nModifyBy);
+
 	CExoString **m_ppsParseTreeFileNames;
 	int32_t m_nNextParseTreeFileName;
 	int32_t m_nCurrentParseTreeFileName;

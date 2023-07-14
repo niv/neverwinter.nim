@@ -29,7 +29,7 @@ void main()
     int op6  = a == b; Assert(!op6);        // CONDITION_EQUAL
     int op7  = a != b; Assert(op7);         // CONDITION_NOT_EQUAL
     int op8  = a >= b; Assert(!op8);        // CONDITION_GEQ
-    int op9  = a >  b; Assert(!op8);        // CONDITION_GT
+    int op9  = a >  b; Assert(!op9);        // CONDITION_GT
     int op10 = a <  b; Assert(op10);        // CONDITION_LT
     int op11 = a <= b; Assert(op11);        // CONDITION_LEQ
     int op12 = a << b; Assert(op12 == 4);   // SHIFT_LEFT

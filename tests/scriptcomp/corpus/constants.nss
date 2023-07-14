@@ -60,4 +60,37 @@ const string S3 = S1 + "_" + S2;
 const int CONSTSTR_CONDITION_EQUAL     = S1 == S2;
 const int CONSTSTR_CONDITION_NOT_EQUAL = S1 != S2;
 
-void main() {}
+void main() 
+{
+    // Test float literals
+    Assert(FLOAT_LITERAL_FULL == FLOAT_LITERAL_NO_SUFFIX);
+    Assert(FLOAT_LITERAL_ENDS_WITH_DOT == FLOAT_LITERAL_ENDS_WITH_DOT_SUFFIX);
+    Assert(FLOAT_LITERAL_ENDS_WITH_DOT == FLOAT_LITERAL_NO_DOT_SUFFIX);
+    Assert(FLOAT_LITERAL_STARTS_WITH_DOT == FLOAT_LITERAL_STARTS_WITH_DOT);
+
+    // Test constant folding
+    Assert(B == 20);
+    Assert(CONSTINT_LOGICAL_OR == 1);
+    Assert(CONSTINT_LOGICAL_AND == 1);
+    Assert(CONSTINT_INCLUSIVE_OR == 30);
+    Assert(CONSTINT_EXCLUSIVE_OR == 30);
+    Assert(CONSTINT_BOOLEAN_AND == FALSE);
+    Assert(CONSTINT_CONDITION_EQUAL == FALSE);
+    Assert(CONSTINT_CONDITION_NOT_EQUAL == TRUE);
+    Assert(CONSTINT_CONDITION_GEQ == FALSE);
+    Assert(CONSTINT_CONDITION_GT == FALSE);
+    Assert(CONSTINT_CONDITION_LT == TRUE);
+    Assert(CONSTINT_CONDITION_LEQ == TRUE);
+    Assert(CONSTINT_SHIFT_LEFT == 10485760);
+    Assert(CONSTINT_SHIFT_RIGHT == 0);
+    Assert(CONSTINT_ADD == 30);
+    Assert(CONSTINT_SUBTRACT == -10);
+    Assert(CONSTINT_MULTIPLY == 200);
+    Assert(CONSTINT_DIVIDE == 0);
+    Assert(CONSTINT_MODULUS == 10);
+
+    Assert(S3 == "AAA_BBB");
+    Assert(CONSTSTR_CONDITION_EQUAL == FALSE);
+    Assert(CONSTSTR_CONDITION_NOT_EQUAL == TRUE);
+
+}

@@ -98,14 +98,20 @@ type
     aux: Auxcode
     extra: string
 
+proc unpackExtra*[T: int8](i: Instr, io: Stream, into: var T) =
+  into = io.readOnt8()
 proc unpackExtra*[T: int16](i: Instr, io: Stream, into: var T) =
   into = io.readInt16().swapEndian()
+proc unpackExtra*[T: uint8](i: Instr, io: Stream, into: var T) =
+  into = io.readUint8()
 proc unpackExtra*[T: uint16](i: Instr, io: Stream, into: var T) =
   into = io.readUint16().swapEndian()
 proc unpackExtra*[T: int32](i: Instr, io: Stream, into: var T) =
   into = io.readInt32().swapEndian()
 proc unpackExtra*[T: uint32](i: Instr, io: Stream, into: var T) =
   into = io.readUint32().swapEndian()
+proc unpackExtra*[T: float32](i: Instr, io: Stream, into: var T) =
+  into = io.readFloat32().swapEndian()
 
 proc unpackExtra*[T](i: Instr, offset = 0): T =
   var io = newStringStream(i.extra)
@@ -138,7 +144,7 @@ proc `$`*(i: Instr): string =
   of STORE_STATE: $str.readInt32().swapEndian() & ", " & $str.readInt32().swapEndian()
   of MODIFY_STACK_POINTER:    $str.readInt32().swapEndian()
   of EXECUTE_COMMAND:         $str.readUint16().swapEndian() & ", " & $str.readUint8()
-  of RUNSTACK_COPY, RUNSTACK_COPY_BASE: $str.readInt32().swapEndian()
+  of RUNSTACK_COPY, RUNSTACK_COPY_BASE: $str.readInt32().swapEndian() & ", " & $str.readInt16().swapEndian()
   of ASSIGNMENT, ASSIGNMENT_BASE: $str.readInt32().swapEndian() & ", " & $str.readUint16().swapEndian()
   of INCREMENT, DECREMENT, INCREMENT_BASE, DECREMENT_BASE: $str.readInt32().swapEndian()
   of DE_STRUCT: $str.readUint16().swapEndian() & ", " & $str.readUint16().swapEndian() & ", " & $str.readUint16().swapEndian()

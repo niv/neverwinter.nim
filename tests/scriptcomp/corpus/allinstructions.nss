@@ -21,41 +21,49 @@ void main()
     int b = 2;
 
     // RUNSTACK_COPY
-    int op1  = a || b;  // LOGICAL_OR
-    int op2  = a && b;  // LOGICAL_AND
-    int op3  = a |  b;  // INCLUSIVE_OR
-    int op4  = a ^  b;  // EXCLUSIVE_OR
-    int op5  = a &  b;  // BOOLEAN_AND
-    int op6  = a == b;  // CONDITION_EQUAL
-    int op7  = a != b;  // CONDITION_NOT_EQUAL
-    int op8  = a >= b;  // CONDITION_GEQ
-    int op9  = a >  b;  // CONDITION_GT
-    int op10 = a <  b;  // CONDITION_LT
-    int op11 = a <= b;  // CONDITION_LEQ
-    int op12 = a << b;  // SHIFT_LEFT
-    int op13 = a >> b;  // SHIFT_RIGHT
-    int op14 = a >>> b; // USHIFT_RIGHT
-    int op15 = a +  b;  // ADD
-    int op16 = a -  b;  // SUBTRACT
-    int op17 = a *  b;  // MULTIPLY
-    int op18 = a /  b;  // DIVIDE
-    int op19 = a %  b;  // MODULUS
-    int op20 = -a;      // NEGATION
-    int op21 = ~a;      // ONES_COMPLEMENT
-    int op22 = !a;      // BOOLEAN_NOT
-    int op23 = ++a;     // INCREMENT_BASE
-    int op24 = --a;     // DECREMENT_BASE
+    int op1  = a || b; Assert(op1 == 1);    // LOGICAL_OR
+    int op2  = a && b; Assert(op2 == 1);    // LOGICAL_AND
+    int op3  = a |  b; Assert(op3 == 3);    // INCLUSIVE_OR
+    int op4  = a ^  b; Assert(op4 == 3);    // EXCLUSIVE_OR
+    int op5  = a &  b; Assert(op5 == 0);    // BOOLEAN_AND
+    int op6  = a == b; Assert(!op6);        // CONDITION_EQUAL
+    int op7  = a != b; Assert(op7);         // CONDITION_NOT_EQUAL
+    int op8  = a >= b; Assert(!op8);        // CONDITION_GEQ
+    int op9  = a >  b; Assert(!op8);        // CONDITION_GT
+    int op10 = a <  b; Assert(op10);        // CONDITION_LT
+    int op11 = a <= b; Assert(op11);        // CONDITION_LEQ
+    int op12 = a << b; Assert(op12 == 4);   // SHIFT_LEFT
+    int op13 = a >> b; Assert(op13 == 0);   // SHIFT_RIGHT
+    int op14 = a >>> b; Assert(op14 == 0);  // USHIFT_RIGHT
+    int op15 = a +  b; Assert(op15 == 3);   // ADD
+    int op16 = a -  b; Assert(op16 == -1);  // SUBTRACT
+    int op17 = a *  b; Assert(op17 == 2);   // MULTIPLY
+    int op18 = a /  b; Assert(op18 == 0);   // DIVIDE
+    int op19 = a %  b; Assert(op19 == 1);   // MODULUS
+    int op20 = -a; Assert(op20 == -1);      // NEGATION
+    int op21 = ~a; Assert(op21 == -2);      // ONES_COMPLEMENT
+    int op22 = !a; Assert(op22 == 0);       // BOOLEAN_NOT
+    int op23 = ++a; Assert(op23 == 2);      // INCREMENT_BASE
+    int op24 = --a; Assert(op24 == 1);      // DECREMENT_BASE
 
-    if (a) {}           // JZ
-    else {}             // JMP, NO_OPERATION
-    if (a != b) {}      // JZ
+    // TODO: also test float, string, engst, etc.
+
+    if (a) {}                               // JZ
+    else { Assert(FALSE); }                 // JMP, NO_OPERATION
+    if (a != b) {}                          // JZ
+
+    teststruct.x = 5;
 
     // RUNSTACK_COPY_BASE
     // RUNSTACK_COPY
-    teststruct.x = teststruct.y;  // DE_STRUCT
-    g = 3;  // ASSIGNMENT_BASE
-    g++; // INCREMENT_BASE
-    g--; // DECREMENT_BASE
+    teststruct.y = teststruct.x;            // DE_STRUCT
+    Assert(teststruct.y == 5, "?");
+    Assert(teststruct.x == 5);
+
+    g = 3; Assert(g == 3);                  // ASSIGNMENT_BASE
+
+    g++; Assert(g == 4);                    // INCREMENT_BASE
+    g--; Assert(g == 3);                    // DECREMENT_BASE
 
     switch(a)
     {
@@ -65,7 +73,7 @@ void main()
     // EXECUTE_COMMAND
     Random(1);
     // STORE_STATE
-    DelayCommand(0.1f, PrintString("Done"));
+    TakeClosure(TakeInt(1));
     // RET
 }
 

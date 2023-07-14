@@ -26,7 +26,7 @@ proc decompileFunction(ndb: Ndb, f: NdbFunction, ncs: Stream) =
   echo asmToStr(disasm fun) do (i: Instr, streamOffset: int) -> string:
     case i.op
     of EXECUTE_COMMAND:
-      $unpackExtra[int16](i).VMCommand
+      $unpackExtra[int16](i)
     of JMP:
       " => " & $(unpackExtra[int32](i) + streamOffset)
     of JSR:

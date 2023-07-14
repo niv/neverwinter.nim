@@ -348,6 +348,7 @@ int32_t CScriptCompiler::CleanUpAfterCompile(int32_t nReturnValue,CScriptParseTr
 	m_pGlobalVariableParseTree = NULL;
 	ClearUserDefinedIdentifiers();
 	ClearAllSymbolLists();
+	m_aOutputCodeInstructionBoundaries.resize(0);
 
 	// Reset the state of the ConditionalFile boolean.
 	if (m_bCompileConditionalOrMain == TRUE)
@@ -431,6 +432,9 @@ CScriptParseTreeNode *CScriptCompiler::InsertGlobalVariablesInParseTree(CScriptP
 
 int32_t CScriptCompiler::InstallLoader()
 {
+	// Mark instruction boundary before the first JSR instruction.
+	// This is immediately after the header and is always at offset 13
+	m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 	// Verify "main" is a void-returning function that is actually
 	// declared within this script.
@@ -593,10 +597,12 @@ int32_t CScriptCompiler::InstallLoader()
 	                     nSymbolSubType1,nSymbolSubType2);
 
 	m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+	m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 	m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
 	m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 	m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+	m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 	// Last, but not least, add a function to the user-defined identifier list
 	// that specifies where this code is located.
@@ -1023,6 +1029,7 @@ int32_t CScriptCompiler::TraverseTreeForSwitchLabels(CScriptParseTreeNode *pNode
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// CODE GENERATION
 		// Here, we have a "constant integer" op-code that would be added.
@@ -1038,12 +1045,14 @@ int32_t CScriptCompiler::TraverseTreeForSwitchLabels(CScriptParseTreeNode *pNode
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// CODE GENERATION
 		// Write an "condition EQUALII" operation.
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// CODE GENERATION
 		// Add the "JNZ _SC_nCaseValue_nSwitchIdentifier" operation.
@@ -1057,6 +1066,7 @@ int32_t CScriptCompiler::TraverseTreeForSwitchLabels(CScriptParseTreeNode *pNode
 		                     nCaseValue,m_nSwitchIdentifier);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 	}
 
@@ -1099,6 +1109,7 @@ void CScriptCompiler::ClearSwitchLabelList()
 		                     m_nSwitchIdentifier,0);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 	}
 	else
 	{
@@ -1118,6 +1129,7 @@ void CScriptCompiler::ClearSwitchLabelList()
 		                     m_nSwitchIdentifier,0);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 	}
 
 
@@ -1586,6 +1598,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+7] = (char) (((nIntegerData)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 8;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		//
 		// Next, we add the JMP instruction.
@@ -1601,6 +1614,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		pNode->nIntegerData = m_nOutputCodeLength;
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		return 0;
 	}
@@ -1745,6 +1759,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
 
 								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+								m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 								m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
 								++m_nStackCurrentDepth;
@@ -1782,6 +1797,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
 
 								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+								m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 								m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
 								++m_nStackCurrentDepth;
@@ -1809,6 +1825,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
 
 									m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+									m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 									m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
 									++m_nStackCurrentDepth;
@@ -1837,6 +1854,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount3+2] = (sStringData.CStr())[nCount3];
 								}
 								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
+								m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 								m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_STRING;
 								++m_nStackCurrentDepth;
@@ -1860,6 +1878,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
 
 								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+								m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 								m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_OBJECT;
 								++m_nStackCurrentDepth;
@@ -1887,6 +1906,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 								m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
 
 								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+								m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 								m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST2;
 								++m_nStackCurrentDepth;
@@ -1919,6 +1939,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 									m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount3+2] = (sStringData.CStr())[nCount3];
 								}
 								m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
+								m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 								m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST7;
 								++m_nStackCurrentDepth;
@@ -2016,6 +2037,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// the PostVisitGenerateCode() call.
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 	}
 
@@ -2041,6 +2063,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// the PostVisitGenerateCode() call.
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 	}
 
 	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_IF_CONDITION)
@@ -2081,6 +2104,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 		pNode->nIntegerData2 = m_nOutputCodeLength;
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		return 0;
 	}
@@ -2200,6 +2224,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 
 		if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_STATEMENT)
@@ -2240,6 +2265,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// the PostVisitGenerateCode() call.
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		if (m_nGenerateDebuggerOutput != 0)
 		{
@@ -2258,6 +2284,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// Here, we go back and add the relative offset to get beyond this return
 		// statement to the JZ command we gave earlier during
@@ -2283,6 +2310,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 			if (m_nGenerateDebuggerOutput != 0)
 			{
@@ -2306,6 +2334,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// Here, we go back and add the relative offset to get beyond this return
 		// statement to the JZ command we gave earlier during
@@ -2370,6 +2399,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 			AddVariableToStack(CSCRIPTCOMPILER_TOKEN_KEYWORD_INT, NULL, FALSE);
 
@@ -2391,6 +2421,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			// which are OPERATION_BASE_SIZE + 4 (for the address).
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		}
 	}
@@ -2424,6 +2455,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 			AddVariableToStack(CSCRIPTCOMPILER_TOKEN_KEYWORD_INT, NULL, FALSE);
 
@@ -2451,6 +2483,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 			// .... the integer at the top of the stack.
 
@@ -2474,6 +2507,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 			// IMPORTANT NOTE:  It is absolutely vital to NOT add this variable to the
 			// stack, since this path is completely optional ... and the right branch
@@ -2488,6 +2522,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			// which are OPERATION_BASE_SIZE + 4 (for the address).
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 
 		}
@@ -2609,6 +2644,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 				m_bAssignmentToVariable = FALSE;
 				return 0;
 			}
@@ -2886,6 +2922,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+						m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 
 						// Add variable on to the stack, too.
@@ -2919,6 +2956,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_INT;
 		m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
@@ -2943,6 +2981,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT;
 		m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_OBJECT;
@@ -2979,6 +3018,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT;
 		m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
@@ -3018,6 +3058,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((*pFloatAsInt)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 			m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
 			++m_nStackCurrentDepth;
 		}
@@ -3048,6 +3089,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount+2] = (pNode->m_psStringData->CStr())[nCount];
 		}
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_STRING;
 		m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_STRING;
@@ -3071,6 +3113,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE2;
 		m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST2;
@@ -3099,6 +3142,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+nCount+2] = (pNode->m_psStringData->CStr())[nCount];
 		}
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nLength + 2;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		pNode->nType = CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE7;
 		m_pchStackTypes[m_nStackCurrentDepth] = CVIRTUALMACHINE_AUXCODE_TYPE_ENGST7;
@@ -3160,6 +3204,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// Here, we go back and add the relative offset to get beyond this return
 		// statement to the JMP command we gave earlier.  This is an awfully good
@@ -3364,6 +3409,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 2] = (char) (m_pcIdentifierList[nCount].m_nParameters & 0x0ff);
 
 					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 3;
+					m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 				}
 				else
 				{
@@ -3385,6 +3431,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					                     nCount,0);
 
 					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+					m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 				}
 
 				return 0;
@@ -3453,6 +3500,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackModifier)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 
 		// At this point we should have had the same state that we saved earlier.  If we
@@ -3589,6 +3637,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// Here, we go back and add the relative offset to get beyond this return
 		// statement to the JZ command we gave earlier during
@@ -3661,6 +3710,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		//
 		// And now, the JMP instruction.
@@ -3680,6 +3730,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nJmpLength)) & 0x0ff);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// Generate a label for the end of the function (used by the break keyword)
 		/* CExoString sSymbolName;
@@ -3860,6 +3911,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LOGICAL_AND;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -3913,6 +3965,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_LOGICAL_OR;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -3938,6 +3991,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_INCLUSIVE_OR;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -3962,6 +4016,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EXCLUSIVE_OR;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -3986,6 +4041,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_BOOLEAN_AND;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -4018,6 +4074,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				}
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -4041,6 +4098,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				}
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_FLOAT;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove two floats, add an integer.
@@ -4066,6 +4124,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				}
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_OBJECT_OBJECT;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove two objects, add an integer.
@@ -4091,6 +4150,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				}
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_STRING_STRING;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -4121,6 +4181,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				}
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = (char) (CVIRTUALMACHINE_AUXCODE_TYPETYPE_ENGST0_ENGST0 + nEngineStructureNumber);
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -4155,6 +4216,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nSize)) & 0x0ff);
 
 					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 2;
+					m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 
 					// FOR TESTING PURPOSES
@@ -4211,6 +4273,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// Write an "condition GEQ/GT/LT/LEQ of two ints" operation.
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -4226,6 +4289,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// Write an "condition GEQ/GT/LT/LEQ of two floats" operation.
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_FLOAT;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -4271,6 +4335,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// FOR TESTING PURPOSES
 				// Remove an integer.
@@ -4319,6 +4384,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// Write a +-*/ operation on two ints.
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// For TESTING PURPOSES
 				// Remove an integer.
@@ -4336,6 +4402,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// Write a +-*/ operation on a float and a PROMOTED int.
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// For TESTING PURPOSES
 				// Remove an integer.
@@ -4353,6 +4420,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// Write a +-*/ operation on a PROMOTED int and a float.
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_FLOAT;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// For TESTING PURPOSES
 				// Remove an integer.
@@ -4370,6 +4438,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// Write a +-*/ operation on a PROMOTED int and a float.
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_FLOAT;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// For TESTING PURPOSES
 				// Remove a float.
@@ -4392,6 +4461,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				// Write a s+s operation on two strings.
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_STRING_STRING;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// For TESTING PURPOSES
 				// Remove both vectors, and add one back.
@@ -4414,6 +4484,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					// Write a v+-v operation on two vectors.
 					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_VECTOR_VECTOR;
 					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+					m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 					// For TESTING PURPOSES
 					// Remove both vectors, and add one back.
@@ -4443,6 +4514,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					// Write a v*/f operation on two vectors.
 					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_VECTOR_FLOAT;
 					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+					m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 					// For TESTING PURPOSES
 					// Remove the vector and scalar, and add the back back.
@@ -4473,6 +4545,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 					// Write a f*v operation.
 					m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_FLOAT_VECTOR;
 					m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+					m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 					// For TESTING PURPOSES
 					// Remove the vector and scalar, and add the vector back.
@@ -4504,6 +4577,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODULUS;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// For TESTING PURPOSES
 				// Remove an integer.
@@ -4530,6 +4604,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NEGATION;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// For TESTING PURPOSES
 				// Do nothing.
@@ -4545,6 +4620,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_NEGATION;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_FLOAT;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 				// For TESTING PURPOSES
 				// Do nothing.
 
@@ -4568,6 +4644,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_ONES_COMPLEMENT;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// For TESTING PURPOSES
 				// Do nothing.
@@ -4592,6 +4669,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_BOOLEAN_NOT;
 				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// For TESTING PURPOSES
 				// Do nothing.
@@ -4742,6 +4820,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 				// Okay, now we have to actually apply the de-struct information.
 				int32_t nCutSizeOriginal   = (nSizeOriginal >> 2);
@@ -4876,6 +4955,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackModifier)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 
 		// MGB - August 22, 2002 - For Scripting Debugger
@@ -4903,6 +4983,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE ;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// Remove the last variable (#retval), and reset the state of the
 		// variable stack.
@@ -4964,6 +5045,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_SAVE_BASE_POINTER;
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		////////////////////////////////////////////////////
 		// MGB - September 13, 2001 - Start of added chunk.
@@ -4975,6 +5057,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD;
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 
 		//////////////////////////////////////////////////
@@ -5007,6 +5090,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_ENTRY,0,2);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 
 		////////////////////////////////////////////////////
@@ -5040,6 +5124,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 
 			// Add the "modify stack pointer" statement so that the return value is never used again.
@@ -5055,6 +5140,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackPointer)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 
 		//////////////////////////////////////////////////
@@ -5066,6 +5152,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RESTORE_BASE_POINTER;
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		////////////////////////////////////////////////////
 		// MGB - September 13, 2001 - Start of added chunk.
@@ -5090,6 +5177,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackPointer)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 
 		//////////////////////////////////////////////////
@@ -5103,6 +5191,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RET;
 		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		// Last, but not least, add a function to the user-defined identifier list
 		// that specifies where this code is located.
@@ -5403,6 +5492,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 
 		// Write the MODIFY_STACK_POINTER instruction to modify the stack.
@@ -5422,6 +5512,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 
 		// And, finally, write the JMP statement.
@@ -5446,6 +5537,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_FUNCTION_EXIT, nIdentifier, 0);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		return 0;
 
@@ -5581,6 +5673,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 			return 0;
 		}
@@ -5668,6 +5761,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
 
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 			}
 		}
 		// MGB - November 8, 2002 - Start Change
@@ -5689,6 +5783,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
 
 				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 			}
 		}
 		// MGB - November 8, 2002 - End Change
@@ -5702,6 +5797,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_BREAK,nIdentifierBreak,0);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		return 0;
 	}
@@ -5725,6 +5821,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
 
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 		// MGB - October 15, 2002 - End Change
 
@@ -5739,6 +5836,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION, CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_CONTINUE,m_nLoopIdentifier,0);
 
 		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 
 		return 0;
 	}
@@ -5999,6 +6097,7 @@ void CScriptCompiler::AddVariableToStack(int32_t nVariableType, CExoString *psVa
 			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD;
 			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = (char) nAuxCodeType;
 			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 		}
 	}
 	else if (nVariableType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT)
@@ -6070,6 +6169,7 @@ void CScriptCompiler::AddStructureToStack(const CExoString &sStructureName, BOOL
 						m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD;
 						m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = (char) nAuxCodeType;
 						m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+						m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
 					}
 				}
 				else if (nFieldType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT)

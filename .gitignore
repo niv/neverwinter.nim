@@ -18,3 +18,5 @@ tests/*/*.exe
 !tests/*/*.*
 /outputExpected.txt
 /outputGotten.txt
+
+*.ncs

@@ -3,16 +3,17 @@ const string S = "nwn";
 
 void main()
 {
-    int n;
+    int n = N;
     switch (n)
     {
-        case N:   break;
-        case N+1: break;
-        case 1:   break;
-        case 1+1: break;
-        case -1:  break;
-        case -N:  break;
-        case S:   break;
-        case S+S: break;
+        case N:    Assert(TRUE); break;
+        case N+1:  Assert(FALSE); break;
+        case 1:    Assert(FALSE); break;
+        case 1+1:  Assert(FALSE); break;
+        case -1:   Assert(FALSE); break;
+        case -N:   Assert(FALSE); break;
+        case S:    Assert(FALSE); break;
+        case S+S:  Assert(FALSE); break;
+        default:   Assert(FALSE); break;
     }
 }

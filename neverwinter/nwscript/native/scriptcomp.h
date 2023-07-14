@@ -599,6 +599,7 @@ private:
 	char       *m_pchOutputCode;
 	int32_t         m_nOutputCodeSize;
 	int32_t         m_nOutputCodeLength;
+	std::vector<int32_t> m_aOutputCodeInstructionBoundaries;
 
 	// Resolving code to its proper location ... some buffers!
 	char       *m_pchResolvedOutputBuffer;

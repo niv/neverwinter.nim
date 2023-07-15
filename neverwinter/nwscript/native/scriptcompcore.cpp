@@ -305,7 +305,7 @@ CScriptCompiler::CScriptCompiler(RESTYPE nSource, RESTYPE nCompiled, RESTYPE nDe
 
 	m_sLanguageSource = "";
 	m_sOutputAlias = "OVERRIDE";
-	m_bOptimizeBinarySpace = TRUE;
+	m_nOptimizationFlags = CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING;
 	m_nIdentifierListState = 0;
 
 	m_pSRStack = NULL;
@@ -1104,22 +1104,6 @@ void CScriptCompiler::SetOutputAlias(const CExoString &sAlias)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  CScriptCompiler::SetOptimizeBinaryCodeLength()
-///////////////////////////////////////////////////////////////////////////////
-//  Created By: Mark Brockington
-//  Created On: 01/25/2000
-//  Description:  This routine will set whether the compiler should generate
-//                all functions (whether or not they are called), or only
-//                those functions that could possibly be called via any
-//                execution.
-///////////////////////////////////////////////////////////////////////////////
-
-void CScriptCompiler::SetOptimizeBinaryCodeLength(BOOL bValue)
-{
-	m_bOptimizeBinarySpace = bValue;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 //  CScriptCompiler::SetCompileConditionalFile()
 ///////////////////////////////////////////////////////////////////////////////
 //  Created By: Mark Brockington
@@ -1516,8 +1500,11 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 // Destructively modify a node and all its children to decay it into a single
 // CONSTANT operation, if possible.
 // This function is safe to call multiple times on the same node.
-BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode)
+BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 {
+	if (!bForce && !(m_nOptimizationFlags & CSCRIPTCOMPILER_OPTIMIZE_FOLD_CONSTANTS))
+		return FALSE;
+
 	if (!pNode)
 		return FALSE;
 
@@ -1528,8 +1515,8 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode)
 
 	// In case of complex expression, start folding at the leaf nodes
 	// e.g.:  C = 3 + 2*4 - First fold 2*4 into 8, then 3+8 into 11
-	ConstantFoldNode(pNode->pLeft);
-	ConstantFoldNode(pNode->pRight);
+	ConstantFoldNode(pNode->pLeft, bForce);
+	ConstantFoldNode(pNode->pRight, bForce);
 
 	// Can only fold if the operands are constants.
 	if (pNode->pLeft->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER &&

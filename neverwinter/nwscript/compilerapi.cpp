@@ -16,7 +16,8 @@ extern "C" CScriptCompiler* scriptCompApiNewCompiler(
     api.TlkResolve = TlkResolve;
     CScriptCompiler* instance = new CScriptCompiler(src, bin, dbg, api);
     instance->SetGenerateDebuggerOutput(writeDebug);
-    instance->SetOptimizeBinaryCodeLength(!writeDebug);
+    // TODO: Expose optimization settings to nwn_script_comp CLI
+    instance->SetOptimizationFlags(writeDebug ? CSCRIPTCOMPILER_OPTIMIZE_NOTHING : CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING);
     instance->SetCompileConditionalOrMain(1);
     instance->SetIdentifierSpecification(lang);
     instance->SetOutputAlias("scriptout");

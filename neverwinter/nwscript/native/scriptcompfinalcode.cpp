@@ -631,7 +631,7 @@ int32_t CScriptCompiler::InstallLoader()
 
 int32_t CScriptCompiler::DetermineLocationOfCode()
 {
-	if (m_bOptimizeBinarySpace == 1)
+	if (m_nOptimizationFlags & CSCRIPTCOMPILER_OPTIMIZE_DEAD_FUNCTIONS)
 	{
 		// Here, we have to compress the language into something that
 		// we can deal with on a small level.
@@ -952,7 +952,7 @@ int32_t CScriptCompiler::TraverseTreeForSwitchLabels(CScriptParseTreeNode *pNode
 	{
 		int32_t nCaseValue;
 
-		ConstantFoldNode(pNode->pLeft);
+		ConstantFoldNode(pNode->pLeft, TRUE);
 		// Evaluate the constant value that is contained.
 		if (pNode->pLeft != NULL &&
 		        pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_NEGATION &&
@@ -1201,7 +1201,7 @@ int32_t CScriptCompiler::GenerateIdentifiersFromConstantVariables(CScriptParseTr
 			        pNode->pRight->pLeft->pLeft->pLeft != NULL)
 			{
 				CScriptParseTreeNode *pNodeConstant = pNode->pRight->pLeft->pLeft->pLeft;
-				ConstantFoldNode(pNodeConstant);
+				ConstantFoldNode(pNodeConstant, TRUE);
 
 				int32_t nConstantOperation = pNodeConstant->nOperation;
 				int32_t nSign = 1;
@@ -1512,7 +1512,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 	{
 		int32_t nCaseValue;
 
-			ConstantFoldNode(pNode->pLeft);
+			ConstantFoldNode(pNode->pLeft, TRUE);
 		// Evaluate the constant value that is contained.
 		if (pNode->pLeft != NULL &&
 		        pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_NEGATION &&
@@ -6994,7 +6994,7 @@ char *CScriptCompiler::EmitInstruction(uint8_t nOpCode, uint8_t nAuxCode, int32_
 
 void CScriptCompiler::EmitModifyStackPointer(int32_t nModifyBy)
 {
-	if (m_bOptimizeBinarySpace) // TODO: Rename or add separate toggle?
+	if (m_nOptimizationFlags & CSCRIPTCOMPILER_OPTIMIZE_MELD_INSTRUCTIONS)
 	{
 		int32_t last = m_aOutputCodeInstructionBoundaries[m_aOutputCodeInstructionBoundaries.size()-2];
 		if (m_pchOutputCode[last + CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER)

@@ -13,7 +13,7 @@ type
 
   NdbFunction* = tuple
     label: string
-    bStart, bEnd: int32
+    bStart, bEnd: uint32
     retType: NdbType
     args: seq[NdbType]
 
@@ -50,7 +50,7 @@ proc parseNdb*(io: Stream): Ndb =
     if ln.len == 0 or ln[0] == '#': continue
     let s = ln.split(" ")
     expect s.len > 0
-    if s[0][0] == 'N':
+    if s[0][0] == 'N' or s[0][0] == 'n':
       expect s[0].substr(1).parseInt() == result.files.len
       result.files.add(s[1])
     elif s[0] == "s":
@@ -70,8 +70,8 @@ proc parseNdb*(io: Stream): Ndb =
       expect s.len == 6
       result.functions.add(NdbFunction (
         label: s[5],
-        bStart: int32 parseHexInt(s[1]),
-        bEnd: int32 parseHexInt(s[2]),
+        bStart: uint32 parseHexInt(s[1]),
+        bEnd: uint32 parseHexInt(s[2]),
         retType: parseEnum[NdbType](s[4]),
         args: @[]
       ))

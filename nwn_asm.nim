@@ -21,8 +21,8 @@ $OPTS
 
 proc decompileFunction(ndb: Ndb, f: NdbFunction, ncs: Stream) =
   echo $f & ":"
-  ncs.setPosition(f.bStart)
-  let fun = newStringStream ncs.readStrOrErr(f.bEnd - f.bStart)
+  ncs.setPosition(int f.bStart)
+  let fun = newStringStream ncs.readStrOrErr(int f.bEnd - f.bStart)
   echo asmToStr(disasm fun) do (i: Instr, streamOffset: int) -> string:
     case i.op
     of EXECUTE_COMMAND:
@@ -31,7 +31,7 @@ proc decompileFunction(ndb: Ndb, f: NdbFunction, ncs: Stream) =
       " => " & $(unpackExtra[int32](i) + streamOffset)
     of JSR:
       let rel = unpackExtra[int32](i)
-      let funcs = ndb.functions.filterIt(it.bStart == f.bStart + rel + streamOffset)
+      let funcs = ndb.functions.filterIt(it.bStart.int == f.bStart.int + rel + streamOffset)
       if funcs.len == 1: $funcs[0] else: "?"
     else: ""
 

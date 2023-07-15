@@ -20,3 +20,4 @@ tests/*/*.exe
 /outputGotten.txt
 
 *.ncs
+*.ndb

@@ -14,6 +14,8 @@ const LangSpecNWTestScript = ("nwtestvmscript", ResType 2009, ResType 2010, ResT
 # Note: This test also exercises the NDB parser.
 const DebugSymbols = true
 
+const NCSHeaderSize = 13
+
 var currentFile: string
 var currentLines: seq[string]
 var currentDebug: NDB
@@ -37,11 +39,11 @@ vm.defineCommand(Assert.int) do:
   var loc = ""
   var code = ""
   for l in currentDebug.lines:
-    if vm.ip.uint32 in l.bStart..<l.bEnd:
+    if (NCSHeaderSize + vm.ip.uint32) in l.bStart..l.bEnd:
       let ext = getResExt(LangSpecNWTestScript.src)
       loc = format("$#.$#:$#", currentDebug.files[l.fileNum], ext, l.lineNum)
       if currentFile == currentDebug.files[l.fileNum]:
-        code = currentLines[l.lineNum.int]
+        code = currentLines[l.lineNum.int - 1]
       break
 
   # currentDebug.lines.bStart.bEnd

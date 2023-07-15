@@ -5,10 +5,7 @@ import std/[streams, strutils, sequtils]
 import neverwinter/[nwscript/nwasm, util]
 
 type
-  ObjectId* = distinct uint32
-
-const
-  ObjectInvalid* = ObjectId 0x7fffffff
+  ObjectId* = uint32
 
 # Stack
 # ===============
@@ -31,7 +28,7 @@ proc `$`*(e: StackElem): string =
   case e.kind
   of skInt:    format("i=$#", e.intVal)
   of skFloat:  format("f=$#", $e.floatVal)
-  of skObject: format("o=0x$#", toHex(e.objectVal.uint32))
+  of skObject: format("o=0x$#", toHex(e.objectVal))
   of skString: format("s='$#'", $e.stringVal)
 
 proc `==`*(a, b: StackElem): bool =
@@ -112,6 +109,10 @@ func ip*(vm: VM): CodeAddress = vm.ip
 func sp*(vm: VM): StackAddress = vm.sp
 func bp*(vm: VM): StackAddress = vm.bp
 
+func saveIp*(vm: VM): CodeAddress = vm.saveIp
+func saveSp*(vm: VM): StackAddress = vm.saveSp
+func saveBp*(vm: VM): StackAddress = vm.saveBp
+
 proc push*(vm: VM, e: StackElem) =
   vm.stack.add e
   inc vm.sp
@@ -170,8 +171,6 @@ proc assign(vm: VM, src, dst: StackAddress) =
     vm.stack[dst] = vm.stack[src]
 
 proc run(vm: VM, i: Instr) =
-  let str = newStringStream(i.extra)
-
   template NotImplemented() =
     raise newException(Defect, "not impl: " & $i)
 
@@ -209,7 +208,7 @@ proc run(vm: VM, i: Instr) =
     of TYPE_INTEGER: vm.pushInt(0)
     of TYPE_FLOAT:   vm.pushFloat(0)
     of TYPE_STRING:  vm.pushString("")
-    of TYPE_OBJECT:  vm.pushObject(ObjectInvalid)
+    of TYPE_OBJECT:  vm.pushObject(0)
     else: NotImplemented
 
   of RUNSTACK_COPY, RUNSTACK_COPY_BASE:
@@ -235,7 +234,7 @@ proc run(vm: VM, i: Instr) =
     of TYPE_INTEGER: vm.pushInt unpackExtra[int32](i)
     of TYPE_FLOAT:   vm.pushFloat unpackExtra[float32](i)
     of TYPE_STRING:  vm.pushString i.extra.substr(2)
-    of TYPE_OBJECT:  vm.pushObject unpackExtra[uint32](i).ObjectId
+    of TYPE_OBJECT:  vm.pushObject unpackExtra[uint32](i)
     else: NotImplemented
 
   of MODIFY_STACK_POINTER:

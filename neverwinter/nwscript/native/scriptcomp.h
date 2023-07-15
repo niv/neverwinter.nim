@@ -606,6 +606,8 @@ private:
 	int32_t         m_nOutputCodeLength;
 	std::vector<int32_t> m_aOutputCodeInstructionBoundaries;
 
+	char *InstructionLookback(uint32_t last=1);
+
 	// Resolving code to its proper location ... some buffers!
 	char       *m_pchResolvedOutputBuffer;
 	int32_t         m_nResolvedOutputBufferSize;

@@ -23,15 +23,15 @@ extern "C" CScriptCompiler* scriptCompApiNewCompiler(
     return instance;
 }
 
-struct CompileResult
+struct NativeCompileResult
 {
     int32_t code;
     char* str; // static buffer
 };
 
-extern "C" CompileResult scriptCompApiCompileFile(CScriptCompiler* instance, char* filename)
+extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instance, char* filename)
 {
-    CompileResult ret;
+    NativeCompileResult ret;
     ret.code = instance->CompileFile(filename);
     ret.str = ret.code ? instance->GetCapturedError()->CStr() : (char*)"";
     return ret;

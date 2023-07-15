@@ -1,4 +1,4 @@
-import std/[streams, tables, threadpool, cpuinfo, atomics]
+import std/[tables, threadpool, cpuinfo, atomics]
 
 import shared
 import neverwinter/nwscript/compiler
@@ -57,10 +57,7 @@ type
   ThreadState = ref object
     chDemandResRefResponse: Channel[string]
     currentRMSearchPath: seq[RMSearchPathEntry]
-
-    currentOutFilename: string # use this as basename ("test", not "test.nss")
-    currentOutDirectory: string # write currently-compiled file to this location
-    cNSS: CScriptCompiler
+    cNSS: ScriptCompiler
 
 const
   LangSpecNWScript* = ("nwscript", ResType 2009, ResType 2010, ResType 2064).LangSpec
@@ -143,30 +140,16 @@ createThread(demandResRefThread) do:
 # native callbacks and compiler helpers.
 # All of these run inside worker threads and only access TLS (via getThreadState()).
 
-var resolveFileBuf {.threadvar.}: string
-proc resolveFile(fn: cstring, ty: uint16): cstring {.cdecl.} =
+proc resolveFile(fn: string, ty: ResType): string =
   let r = newResRef($fn, ResType ty)
   chDemandResRef.send((
     resRef: r,
     searchPath: getThreadState().currentRMSearchPath,
     response: getThreadState().chDemandResRefResponse.addr
   ))
-  resolveFileBuf = getThreadState().chDemandResRefResponse.recv()
-  if resolveFileBuf == "": return nil
-  return resolveFileBuf.cstring
-
-proc writeFile(fn: cstring, resType: uint16, pData: ptr uint8, size: csize_t, bin: bool): int32 {.cdecl.} =
-  assert(not isNil pData)
-  let resExt = lookupResExt(ResType resType).get
-
-  let actualOutFile = getThreadState().currentOutDirectory / getThreadState().currentOutFilename & "." & resExt
-
-  if params.simulate:
-    debug "[simulate] Would write file: ", actualOutFile
-  else:
-    let str = newFileStream(actualOutFile, fmWrite)
-    str.writeData(pData, size.int)
-    str.close()
+  let resolveFileBuf = getThreadState().chDemandResRefResponse.recv()
+  if resolveFileBuf == "": raise newException(IOError, "not found: " & $r)
+  return resolveFileBuf
 
 var state {.threadvar.}: ThreadState
 proc getThreadState(): ThreadState {.gcsafe.} =
@@ -176,7 +159,7 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     #       will depend on logging and related to be set up.
     discard DOC(ArgsHelp)
     state.chDemandResRefResponse.open(maxItems=1)
-    state.cNSS = newCompiler(LangSpecNWScript, params.debugSymbols, writeFile, resolveFile)
+    state.cNSS = newCompiler(LangSpecNWScript, params.debugSymbols, resolveFile)
   state
 
 proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.gcsafe.} =
@@ -184,15 +167,10 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
   doAssert(parts.dir != "")
   let outParts = if overrideOutPath != "": splitFile(absolutePath(overrideOutPath)) else: parts
 
-  # Because the compiler calls writeFile instead of giving us the blobs, we need to store
-  # the currently-compiling filename (per thread) if we want to be able to override it.
-  # The write callback will read this from TLS.
-  getThreadState().currentOutDirectory = outParts.dir
-  getThreadState().currentOutFilename = outParts.name
-
-  # global params can override the out directory.
-  if params.outDirectory != "":
-    getThreadState().currentOutDirectory = params.outDirectory
+  let outFilePrefix =
+    # global params can override the out directory.
+    if params.outDirectory != "": outParts.dir / outParts.name
+    else:                         params.outDirectory / outParts.name
 
   case parts.ext
   of ".nss":
@@ -214,8 +192,16 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
       let prefix = format("[$#/$#] $#: ", num, total, p)
       case ret.code
       of 0:
+        proc writeData(fn, data: string) =
+          if data == "": return
+          elif params.simulate: debug "[simulate] Would write file: ", fn
+          else: writeFile(fn, data)
+
         atomicInc globalState.successes
         debug prefix, "Success"
+
+        writeData(outFilePrefix & "." & getResExt(LangSpecNWScript.bin), ret.bytecode)
+        writeData(outFilePrefix & "." & getResExt(LangSpecNWScript.dbg), ret.debugcode)
       of 623:
         atomicInc globalState.skips
         debug prefix, "no main (include?)"

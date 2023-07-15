@@ -34,20 +34,21 @@ type VMCommand = enum
 
 vm.defineCommand(Assert.int) do:
   let boo = vm.popIntBool()
-  let msg = vm.popString()
+  var msg = vm.popString()
+
   # attempt to find the failing line in ndb.
   var loc = ""
-  var code = ""
+
   for l in currentDebug.lines:
     if (NCSHeaderSize + vm.ip.uint32) in l.bStart..l.bEnd:
       let ext = getResExt(LangSpecNWTestScript.src)
-      loc = format("$#.$#:$#", currentDebug.files[l.fileNum], ext, l.lineNum)
+      loc = format("$#.$#:$#: ", currentDebug.files[l.fileNum], ext, l.lineNum)
       if currentFile == currentDebug.files[l.fileNum]:
-        code = currentLines[l.lineNum.int - 1]
+        msg = msg & " (`" & currentLines[l.lineNum.int - 1].strip & "`)"
       break
 
   # currentDebug.lines.bStart.bEnd
-  doAssert boo, format("[ip=$#,sp=$#] $# (`$#`)", vm.ip, vm.sp, loc, code.strip)
+  doAssert boo, format("[ip=$#,sp=$#] $#$#", vm.ip, vm.sp, loc, msg)
 
 vm.defineCommand(IntToString.int) do:
   vm.pushString $vm.popInt

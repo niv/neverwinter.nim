@@ -1,8 +1,6 @@
-import std/[streams, strutils]
-import neverwinter/[nwscript/nwtestvm]
-
-import std/[random, os]
-import neverwinter/nwscript/compiler, neverwinter/restype, neverwinter/resdir, neverwinter/resman
+import std/[streams, strutils, random, os]
+import neverwinter/nwscript/[nwtestvm, compiler, ndb]
+import neverwinter/[restype, resdir, resman]
 
 randomize()
 
@@ -12,7 +10,13 @@ rm.add newResDir("tests/scriptcomp")
 rm.add newResDir("tests/scriptcomp/corpus")
 
 const LangSpecNWTestScript = ("nwtestvmscript", ResType 2009, ResType 2010, ResType 2064).LangSpec
+
+# Note: This test also exercises the NDB parser.
 const DebugSymbols = true
+
+var currentFile: string
+var currentLines: seq[string]
+var currentDebug: NDB
 
 let cNSS = newCompiler(LangSpecNWTestScript, DebugSymbols, rm)
 
@@ -29,7 +33,19 @@ type VMCommand = enum
 vm.defineCommand(Assert.int) do:
   let boo = vm.popIntBool()
   let msg = vm.popString()
-  doAssert boo, format("[ip=$#,sp=$#] $#", vm.ip, vm.sp, msg)
+  # attempt to find the failing line in ndb.
+  var loc = ""
+  var code = ""
+  for l in currentDebug.lines:
+    if vm.ip.uint32 in l.bStart..<l.bEnd:
+      let ext = getResExt(LangSpecNWTestScript.src)
+      loc = format("$#.$#:$#", currentDebug.files[l.fileNum], ext, l.lineNum)
+      if currentFile == currentDebug.files[l.fileNum]:
+        code = currentLines[l.lineNum.int]
+      break
+
+  # currentDebug.lines.bStart.bEnd
+  doAssert boo, format("[ip=$#,sp=$#] $# (`$#`)", vm.ip, vm.sp, loc, code.strip)
 
 vm.defineCommand(IntToString.int) do:
   vm.pushString $vm.popInt
@@ -56,6 +72,13 @@ for file in walkFiles("tests/scriptcomp/corpus/*.nss"):
   echo "Compiling: ", ff
   let ret = cNSS.compileFile(ff)
   doAssert ret.code == 0, $ret
+  doAssert ret.bytecode != ""
+  doAssert ret.debugcode != ""
+
+  # for Assert()
+  currentLines = splitLines(readFile(file))
+  currentDebug = parseNdb(newStringStream ret.debugcode)
+  currentFile = ff
 
   echo "Running: ", ff
   vm.run newStringSTream(ret.bytecode)

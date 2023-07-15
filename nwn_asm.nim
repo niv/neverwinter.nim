@@ -1,7 +1,7 @@
 import std/streams
 
 import shared
-import neverwinter/nwscript/[nwasm, ndb, vm]
+import neverwinter/nwscript/[nwasm, ndb]
 
 let args = DOC """
 Disassemble ncs.

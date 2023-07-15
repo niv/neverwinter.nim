@@ -2214,17 +2214,7 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		if (pNode->nIntegerData != 0)
 		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-			// Enter the location of the variable to write to.
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+			EmitModifyStackPointer(pNode->nIntegerData);
 		}
 
 		if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_STATEMENT)
@@ -3490,17 +3480,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		if (nStackModifier != 0)
 		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-			// Enter the location of the variable to write to.
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackModifier) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackModifier) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackModifier) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackModifier)) & 0x0ff);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+			EmitModifyStackPointer(nStackModifier);
 		}
 
 		// At this point we should have had the same state that we saved earlier.  If we
@@ -4945,17 +4925,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		if (nStackModifier != 0)
 		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-			// Enter the location of the variable to write to.
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackModifier) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackModifier) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackModifier) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackModifier)) & 0x0ff);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+			EmitModifyStackPointer(nStackModifier);
 		}
 
 		// MGB - August 22, 2002 - For Scripting Debugger
@@ -5128,19 +5098,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 
 			// Add the "modify stack pointer" statement so that the return value is never used again.
-			int32_t nStackPointer = -4;
-
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-			// Enter the location of the variable to write to.
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackPointer) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackPointer) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackPointer) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackPointer)) & 0x0ff);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+			EmitModifyStackPointer(-4);
 		}
 
 		//////////////////////////////////////////////////
@@ -5167,17 +5125,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// to be moved at all!
 		if (nStackPointer != 0)
 		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-			// Enter the location of the variable to write to.
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackPointer) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackPointer) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackPointer) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackPointer)) & 0x0ff);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+			EmitModifyStackPointer(nStackPointer);
 		}
 
 		//////////////////////////////////////////////////
@@ -5502,17 +5450,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 		if (pNode->nIntegerData != 0)
 		{
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-			// Enter the location of the variable to write to.
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((pNode->nIntegerData) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((pNode->nIntegerData) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((pNode->nIntegerData) >> 8) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((pNode->nIntegerData)) & 0x0ff);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+			EmitModifyStackPointer(pNode->nIntegerData);
 		}
 
 		// And, finally, write the JMP statement.
@@ -5750,18 +5688,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			if (m_nLoopStackDepth != m_nStackCurrentDepth)
 			{
 				int32_t nStackChange = (m_nLoopStackDepth - m_nStackCurrentDepth) * 4;
-
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-				// Enter the location of the variable to write to.
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackChange) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackChange) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackChange) >> 8 ) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
-
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+				EmitModifyStackPointer(nStackChange);
 			}
 		}
 		// MGB - November 8, 2002 - Start Change
@@ -5772,18 +5699,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 			if ((m_nSwitchStackDepth + 1) != m_nStackCurrentDepth)
 			{
 				int32_t nStackChange = ((m_nSwitchStackDepth + 1) - m_nStackCurrentDepth) * 4;
-
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-				// Enter the location of the variable to write to.
-				m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackChange) >> 24) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackChange) >> 16) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackChange) >> 8 ) & 0x0ff);
-				m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
-
-				m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+				EmitModifyStackPointer(nStackChange);
 			}
 		}
 		// MGB - November 8, 2002 - End Change
@@ -5810,18 +5726,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		if (m_nLoopStackDepth != m_nStackCurrentDepth)
 		{
 			int32_t nStackChange = (m_nLoopStackDepth - m_nStackCurrentDepth) * 4;
-
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER;
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-			// Enter the location of the variable to write to.
-			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackChange) >> 24) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackChange) >> 16) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackChange) >> 8 ) & 0x0ff);
-			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackChange)      ) & 0x0ff);
-
-			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+			EmitModifyStackPointer(nStackChange);
 		}
 		// MGB - October 15, 2002 - End Change
 
@@ -7059,4 +6964,48 @@ int32_t CScriptCompiler::WriteDebuggerOutputToFile(CExoString sFileName)
 		m_nDebuggerCodeLength = 0;
 	}
 	return 0;
+}
+
+
+void CScriptCompiler::WriteByteSwap32(char *buffer, int32_t value)
+{
+	buffer[0] = (char)((value >> 24) & 0xff);
+	buffer[1] = (char)((value >> 16) & 0xff);
+	buffer[2] = (char)((value >> 8)  & 0xff);
+	buffer[3] = (char)((value)       & 0xff);
+}
+int32_t CScriptCompiler::ReadByteSwap32(char *buffer)
+{
+	return ((int32_t)buffer[0] << 24) | ((int32_t)buffer[1] << 16) | ((int32_t)buffer[2] << 8) | (int32_t)buffer[3];
+}
+
+char *CScriptCompiler::EmitInstruction(uint8_t nOpCode, uint8_t nAuxCode, int32_t nDataSize)
+{
+	m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = nOpCode;
+	m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = nAuxCode;
+
+	char *ret = &m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION];
+
+	m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + nDataSize;
+	m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+
+	return ret;
+}
+
+void CScriptCompiler::EmitModifyStackPointer(int32_t nModifyBy)
+{
+	if (m_bOptimizeBinarySpace) // TODO: Rename or add separate toggle?
+	{
+		int32_t last = m_aOutputCodeInstructionBoundaries[m_aOutputCodeInstructionBoundaries.size()-2];
+		if (m_pchOutputCode[last + CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER)
+		{
+			int32_t mod = ReadByteSwap32(&m_pchOutputCode[last + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]);
+			mod += nModifyBy;
+			WriteByteSwap32(&m_pchOutputCode[last + CVIRTUALMACHINE_EXTRA_DATA_LOCATION], mod);
+			return;
+		}
+	}
+
+	char *buf = EmitInstruction(CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER, 0, 4);
+	WriteByteSwap32(buf, nModifyBy);
 }

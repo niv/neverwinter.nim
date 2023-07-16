@@ -15,6 +15,8 @@ Usage:
 
 Options:
   -d                          Disassemble ncs file to stdout.
+  -g                          Require .ndb loading.
+  -G                          Do not attempt to load .ndb.
 
 $OPTS
 """
@@ -42,7 +44,9 @@ let sndb = joinPath(script.dir, script.name) & ".ndb"
 doAssert fileExists(sncs), sncs
 let sncsx = openFileStream(sncs, fmRead)
 
-if fileExists(sndb):
+doAssert fileExists(sndb) or not args["-g"], "-g: .ndb required, but not found"
+
+if not args["-G"] and fileExists(sndb):
   let ndbx = parseNdb(openFileStream(sndb, fmRead))
   for idx, f in ndbx.functions:
     ndbx.decompileFunction(f, sncsx)

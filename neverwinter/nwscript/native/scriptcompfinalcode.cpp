@@ -6966,6 +6966,13 @@ int32_t CScriptCompiler::WriteDebuggerOutputToFile(CExoString sFileName)
 	return 0;
 }
 
+char *CScriptCompiler::InstructionLookback(uint32_t last)
+{
+	if (last == 0 || last > m_aOutputCodeInstructionBoundaries.size())
+		return NULL;
+
+	return &m_pchOutputCode[m_aOutputCodeInstructionBoundaries[m_aOutputCodeInstructionBoundaries.size() - 1 - last]];
+}
 
 void CScriptCompiler::WriteByteSwap32(char *buffer, int32_t value)
 {
@@ -6996,13 +7003,49 @@ void CScriptCompiler::EmitModifyStackPointer(int32_t nModifyBy)
 {
 	if (m_bOptimizeBinarySpace) // TODO: Rename or add separate toggle?
 	{
-		int32_t last = m_aOutputCodeInstructionBoundaries[m_aOutputCodeInstructionBoundaries.size()-2];
-		if (m_pchOutputCode[last + CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER)
+		char *last = InstructionLookback(1);
+		// Multiple MODIFY_STACK_POINTER instructions can always be merged into a single one
+		if (last[CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER)
 		{
-			int32_t mod = ReadByteSwap32(&m_pchOutputCode[last + CVIRTUALMACHINE_EXTRA_DATA_LOCATION]);
+			int32_t mod = ReadByteSwap32(&last[CVIRTUALMACHINE_EXTRA_DATA_LOCATION]);
 			mod += nModifyBy;
-			WriteByteSwap32(&m_pchOutputCode[last + CVIRTUALMACHINE_EXTRA_DATA_LOCATION], mod);
+			WriteByteSwap32(&last[CVIRTUALMACHINE_EXTRA_DATA_LOCATION], mod);
 			return;
+		}
+
+		// The nwscript construct `int n = 3;` gets compiled into the following:
+		//     RUNSTACK_ADD, TYPE_INTEGER
+		//     CONSTANT, TYPE_INTEGER, 3
+		//     ASSIGNMENT, TYPE_VOID, -8, 4
+		//     MODIFY_STACK_POINTER, -4
+		// This ends up with just the CONSTI 3 on the top of stack, but the
+		// dance is necessary as `n = 3` is also an expression which returns 3.
+		// Then, the last MODSP discards the result of the expression.
+		// Here, we detect the pattern when it is discarded, and replace the
+		// whole set of instructions with just CONSTI 3
+		if (last[CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_ASSIGNMENT)
+		{
+			char *instConstant    = InstructionLookback(2);
+			char *instRunstackAdd = InstructionLookback(3);
+
+			if (instConstant    && instConstant[CVIRTUALMACHINE_OPCODE_LOCATION]    == CVIRTUALMACHINE_OPCODE_CONSTANT &&
+			    instRunstackAdd && instRunstackAdd[CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_RUNSTACK_ADD &&
+			    instConstant[CVIRTUALMACHINE_AUXCODE_LOCATION] == instRunstackAdd[CVIRTUALMACHINE_AUXCODE_LOCATION] &&
+			    ReadByteSwap32(&last[CVIRTUALMACHINE_EXTRA_DATA_LOCATION]) == -8
+			   )
+			{
+				// Move the CONST instruction up to where runstack add is..
+				const int32_t instConstantSize = (last - instConstant);
+				memmove(instRunstackAdd, instConstant, instConstantSize);
+				// Roll back output code length to where the old instConstant started..
+				m_nOutputCodeLength = (instRunstackAdd - m_pchOutputCode) + instConstantSize;
+				// Pop the last two instruction boundaries (CONSTANT, ASSIGNMENT) since those don't exist anymore
+				m_aOutputCodeInstructionBoundaries.pop_back();
+				m_aOutputCodeInstructionBoundaries.pop_back();
+				m_aOutputCodeInstructionBoundaries.pop_back();
+				m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+				return;
+			}
 		}
 	}
 

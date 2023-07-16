@@ -1,4 +1,4 @@
-import std/[streams, strutils, random, os]
+import std/[streams, strutils, random, os, logging]
 import neverwinter/nwscript/[nwtestvm, compiler, ndb]
 import neverwinter/[restype, resfile, resdir, resman]
 
@@ -75,7 +75,7 @@ for file in walkFiles(SourcePath / "corpus" / "*.nss"):
     else:
       0
 
-  echo "Compiling: ", ff
+  info "Compiling: ", ff
   let ret = cNSS.compileFile(ff)
 
   doAssert ret.code == expectCode,
@@ -83,7 +83,7 @@ for file in walkFiles(SourcePath / "corpus" / "*.nss"):
 
   # If we expected the file not to compile, continue. The expectations are checked above.
   if expectCode != 0:
-    echo "Compile code ", expectCode, " - expected failure, next"
+    info "Compile code ", expectCode, " - expected failure, next"
     inc scriptsRan
     continue
 
@@ -96,7 +96,7 @@ for file in walkFiles(SourcePath / "corpus" / "*.nss"):
   currentFile = ff
 
   var script = newVMScript(vm, ret.bytecode)
-  echo "Running: ", ff
+  info "Running: ", ff
   run script
   inc scriptsRan
 

@@ -16,14 +16,18 @@ void main()
         string s = "B";
         float f = 10.0f;
 
-        Assert(a = 10);
-        Assert(b = 20);
-        Assert(c = 30);
-        Assert(d = 40);
+        Assert(a == 10);
+        Assert(b == 20);
+        Assert(c == 30);
+        Assert(d == 40);
+        Assert(s == "B");
+        Assert(f == 10.0f);
     }
 
-    Assert(a = 1);
-    Assert(b = 2);
-    Assert(c = 3);
-    Assert(d = 4);
+    Assert(a == 1);
+    Assert(b == 2);
+    Assert(c == 3);
+    Assert(d == 4);
+    Assert(s == "A");
+    Assert(f == 1.0f);
 }

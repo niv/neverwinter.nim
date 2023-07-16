@@ -1,7 +1,9 @@
 # A laissez-faire, incomplete reimplementation of the game script VM.
 # This impl is meant as a test runner.
 
-import std/[streams, strutils, sequtils]
+# Add -d:tracetestvm to emit debug more verbose logs to logging framework.
+
+import std/[streams, strutils, sequtils, logging]
 import neverwinter/[nwscript/nwasm, util]
 
 type
@@ -26,10 +28,10 @@ type
 
 proc `$`*(e: StackElem): string =
   case e.kind
-  of skInt:    format("i=$#", e.intVal)
-  of skFloat:  format("f=$#", $e.floatVal)
-  of skObject: format("o=0x$#", toHex(e.objectVal))
-  of skString: format("s='$#'", $e.stringVal)
+  of skInt:    format("$#", e.intVal)
+  of skFloat:  format("$#", $e.floatVal)
+  of skObject: format("0x$#", toHex(e.objectVal))
+  of skString: format("'$#'", $e.stringVal.substr(0, 10))
 
 proc `==`*(a, b: StackElem): bool =
   a.kind == b.kind and (
@@ -99,6 +101,7 @@ type
 
   VMScript* = ref object
     vm*: VM
+    label: string
     code: Stream
     ip: CodeAddress
     sp: StackAddress     # 1 = array elem 0; 0 = invalid/none
@@ -110,8 +113,16 @@ type
     saveIp: CodeAddress
     saveBp, saveSp: StackAddress
 
+proc stackStr*(script: VMScript): string =
+  for idx, elem in script.stack:
+    if idx == script.bp - 1: result &= "^"
+    if idx == script.sp - 1: result &= "*"
+    result &= $elem
+    if idx < script.stack.len: result &= " "
+  # script.stack.mapIt($it).join(" ")
+
 proc `$`*(script: VMScript): string =
-  format("ip=$#,sp=$#,bp=$#", script.ip, script.sp, script.bp)
+  format("Script[$#@$#]", script.label, script.ip)
 
 func ip*(script: VMScript): CodeAddress = script.ip
 func sp*(script: VMScript): StackAddress = script.sp
@@ -141,11 +152,6 @@ proc popIntBool*(script: VMScript): bool = script.popInt.bool
 proc popFloat*(script: VMScript): float32 = script.pop.floatVal
 proc popString*(script: VMScript): string = script.pop.stringVal
 proc popObject*(script: VMScript): ObjectId = script.pop.objectVal
-
-proc printInternals*(script: VMScript, prefix = "VM") =
-  echo format("$# [size=$#,bp=$#,sp=$#]:", prefix, script.stack.len, script.bp, script.sp)
-  for idx, se in script.stack:
-    echo format("   $# [$#] $#", (if idx+1 == script.sp.int: "=> " else: "   "), idx, se)
 
 proc defineCommand*(vm: VM, cmd: Cmd, cb: CmdHandler) =
   vm.cmd.setLen(max(vm.cmd.len, cmd + 1))
@@ -363,15 +369,19 @@ proc run(vm: VM, script: VMScript, i: Instr) =
   assert script.sp >= 0
   assert script.sp <= script.stack.len
 
-proc newVMScript*(vm: VM, bytecode: string): VMScript =
+proc newVMScript*(vm: VM, bytecode: string, label = "(anon)"): VMScript =
   new(result)
-
+  result.label = label
   result.vm = vm
 
   # We copy the input data, stripping off the initial bytes.
   result.code = newStringStream(
     if bytecode.startsWith(Header): bytecode.substr(13)
     else: bytecode)
+
+template trace(args: varargs[string, `$`]) =
+  when defined(tracetestvm):
+    debug args
 
 proc run*(script: VMScript) =
   ## Run the given script at the current position.
@@ -385,12 +395,8 @@ proc run*(script: VMScript) =
   while true:
     let i = script.code.readInstr()
 
-    # echo ""
-    # echo "Execute: ", i
-
-    # echo format("  Before [size=$#,bp=$#,sp=$#]:", vm.stack.len, vm.bp, vm.sp)
-    # for idx, se in vm.stack:
-    #   echo format("   $# [$#] $#", (if idx+1 == vm.sp.int: "=> " else: "   "), idx, se)
+    trace script, " executing: ", i
+    trace script, "   stack: ", script.stackStr
 
     # VM executes single instruction
     script.vm.run(script, i)
@@ -399,13 +405,11 @@ proc run*(script: VMScript) =
       # "loader" shim/fake: return, we're done
       break
 
-    if script.code.getPosition() != script.ip:
-      # echo "  Jump: ", script.code.getPosition(), " -> ", script.ip
-      script.code.setPosition(script.ip)
+    trace script, "   after: ", script.stackStr
 
-    # echo format("  After [size=$#,bp=$#,sp=$#]:", vm.stack.len, vm.bp, vm.sp)
-    # for idx, se in vm.stack:
-    #   echo format("   $# [$#] $#", (if idx+1 == vm.sp.int: "=> " else: "   "), idx, se)
+    if script.code.getPosition() != script.ip:
+      trace script, " jump: ", script.code.getPosition(), " -> ", script.ip
+      script.code.setPosition(script.ip)
 
   # StartingCond leaves something on the stack
   # assert vm.sp == 0

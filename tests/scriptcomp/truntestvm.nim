@@ -95,7 +95,7 @@ for file in walkFiles(SourcePath / "corpus" / "*.nss"):
   currentDebug = parseNdb(newStringStream ret.debugcode)
   currentFile = ff
 
-  var script = newVMScript(vm, ret.bytecode)
+  var script = newVMScript(vm, ret.bytecode, ff)
   info "Running: ", ff
   run script
   inc scriptsRan

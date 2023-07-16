@@ -292,6 +292,8 @@ public:
 	// to access the log.
 	CExoString *GetCapturedError() { return &m_sCapturedError; }
 
+    STRREF GetCapturedErrorStrRef() const { return m_nCapturedErrorStrRef; }
+
 	int32_t WriteFinalCodeToFile(const CExoString &sFileName);
 	int32_t WriteDebuggerOutputToFile(CExoString sFileName);
 
@@ -635,6 +637,7 @@ private:
 	// Error generation.
 
 	CExoString  m_sCapturedError;
+    STRREF      m_nCapturedErrorStrRef;
 
     void* m_pUserData;
 };

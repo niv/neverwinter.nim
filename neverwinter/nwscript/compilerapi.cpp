@@ -33,7 +33,19 @@ struct NativeCompileResult
 extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instance, char* filename)
 {
     NativeCompileResult ret;
+
     ret.code = instance->CompileFile(filename);
+
+    // Sometimes, CompileFile returns 1 or -1; in which case the error sould be in CapturedError.
+    // Forward from there.
+    if (ret.code == 1 || ret.code == -1)
+    {
+        ret.code = instance->GetCapturedErrorStrRef();
+        assert(ret.code != 0);
+        if (ret.code == 0)
+            ret.code = STRREF_CSCRIPTCOMPILER_ERROR_FATAL_COMPILER_ERROR;
+    }
+
     ret.str = ret.code ? instance->GetCapturedError()->CStr() : (char*)"";
     return ret;
 }

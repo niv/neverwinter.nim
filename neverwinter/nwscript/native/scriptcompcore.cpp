@@ -486,6 +486,7 @@ void CScriptCompiler::Initialize( )
 
 
 	m_sCapturedError = "";
+    m_nCapturedErrorStrRef = 0;
 
 	m_nLines = 1;
 	m_nCharacterOnLine = 1;
@@ -1484,6 +1485,7 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 	}
 
 	m_sCapturedError = sFullErrorText;
+    m_nCapturedErrorStrRef = nError;
 
 	// Print the full error text to the log file.
     // This is used and parsed by the toolset :( Do not remove.

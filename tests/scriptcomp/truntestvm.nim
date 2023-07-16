@@ -77,8 +77,9 @@ for file in walkFiles(SourcePath / "corpus" / "*.nss"):
 
   echo "Compiling: ", ff
   let ret = cNSS.compileFile(ff)
+
   doAssert ret.code == expectCode,
-    file & " failed compiler retcode expectation " & $expectCode & ": " & ret.str
+    file & " failed to compile: expected " & $expectCode & " got " & $ret.code & " (" & ret.str & ")"
 
   # If we expected the file not to compile, continue. The expectations are checked above.
   if expectCode != 0:

@@ -31,43 +31,37 @@ type VMCommand = enum
   Random
   TakeInt
   TakeClosure
-
-vm.defineCommand(Assert.int) do:
-  let boo = vm.popIntBool()
-  var msg = vm.popString()
+  
+vm.defineCommand(Assert.int) do (script: VMScript):
+  let boo = script.popIntBool()
+  var msg = script.popString()
 
   # attempt to find the failing line in ndb.
   var loc = ""
 
   for l in currentDebug.lines:
-    if (NCSHeaderSize + vm.ip.uint32) in l.bStart..l.bEnd:
+    if (NCSHeaderSize + script.ip.uint32) in l.bStart..l.bEnd:
       let ext = getResExt(LangSpecNWTestScript.src)
       loc = format("$#.$#:$#: ", currentDebug.files[l.fileNum], ext, l.lineNum)
       if currentFile == currentDebug.files[l.fileNum]:
         msg = msg & " (`" & currentLines[l.lineNum.int - 1].strip & "`)"
       break
 
-  # currentDebug.lines.bStart.bEnd
-  doAssert boo, format("[ip=$#,sp=$#] $#$#", vm.ip, vm.sp, loc, msg)
+  doAssert boo, format("[ip=$#,sp=$#] $#$#", script.ip, script.sp, loc, msg)
 
-vm.defineCommand(IntToString.int) do:
-  vm.pushString $vm.popInt
+vm.defineCommand(IntToString.int) do (script: VMScript):
+  script.pushString $script.popInt
 
-vm.defineCommand(Random.int) do:
-  vm.pushInt rand(vm.popInt).int32
+vm.defineCommand(Random.int) do (script: VMScript):
+  script.pushInt rand(script.popInt).int32
 
-vm.defineCommand(TakeInt.int) do:
-  discard vm.popInt
+vm.defineCommand(TakeInt.int) do (script: VMScript):
+  discard script.popInt
 
-vm.defineCommand(TakeClosure.int) do:
+vm.defineCommand(TakeClosure.int) do (script: VMScript):
   discard
-  # echo "*** CLOSURES NOT IMPLEMENTED: saved data: " &
-  #      "ip=", vm.saveIp, " bp=", vm.saveBp, " sp=", vm.saveSp
-  # vm.saveIp = 0
-  # vm.saveBp = 0
-  # vm.saveSp = 0
 
-var anyRan = false
+var scriptsRan = 0
 
 for file in walkFiles("tests/scriptcomp/corpus/*.nss"):
   let ff = splitFile(file).name
@@ -83,8 +77,9 @@ for file in walkFiles("tests/scriptcomp/corpus/*.nss"):
   currentDebug = parseNdb(newStringStream ret.debugcode)
   currentFile = ff
 
+  var script = newVMScript(vm, ret.bytecode)
   echo "Running: ", ff
-  vm.run newStringSTream(ret.bytecode)
-  anyRan = true
+  run script
+  inc scriptsRan
 
-doAssert anyRan
+doAssert scriptsRan > 0, "test didn't run any scripts?"

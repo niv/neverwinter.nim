@@ -1,14 +1,7 @@
-#define ENGINE_NUM_STRUCTURES   8
-#define ENGINE_STRUCTURE_0      effect
-#define ENGINE_STRUCTURE_1      event
-#define ENGINE_STRUCTURE_2      location
-#define ENGINE_STRUCTURE_3      talent
-#define ENGINE_STRUCTURE_4      itemproperty
-#define ENGINE_STRUCTURE_5      sqlquery
-#define ENGINE_STRUCTURE_6      cassowary
-#define ENGINE_STRUCTURE_7      json
+// Dummy VM implementation used for test runner.
 
-// Constants
+#define ENGINE_NUM_STRUCTURES   0
+// #define ENGINE_STRUCTURE_0      effect
 
 int    TRUE                     = 1;
 int    FALSE                    = 0;

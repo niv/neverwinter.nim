@@ -1,13 +1,14 @@
 import std/[streams, strutils, random, os]
 import neverwinter/nwscript/[nwtestvm, compiler, ndb]
-import neverwinter/[restype, resdir, resman]
+import neverwinter/[restype, resfile, resdir, resman]
 
 randomize()
 
+const SourcePath = currentSourcePath().splitFile().dir
+
 let rm = newResMan()
-rm.add newResDir(".")
-rm.add newResDir("tests/scriptcomp")
-rm.add newResDir("tests/scriptcomp/corpus")
+rm.add newResFile(SourcePath / "nwtestvmscript.nss")
+rm.add newResDir(SourcePath / "corpus")
 
 const LangSpecNWTestScript = ("nwtestvmscript", ResType 2009, ResType 2010, ResType 2064).LangSpec
 
@@ -31,7 +32,7 @@ type VMCommand = enum
   Random
   TakeInt
   TakeClosure
-  
+
 vm.defineCommand(Assert.int) do (script: VMScript):
   let boo = script.popIntBool()
   var msg = script.popString()
@@ -63,12 +64,28 @@ vm.defineCommand(TakeClosure.int) do (script: VMScript):
 
 var scriptsRan = 0
 
-for file in walkFiles("tests/scriptcomp/corpus/*.nss"):
+for file in walkFiles(SourcePath / "corpus" / "*.nss"):
   let ff = splitFile(file).name
+
+  let expectCode = block:
+    var expectStr = readLines(file, 1)[0]
+    if expectStr.startsWith("// EXPECT: "):
+      expectStr.removePrefix("// EXPECT: ")
+      expectStr.parseInt
+    else:
+      0
 
   echo "Compiling: ", ff
   let ret = cNSS.compileFile(ff)
-  doAssert ret.code == 0, $ret
+  doAssert ret.code == expectCode,
+    file & " failed compiler retcode expectation " & $expectCode & ": " & ret.str
+
+  # If we expected the file not to compile, continue. The expectations are checked above.
+  if expectCode != 0:
+    echo "Compile code ", expectCode, " - expected failure, next"
+    inc scriptsRan
+    continue
+
   doAssert ret.bytecode != ""
   doAssert ret.debugcode != ""
 

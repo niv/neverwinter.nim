@@ -17,15 +17,14 @@ Options:
   -d                          Disassemble ncs file to stdout.
   -g                          Require .ndb loading.
   -G                          Do not attempt to load .ndb.
-
-$OPTS
+$OPT
 """
 
 proc decompileFunction(ndb: Ndb, f: NdbFunction, ncs: Stream) =
   echo $f & ":"
   ncs.setPosition(int f.bStart)
   let fun = newStringStream ncs.readStrOrErr(int f.bEnd - f.bStart)
-  echo asmToStr(disasm fun) do (i: Instr, streamOffset: int) -> string:
+  echo asmToStr(disasm fun, some(int f.bStart - 13)) do (i: Instr, streamOffset: int) -> string:
     case i.op
     of EXECUTE_COMMAND:
       $unpackExtra[int16](i)
@@ -47,7 +46,9 @@ let sncsx = openFileStream(sncs, fmRead)
 doAssert fileExists(sndb) or not args["-g"], "-g: .ndb required, but not found"
 
 if not args["-G"] and fileExists(sndb):
-  let ndbx = parseNdb(openFileStream(sndb, fmRead))
+  var ndbx = parseNdb(openFileStream(sndb, fmRead))
+  ndbx.functions.sort do (a, b: NdbFunction) -> int:
+    system.cmp(a.bStart, b.bStart)
   for idx, f in ndbx.functions:
     ndbx.decompileFunction(f, sncsx)
 else:

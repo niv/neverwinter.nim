@@ -1,4 +1,4 @@
-import std/[streams, strutils]
+import std/[streams, strutils, options]
 
 import neverwinter/util
 
@@ -200,14 +200,17 @@ proc disAsm*(io: Stream): seq[Instr] =
   while not io.atEnd:
     result.add readInstr(io)
 
-proc asmToStr*(ii: seq[Instr], commentCb: proc(i: Instr, offset: int): string = nil): string =
+proc asmToStr*(ii: seq[Instr], startOffset = none(int), commentCb: proc(i: Instr, offset: int): string = nil): string =
+  var globalOffset = startOffset.get(0)
   var offset = 0
   for idx, c in ii:
     let comment = if not isNil commentCb: commentCb(c, offset) else: ""
     result &=
-      align($(offset), 6) & "  " &
+      (if startOffset.isSome: align($globalOffset, 6) & "  " else: "") &
+      align($offset, 6) & "  " &
       alignLeft($c, 40) &
       (if comment.len > 0:("# " & comment) else: "") &
       "\n"
 
     inc offset, c.len
+    inc globalOffset, c.len

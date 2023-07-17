@@ -32,11 +32,17 @@ Usage:
 
   -s                          Simulate: Compile, but write no filee.
                               Use --verbose to see what would be written.
+
+  --langspec NSS              Language spec to load [default: nwscript]
+  --restype-src TYPE          ResType to use for source lookup [default: nss]
+  --restype-bin TYPE          ResType to use for binary output [default: ncs]
+  --restype-dbg TYPE          ResType to use for debug output [default: ndb]
 $OPTRESMAN
 """
 
 type
   Params = ref object
+    langSpec: LangSpec
     recurse: bool
     simulate: bool
     debugSymbols: bool
@@ -59,9 +65,6 @@ type
     currentRMSearchPath: seq[RMSearchPathEntry]
     cNSS: ScriptCompiler
 
-const
-  LangSpecNWScript* = ("nwscript", ResType 2009, ResType 2010, ResType 2064).LangSpec
-
 # =================
 # Global state is used on the main thread.
 # We also initialise the thread pool and other global properties here.
@@ -69,6 +72,12 @@ const
 var globalState: GlobalState
 globalState.args = DOC(ArgsHelp)
 globalState.params = Params(
+  langSpec: LangSpec (
+    lang: $globalState.args["--langspec"],
+    src: getResType $globalState.args["--restype-src"],
+    bin: getResType $globalState.args["--restype-bin"],
+    dbg: getResType $globalState.args["--restype-dbg"]
+  ),
   recurse: globalState.args["-R"].to_bool,
   simulate: globalState.args["-s"].to_bool,
   debugSymbols: globalState.args["-g"].to_bool,
@@ -159,7 +168,7 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     #       will depend on logging and related to be set up.
     discard DOC(ArgsHelp)
     state.chDemandResRefResponse.open(maxItems=1)
-    state.cNSS = newCompiler(LangSpecNWScript, params.debugSymbols, resolveFile)
+    state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile)
   state
 
 proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.gcsafe.} =
@@ -182,7 +191,7 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
     # Always remove the ndb file - in case of not generating it, it'd crash
     # the game or confuse the disassember. And in case of generating, a correct
     # version will come back.
-    removeFile(parts.dir / parts.name & "." & getResExt(LangSpecNWScript.dbg))
+    removeFile(parts.dir / parts.name & "." & getResExt(params.langSpec.dbg))
 
     let ret = compileFile(getThreadState().cNSS, parts.name)
 
@@ -200,8 +209,8 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
         atomicInc globalState.successes
         debug prefix, "Success"
 
-        writeData(outFilePrefix & "." & getResExt(LangSpecNWScript.bin), ret.bytecode)
-        writeData(outFilePrefix & "." & getResExt(LangSpecNWScript.dbg), ret.debugcode)
+        writeData(outFilePrefix & "." & getResExt(params.langSpec.bin), ret.bytecode)
+        writeData(outFilePrefix & "." & getResExt(params.langSpec.dbg), ret.debugcode)
       of 623:
         atomicInc globalState.skips
         debug prefix, "no main (include?)"

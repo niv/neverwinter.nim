@@ -10,7 +10,7 @@ when defined(linux) or defined(mingw):
 {.compile("native/scriptcompfinalcode.cpp", cppFlags).}
 {.compile("compilerapi.cpp", cppFlags).}
 
-import std/[tables, strutils, logging]
+import std/[tables, strutils, logging, enumutils, setutils]
 
 import neverwinter/[resman, restype]
 
@@ -39,6 +39,17 @@ type
     str: string
     bytecode: string  # "" if none written
     debugcode: string # "" if none written
+
+type
+  # Needs to match scriptcomp.h
+  OptimizationFlag* {.pure.} = enum
+    RemoveDeadCode       = 0x1
+    FoldConstants        = 0x2
+    MeldInstructions     = 0x4
+
+const
+  OptimizationFlagsO0* = {}
+  OptimizationFlagsO2* = fullSet(OptimizationFlag)
 
 const CompileErrorTlk* = {
   560: "ERROR: UNEXPECTED CHARACTER",
@@ -273,3 +284,22 @@ proc compileFile*(instance: ScriptCompiler, fn: string): CompileResult =
   swap(result, currentCompileResults)
   result.code = q.code * -1
   result.str  = strip $(q.str)
+
+proc scriptCompApiGetOptimizationFlags(instance: CScriptCompiler): uint32 {.importc.}
+proc scriptCompApiSetOptimizationFlags(instance: CScriptCompiler, flags: uint32) {.importc.}
+
+proc getOptimizations*(instance: ScriptCompiler): set[OptimizationFlag] =
+  let val = scriptCompApiGetOptimizationFlags(instance.compiler)
+  for check in OptimizationFlag:
+    if (val and check.uint32) > 0:
+      result.incl check
+
+proc setOptimizations*(instance: ScriptCompiler, opt: set[OptimizationFlag]) =
+  var optVal: uint32
+  for v in opt: optVal = optval or v.uint32
+  scriptCompApiSetOptimizationFlags(instance.compiler, optVal)
+
+proc scriptCompApiSetGenerateDebuggerOutput(instance: CScriptCompiler, state: uint32) {.importc.}
+
+proc setGenerateDebuggerOutput*(instance: ScriptCompiler, state: bool) =
+  scriptCompApiSetGenerateDebuggerOutput(instance.compiler, if state: 1 else: 0)

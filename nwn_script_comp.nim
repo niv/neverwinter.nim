@@ -1,4 +1,4 @@
-import std/[tables, threadpool, cpuinfo, atomics]
+import std/[tables, threadpool, cpuinfo, atomics, strutils, sequtils, setutils]
 
 import shared
 import neverwinter/nwscript/compiler
@@ -30,6 +30,12 @@ Usage:
   -y                          Continue processing input files even on error.
   -j N                        Parallel execution (default: all CPUs).
 
+  -O N                        Optimisation levels [default: 2]
+                                0: Optimise nothing
+                                2: Aggressive optimisations; fastest and smallest code size:
+""" & indent(join(toSeq(OptimizationFlagsO2).mapIt("+" & $it), "\n"), 36) & """
+
+
   -s                          Simulate: Compile, but write no filee.
                               Use --verbose to see what would be written.
 
@@ -46,6 +52,7 @@ type
     recurse: bool
     simulate: bool
     debugSymbols: bool
+    optFlags: set[OptimizationFlag]
     continueOnError: bool
     parallel: Positive
     outDirectory: string
@@ -81,6 +88,11 @@ globalState.params = Params(
   recurse: globalState.args["-R"].to_bool,
   simulate: globalState.args["-s"].to_bool,
   debugSymbols: globalState.args["-g"].to_bool,
+  optFlags: (case parseInt($globalState.args["-O"])
+    of 0: OptimizationFlagsO0
+    of 2: OptimizationFlagsO2
+    else: raise newException(ValueError, "No such optimisation flag: " & $globalState.args["-O"])
+  ),
   continueOnError: globalState.args["-y"].to_bool,
   parallel: (if globalState.args["-j"]: parseInt($globalState.args["-j"]) else: countProcessors()).Positive,
   outDirectory: if globalState.args["-d"]: ($globalState.args["-d"]) else: ""
@@ -169,6 +181,7 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     discard DOC(ArgsHelp)
     state.chDemandResRefResponse.open(maxItems=1)
     state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile)
+    state.cNSS.setOptimizations(params.optFlags)
   state
 
 proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.gcsafe.} =
@@ -178,7 +191,7 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
 
   let outFilePrefix =
     # global params can override the out directory.
-    if params.outDirectory != "": outParts.dir / outParts.name
+    if params.outDirectory == "": outParts.dir / outParts.name
     else:                         params.outDirectory / outParts.name
 
   case parts.ext

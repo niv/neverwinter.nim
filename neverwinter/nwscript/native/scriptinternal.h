@@ -43,19 +43,15 @@
 #define __SCRIPTINTERNAL_H__
 
 #define CSCRIPTCOMPILER_MAX_STACK_ENTRIES    1024
-#define CSCRIPTCOMPILER_MAX_TOKEN_LENGTH     8192
 #define CSCRIPTCOMPILER_MAX_OPERATIONS       88
 #define CSCRIPTCOMPILER_MAX_IDENTIFIERS      65536
 #define CSCRIPTCOMPILER_SIZE_IDENTIFIER_HASH_TABLE  131072  // NOTE:  This should be larger than MAX_IDENTIFIERS
 #define CSCRIPTCOMPILER_MASK_SIZE_IDENTIFIER_HASH_TABLE 0x0001ffff
 #define CSCRIPTCOMPILER_MAX_VARIABLES        1024
-#define CSCRIPTCOMPILER_MAX_RUNTIME_VARS     8192
 #define CSCRIPTCOMPILER_MAX_CODE_SIZE        524288  // 512K.
 #define CSCRIPTCOMPILER_MAX_DEBUG_OUTPUT_SIZE 2097152 // 2048K, 1048576 = 1024K.
-#define CSCRIPTCOMPILER_MAX_INCLUDE_LEVELS   16
 #define CSCRIPTCOMPILER_MAX_STRUCTURES       256
 #define CSCRIPTCOMPILER_MAX_STRUCTURE_FIELDS 4096
-#define CSCRIPTCOMPILER_MAX_TABLE_FILENAMES  512
 #define CSCRIPTCOMPILER_MAX_KEYWORDS         42
 
 #define CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH          13
@@ -179,6 +175,8 @@
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_LOCATION_INVALID                115
 #define CSCRIPTCOMPILER_TOKEN_RAW_STRING                              116
 
+const char *TokenKeywordToString(int nTokenKeyword);
+
 #define CSCRIPTCOMPILER_GRAMMAR_PROGRAM                            0
 #define CSCRIPTCOMPILER_GRAMMAR_FUNCTIONAL_UNIT                    1
 #define CSCRIPTCOMPILER_GRAMMAR_AFTER_PROGRAM                      2
@@ -215,6 +213,8 @@
 #define CSCRIPTCOMPILER_GRAMMAR_POST_EXPRESSION                   33
 #define CSCRIPTCOMPILER_GRAMMAR_PRIMARY_EXPRESSION                34
 #define CSCRIPTCOMPILER_GRAMMAR_CONSTANT                          35
+
+const char *GrammarToString(int nGrammar);
 
 #define CSCRIPTCOMPILER_OPERATION_COMPOUND_STATEMENT   0
 #define CSCRIPTCOMPILER_OPERATION_STATEMENT            1
@@ -309,6 +309,8 @@
 #define CSCRIPTCOMPILER_OPERATION_CONST_DECLARATION    90
 #define CSCRIPTCOMPILER_OPERATION_CONSTANT_JSON        91
 #define CSCRIPTCOMPILER_OPERATION_CONSTANT_LOCATION    92
+
+const char *OperationToString(int nOperation);
 
 #define CSCRIPTCOMPILER_IDENT_STATE_START_OF_LINE                     0
 #define CSCRIPTCOMPILER_IDENT_STATE_AFTER_TYPE_DECLARATION            1
@@ -539,6 +541,18 @@ public:
 		}
 	}
 
+    void DebugDump(const char *prefix = "", FILE *out = NULL)
+    {
+        if (!out) out = stdout;
+        fprintf(out, "%s[%p] (pLeft=%p, pRight=%p)\n", prefix, this, pLeft, pRight);
+        fprintf(out, "  Operation:         %s\n", OperationToString(nOperation));
+        fprintf(out, "  Type:              %s\n", TokenKeywordToString(nType));
+        fprintf(out, "  IntegerData:       %d %d %d %d\n", nIntegerData, nIntegerData2, nIntegerData3, nIntegerData4);
+        fprintf(out, "  FloatData:         %f %f %f %f\n", fFloatData, fVectorData[0], fVectorData[1], fVectorData[2]);
+        fprintf(out, "  StringData:        \"%s\"\n", m_psStringData ? m_psStringData->CStr() : "");
+        fprintf(out, "  TypeName:          \"%s\"\n", m_psTypeName ? m_psTypeName->CStr() : "");
+        fprintf(out, "  File/Line/Char/SP: %d %d %d %d\n", m_nFileReference, nLine, nChar, m_nStackPointer);
+    }
 };
 
 #define CSCRIPTCOMPILER_PARSETREENODEBLOCK_SIZE 4096

@@ -79,7 +79,7 @@ method demand*(self: ResContainer, rr: ResRef): Res {.base.} =
   ## Implement this in any ResContainer. See the proc on ResMan for a description.
   ##
   ## This needs to return a Res. It must be safe to call even if contains() was
-  ## not checked beforehand; a missing entry should raise a ValueError.
+  ## not checked beforehand; a missing entry must raise.
   raise newException(ValueError, "Implement me!")
 
 method count*(self: ResContainer): int {.base.} =

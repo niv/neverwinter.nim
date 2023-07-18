@@ -11,6 +11,8 @@ import util
 type ResType* = distinct uint16
 
 proc `==`*(x, y: ResType): bool {.borrow.}
+proc `<`*(x, y: ResType): bool {.borrow.}
+proc `<=`*(x, y: ResType): bool {.borrow.}
 
 func makeResTypeTable(): tuple[types: Table[ResType, string], rtypes: Table[string, ResType]] =
   var r = result
@@ -28,10 +30,12 @@ func makeResTypeTable(): tuple[types: Table[ResType, string], rtypes: Table[stri
     r.rtypes[extension.toLowerAscii] = resType
 
   # nwn1
+  registerResType(ResType 0, "res")
   registerResType(ResType 1, "bmp")
   registerResType(ResType 2, "mve")
   registerResType(ResType 3, "tga")
   registerResType(ResType 4, "wav")
+  registerResType(ResType 5, "wfx")
   registerResType(ResType 6, "plt")
   registerResType(ResType 7, "ini")
   registerResType(ResType 8, "bmu")

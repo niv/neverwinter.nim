@@ -1,4 +1,4 @@
-import std/[streams, tables, threadpool, cpuinfo, atomics]
+import std/[tables, threadpool, cpuinfo, atomics, strutils, sequtils, setutils]
 
 import shared
 import neverwinter/nwscript/compiler
@@ -30,16 +30,29 @@ Usage:
   -y                          Continue processing input files even on error.
   -j N                        Parallel execution (default: all CPUs).
 
+  -O N                        Optimisation levels [default: 2]
+                                0: Optimise nothing
+                                2: Aggressive optimisations; fastest and smallest code size:
+""" & indent(join(toSeq(OptimizationFlagsO2).mapIt("+" & $it), "\n"), 36) & """
+
+
   -s                          Simulate: Compile, but write no filee.
                               Use --verbose to see what would be written.
+
+  --langspec NSS              Language spec to load [default: nwscript]
+  --restype-src TYPE          ResType to use for source lookup [default: nss]
+  --restype-bin TYPE          ResType to use for binary output [default: ncs]
+  --restype-dbg TYPE          ResType to use for debug output [default: ndb]
 $OPTRESMAN
 """
 
 type
   Params = ref object
+    langSpec: LangSpec
     recurse: bool
     simulate: bool
     debugSymbols: bool
+    optFlags: set[OptimizationFlag]
     continueOnError: bool
     parallel: Positive
     outDirectory: string
@@ -57,13 +70,7 @@ type
   ThreadState = ref object
     chDemandResRefResponse: Channel[string]
     currentRMSearchPath: seq[RMSearchPathEntry]
-
-    currentOutFilename: string # use this as basename ("test", not "test.nss")
-    currentOutDirectory: string # write currently-compiled file to this location
-    cNSS: CScriptCompiler
-
-const
-  LangSpecNWScript* = ("nwscript", ResType 2009, ResType 2010, ResType 2064).LangSpec
+    cNSS: ScriptCompiler
 
 # =================
 # Global state is used on the main thread.
@@ -72,9 +79,20 @@ const
 var globalState: GlobalState
 globalState.args = DOC(ArgsHelp)
 globalState.params = Params(
+  langSpec: LangSpec (
+    lang: $globalState.args["--langspec"],
+    src: getResType $globalState.args["--restype-src"],
+    bin: getResType $globalState.args["--restype-bin"],
+    dbg: getResType $globalState.args["--restype-dbg"]
+  ),
   recurse: globalState.args["-R"].to_bool,
   simulate: globalState.args["-s"].to_bool,
   debugSymbols: globalState.args["-g"].to_bool,
+  optFlags: (case parseInt($globalState.args["-O"])
+    of 0: OptimizationFlagsO0
+    of 2: OptimizationFlagsO2
+    else: raise newException(ValueError, "No such optimisation flag: " & $globalState.args["-O"])
+  ),
   continueOnError: globalState.args["-y"].to_bool,
   parallel: (if globalState.args["-j"]: parseInt($globalState.args["-j"]) else: countProcessors()).Positive,
   outDirectory: if globalState.args["-d"]: ($globalState.args["-d"]) else: ""
@@ -143,30 +161,16 @@ createThread(demandResRefThread) do:
 # native callbacks and compiler helpers.
 # All of these run inside worker threads and only access TLS (via getThreadState()).
 
-var resolveFileBuf {.threadvar.}: string
-proc resolveFile(fn: cstring, ty: uint16): cstring {.cdecl.} =
+proc resolveFile(fn: string, ty: ResType): string =
   let r = newResRef($fn, ResType ty)
   chDemandResRef.send((
     resRef: r,
     searchPath: getThreadState().currentRMSearchPath,
     response: getThreadState().chDemandResRefResponse.addr
   ))
-  resolveFileBuf = getThreadState().chDemandResRefResponse.recv()
-  if resolveFileBuf == "": return nil
-  return resolveFileBuf.cstring
-
-proc writeFile(fn: cstring, resType: uint16, pData: ptr uint8, size: csize_t, bin: bool): int32 {.cdecl.} =
-  assert(not isNil pData)
-  let resExt = lookupResExt(ResType resType).get
-
-  let actualOutFile = getThreadState().currentOutDirectory / getThreadState().currentOutFilename & "." & resExt
-
-  if params.simulate:
-    debug "[simulate] Would write file: ", actualOutFile
-  else:
-    let str = newFileStream(actualOutFile, fmWrite)
-    str.writeData(pData, size.int)
-    str.close()
+  let resolveFileBuf = getThreadState().chDemandResRefResponse.recv()
+  if resolveFileBuf == "": raise newException(IOError, "not found: " & $r)
+  return resolveFileBuf
 
 var state {.threadvar.}: ThreadState
 proc getThreadState(): ThreadState {.gcsafe.} =
@@ -176,7 +180,8 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     #       will depend on logging and related to be set up.
     discard DOC(ArgsHelp)
     state.chDemandResRefResponse.open(maxItems=1)
-    state.cNSS = newCompiler(LangSpecNWScript, params.debugSymbols, writeFile, resolveFile)
+    state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile)
+    state.cNSS.setOptimizations(params.optFlags)
   state
 
 proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.gcsafe.} =
@@ -184,15 +189,10 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
   doAssert(parts.dir != "")
   let outParts = if overrideOutPath != "": splitFile(absolutePath(overrideOutPath)) else: parts
 
-  # Because the compiler calls writeFile instead of giving us the blobs, we need to store
-  # the currently-compiling filename (per thread) if we want to be able to override it.
-  # The write callback will read this from TLS.
-  getThreadState().currentOutDirectory = outParts.dir
-  getThreadState().currentOutFilename = outParts.name
-
-  # global params can override the out directory.
-  if params.outDirectory != "":
-    getThreadState().currentOutDirectory = params.outDirectory
+  let outFilePrefix =
+    # global params can override the out directory.
+    if params.outDirectory == "": outParts.dir / outParts.name
+    else:                         params.outDirectory / outParts.name
 
   case parts.ext
   of ".nss":
@@ -200,6 +200,11 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
     # This allows resolving includes. We need to pass this info to the RM worker
     # so it can set up the include path for this.
     getThreadState().currentRMSearchPath = @[(pcDir, parts.dir), (pcFile, p)]
+
+    # Always remove the ndb file - in case of not generating it, it'd crash
+    # the game or confuse the disassember. And in case of generating, a correct
+    # version will come back.
+    removeFile(parts.dir / parts.name & "." & getResExt(params.langSpec.dbg))
 
     let ret = compileFile(getThreadState().cNSS, parts.name)
 
@@ -209,8 +214,16 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
       let prefix = format("[$#/$#] $#: ", num, total, p)
       case ret.code
       of 0:
+        proc writeData(fn, data: string) =
+          if data == "": return
+          elif params.simulate: debug "[simulate] Would write file: ", fn
+          else: writeFile(fn, data)
+
         atomicInc globalState.successes
         debug prefix, "Success"
+
+        writeData(outFilePrefix & "." & getResExt(params.langSpec.bin), ret.bytecode)
+        writeData(outFilePrefix & "." & getResExt(params.langSpec.dbg), ret.debugcode)
       of 623:
         atomicInc globalState.skips
         debug prefix, "no main (include?)"

@@ -161,7 +161,7 @@ int32_t CScriptCompiler::ParseCharacterNumeric(int32_t ch)
 //  Description:  Compiles a period for use by tokens
 ///////////////////////////////////////////////////////////////////////////////
 
-int32_t CScriptCompiler::ParseCharacterPeriod()
+int32_t CScriptCompiler::ParseCharacterPeriod(int32_t chNext)
 {
 	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_FLOAT)
 	{
@@ -193,8 +193,19 @@ int32_t CScriptCompiler::ParseCharacterPeriod()
 	}
 	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_UNKNOWN)
 	{
-		m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_STRUCTURE_PART_SPECIFY;
-		return HandleToken();
+		// If our token starts with a dot, and next one is a digit, it's a float
+		// in the form of ".42", meaning 0.42
+		if (chNext >= '0' && chNext <= '9')
+		{
+			m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_FLOAT;
+			m_pchToken[m_nTokenCharacters++] = '0';
+			m_pchToken[m_nTokenCharacters++] = '.';
+		}
+		else // Otherwise, assume struct field
+		{
+			m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_STRUCTURE_PART_SPECIFY;
+			return HandleToken();
+		}
 	}
 	else
 	{
@@ -1606,7 +1617,7 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, char *pS
 	}
 	else if (ch == '.')
 	{
-		return ParseCharacterPeriod();
+		return ParseCharacterPeriod(chNext);
 	}
 	else if ((ch == 'x' || ch == 'X') &&
 	         m_nTokenCharacters == 1 &&
@@ -1618,8 +1629,12 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, char *pS
 	{
 		int32_t nCompiledCharacters = 0;
 		// Compile all suffixes that make sense.
-		if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_FLOAT && (ch == 'f'))
+		if (ch == 'f')
 		{
+			if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_INTEGER)
+			{
+				m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_FLOAT;
+			}
 			nCompiledCharacters = 1;
 		}
 

@@ -2815,7 +2815,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				else
 				{
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,4,pTopStackCurrentNode);
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,0,0,NULL);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_EXPRESSION,0,0,NULL);
 				}
 			}
 			if (nTopStackRule == 9 && nTopStackTerm == 4)
@@ -2878,7 +2878,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				else
 				{
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,8,pTopStackCurrentNode);
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,0,0,NULL);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_EXPRESSION,0,0,NULL);
 				}
 			}
 			if (nTopStackRule == 9 && nTopStackTerm == 8)

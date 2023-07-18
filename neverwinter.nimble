@@ -23,3 +23,10 @@ task clean, "Remove compiled binaries and temporary data":
     rmFile(b)
     rmFile(b & ".exe")
   rmdir(nimcacheDir())
+  rmFile("testresults.html")
+  rmdir("testresults")
+
+task test, "Run all tests":
+  # Megatest disabled for now: it appears to show all tests as skipped in html, and
+  # i'm not sure it'll work well with threaded tests
+  exec "testament --megatest:off all"

@@ -660,26 +660,6 @@ int32_t CScriptCompiler::ParseRawStringCharacter(int32_t ch, int32_t chNext)
 	return STRREF_CSCRIPTCOMPILER_ERROR_UNEXPECTED_CHARACTER;
 }
 
-int32_t CScriptCompiler::ParseCharacterAtSign(int32_t chNext)
-{
-	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_UNKNOWN)
-	{
-		if (chNext == '"')
-		{
-			m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_RAW_STRING;
-			m_nTokenCharacters = 0;
-			return 1; // consume @"
-		}
-	}
-	else
-	{
-		return STRREF_CSCRIPTCOMPILER_ERROR_UNEXPECTED_CHARACTER;
-	}
-
-	return 0;
-}
-
-
 ///////////////////////////////////////////////////////////////////////////////
 //  CScriptCompiler::ParseCharacterQuotationMark()
 ///////////////////////////////////////////////////////////////////////////////
@@ -1606,6 +1586,13 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, char *pS
 		return ParseRawStringCharacter(ch, chNext);
 	}
 
+	if ((ch == 'r' || ch == 'R') && chNext == '"')
+	{
+		m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_RAW_STRING;
+		m_nTokenCharacters = 0;
+		return 1; // consume r"
+	}
+
 	// Handle the tokens associated with integer and real numbers.
 	// Note that we terminate the current token if we are currently
 	// building an integer or a real number, and we've received a non
@@ -1781,10 +1768,6 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, char *pS
 	if (ch == ':')
 	{
 		return ParseCharacterColon();
-	}
-	if (ch == '@')
-	{
-		return ParseCharacterAtSign(chNext);
 	}
 
 	return 0;

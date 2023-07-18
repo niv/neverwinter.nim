@@ -3,7 +3,7 @@
 
 {.used.}
 
-import std/[strutils, logging]
+import std/logging
 
 type AssertLogger = ref object of Logger
 

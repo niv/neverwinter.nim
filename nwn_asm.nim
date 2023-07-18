@@ -1,4 +1,4 @@
-import std/streams
+import std/[os, streams, tables]
 
 import shared
 import neverwinter/nwscript/[nwasm, ndb]
@@ -17,15 +17,42 @@ Options:
   -d                          Disassemble ncs file to stdout.
   -g                          Require .ndb loading.
   -G                          Do not attempt to load .ndb.
-$OPT
+  -S                          Do not attempt to read/load source code for interweaving (ndb only).
+$OPTRESMAN
 """
 
+let script = ($args["<script>"]).splitFile()
+
+let weaveCode = not args["-S"]
+
+let rm = newBasicResMan()
+rm.add newResFile(script.dir / script.name & ".nss")
+
+var fileLinesCache: Table[ResolvedResRef, seq[string]]
+
+proc getLineOfFile(ndb: Ndb, fileNum, lineNum: int): string =
+  let rr = newResolvedResRef(ndb.files[fileNum] & ".nss")
+  if not fileLinesCache.contains(rr):
+    if rm.contains(rr):
+      fileLinesCache[rr] = rm.demand(rr).readAll.splitLines()
+    else:
+      return ""
+
+  "// " & fileLinesCache[rr][lineNum - 1].strip
+
 proc decompileFunction(ndb: Ndb, f: NdbFunction, ncs: Stream) =
-  echo $f & ":"
   ncs.setPosition(int f.bStart)
+  var currentLine: NdbLine
   let fun = newStringStream ncs.readStrOrErr(int f.bEnd - f.bStart)
-  echo asmToStr(disasm fun, some(int f.bStart - 13)) do (i: Instr, streamOffset: int) -> string:
-    case i.op
+  echo asmToStr(disasm fun, some(int f.bStart - 13)) do (i: Instr, streamOffset: int) -> tuple[prefix, comment, source: string]:
+    if weaveCode:
+      let lines = ndb.lines.filterIt(streamOffset.uint32 in (it.bStart - 13)..<(it.bEnd-13))
+      if lines.len == 1 and lines[0] != currentLine:
+        currentLine = lines[0]
+        # Only print source on first appearance of line
+        result.source = getLineOfFile(ndb, currentLine.fileNum, currentLine.lineNum)
+
+    result.comment = (case i.op
     of EXECUTE_COMMAND:
       $unpackExtra[int16](i)
     of JMP:
@@ -34,9 +61,8 @@ proc decompileFunction(ndb: Ndb, f: NdbFunction, ncs: Stream) =
       let rel = unpackExtra[int32](i)
       let funcs = ndb.functions.filterIt(it.bStart.int == f.bStart.int + rel + streamOffset)
       if funcs.len == 1: $funcs[0] else: "?"
-    else: ""
+    else: "")
 
-let script = ($args["<script>"]).splitFile()
 let sncs = joinPath(script.dir, script.name) & ".ncs"
 let sndb = joinPath(script.dir, script.name) & ".ndb"
 

@@ -200,12 +200,16 @@ proc disAsm*(io: Stream): seq[Instr] =
   while not io.atEnd:
     result.add readInstr(io)
 
-proc asmToStr*(ii: seq[Instr], startOffset = none(int), commentCb: proc(i: Instr, offset: int): string = nil): string =
+proc asmToStr*(ii: seq[Instr], startOffset = none(int),
+               commentCb: proc(i: Instr, offset: int): tuple[prefix, comment, source: string] = nil): string =
   var globalOffset = startOffset.get(0)
   var offset = 0
   for idx, c in ii:
-    let comment = if not isNil commentCb: commentCb(c, offset) else: ""
+    let (prefix, comment, source) = if not isNil commentCb: commentCb(c, offset) else: ("", "", "")
+    if source != "":
+      result &= prefix & source & "\n"
     result &=
+      prefix &
       (if startOffset.isSome: align($globalOffset, 6) & "  " else: "") &
       align($offset, 6) & "  " &
       alignLeft($c, 40) &

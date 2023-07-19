@@ -341,6 +341,7 @@ private:
 	int32_t ParseCharacterVerticalBar(int32_t chNext);
 	int32_t ParseCharacterAlphabet(int32_t ch);
 	int32_t ParseStringCharacter(int32_t ch, int32_t chNext, char *pScript, int32_t nScriptLength);
+	int32_t ParseRawStringCharacter(int32_t ch, int32_t chNext);
 	int32_t ParseCharacterQuotationMark();
 	int32_t ParseCharacterHyphen(int32_t chNext);
 	int32_t ParseCharacterLeftBrace();

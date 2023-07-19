@@ -626,6 +626,40 @@ int32_t CScriptCompiler::ParseStringCharacter(int32_t ch, int32_t chNext, char *
 	return nReturnValue;
 }
 
+int32_t CScriptCompiler::ParseRawStringCharacter(int32_t ch, int32_t chNext)
+{
+	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RAW_STRING)
+	{
+		if (ch == '"')
+		{
+			if (chNext == '"')
+			{
+				// "" in a raw string means single "
+				m_pchToken[m_nTokenCharacters++] = '"';
+				if (m_nTokenCharacters >= CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
+				{
+					return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
+				}
+				return 1; // consume 1 more
+			}
+
+			// Otherwise, terminate string literal.
+			m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_STRING;
+			return HandleToken();
+		}
+
+		m_pchToken[m_nTokenCharacters++] = (char) ch;
+		if (m_nTokenCharacters >= CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
+		{
+			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
+		}
+
+		return 0;
+	}
+
+	return STRREF_CSCRIPTCOMPILER_ERROR_UNEXPECTED_CHARACTER;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //  CScriptCompiler::ParseCharacterQuotationMark()
 ///////////////////////////////////////////////////////////////////////////////
@@ -1545,6 +1579,18 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, char *pS
 	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_STRING)
 	{
 		return ParseStringCharacter(ch,chNext, pScript, nScriptLength);
+	}
+
+	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RAW_STRING)
+	{
+		return ParseRawStringCharacter(ch, chNext);
+	}
+
+	if ((ch == 'r' || ch == 'R') && chNext == '"')
+	{
+		m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_RAW_STRING;
+		m_nTokenCharacters = 0;
+		return 1; // consume r"
 	}
 
 	// Handle the tokens associated with integer and real numbers.

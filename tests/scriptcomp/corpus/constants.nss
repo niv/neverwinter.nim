@@ -60,6 +60,14 @@ const string S3 = S1 + "_" + S2;
 const int CONSTSTR_CONDITION_EQUAL     = S1 == S2;
 const int CONSTSTR_CONDITION_NOT_EQUAL = S1 != S2;
 
+// Raw strings
+const string RAW_STRING_SIMPLE_LOWERCASE = r"Neverwinter\nNights";
+const string RAW_STRING_SIMPLE_UPPERCASE = R"Neverwinter\nNights";
+const string RAW_STRING_MULTILINE = r"AAA
+BBB
+CCC";
+const string RAW_STRING_QUOTE = r"_""_";
+
 void main() 
 {
     // Test float literals
@@ -92,5 +100,11 @@ void main()
     Assert(S3 == "AAA_BBB");
     Assert(CONSTSTR_CONDITION_EQUAL == FALSE);
     Assert(CONSTSTR_CONDITION_NOT_EQUAL == TRUE);
+
+
+    Assert(RAW_STRING_SIMPLE_LOWERCASE == RAW_STRING_SIMPLE_UPPERCASE);
+    Assert(RAW_STRING_SIMPLE_LOWERCASE != "Neverwinter\nNights");
+    Assert(RAW_STRING_MULTILINE == "AAA\nBBB\nCCC");
+    Assert(RAW_STRING_QUOTE == "_\"_");
 
 }

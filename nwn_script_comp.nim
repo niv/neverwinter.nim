@@ -242,7 +242,7 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
 # =================
 # Global mainloop. This queues up all files to be compiled onto the threadpool.
 
-func canCompileFile(path: string): bool =
+proc canCompileFile(path: string): bool =
   fileExists(path) and path.endsWith(".nss")
 
 # Collect files to compile first in one go, and verify they exist.

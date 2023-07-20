@@ -41,7 +41,7 @@ proc findNwnRoot*(override: string = ""): string =
     elif defined(linux):
       let steamapps = r"~/.local/share/Steam/steamapps/common".expandTilde
     elif defined(windows):
-      let steamapps = r"c:\program files\steam\steamapps\common"
+      let steamapps = r"c:\program files (x86)\steam\steamapps\common"
     else: {.fatal: "Unsupported os for findNwnRoot".}
 
     if dirExists(steamapps / "Neverwinter Nights" / "data") and

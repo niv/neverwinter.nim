@@ -58,21 +58,22 @@ proc findNwnRoot*(override: string = ""): string =
       let settingsFile = getHomeDir() / r"AppData\Roaming\Beamdog Client\settings.json"
     else: {.fatal: "Unsupported os for findNwnRoot"}
 
-    let data = readFile(settingsFile)
-    let j = data.parseJson
-    doAssert(j.hasKey("folders"))
-    doAssert(j["folders"].kind == JArray)
+    if fileExists(settingsFile):
+      let data = readFile(settingsFile)
+      let j = data.parseJson
+      doAssert(j.hasKey("folders"))
+      doAssert(j["folders"].kind == JArray)
 
-    # 00785: Stable
-    # 00829: Development
-    const releases = ["00829", "00785"]
-    for torrentId in releases:
-      var fo = j["folders"].mapIt(it.str / torrentId)
+      # 00785: Stable
+      # 00829: Development
+      const releases = ["00829", "00785"]
+      for torrentId in releases:
+        var fo = j["folders"].mapIt(it.str / torrentId)
 
-      fo.keepItIf(dirExists(it))
-      if fo.len > 0:
-        result = fo[0]
-        break
+        fo.keepItIf(dirExists(it))
+        if fo.len > 0:
+          result = fo[0]
+          break
 
   if result == "" or not dirExists(result):
     raise newException(ValueError, "Could not locate NWN; try --root")

@@ -114,7 +114,8 @@ proc DOC*(body: string): OptArgs =
 proc newBasicResMan*(
     root = findNwnRoot(if Args["--root"]: $Args["--root"] else: ""),
     user = findUserRoot(if Args["--userdirectory"]: $Args["--userdirectory"] else: ""),
-    language = "", cacheSize = 0): ResMan =
+    language = if Args["--language"]: $Args["--language"] else : "en",
+    cacheSize = 0): ResMan =
   ## Sets up a resman that defaults to what EE looks like.
   ## Will load an additional language directory, if language is given.
 

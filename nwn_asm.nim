@@ -18,6 +18,8 @@ Options:
   -g                          Require .ndb loading.
   -G                          Do not attempt to load .ndb.
   -S                          Do not attempt to read/load source code for interweaving (ndb only).
+
+  --internal-names            Do not print shorthand opcodes, use internal constants instead.
 $OPTRESMAN
 """
 
@@ -44,7 +46,7 @@ proc decompileFunction(ndb: Ndb, f: NdbFunction, ncs: Stream) =
   ncs.setPosition(int f.bStart)
   var currentLine: NdbLine
   let fun = newStringStream ncs.readStrOrErr(int f.bEnd - f.bStart)
-  echo asmToStr(disasm fun, some(int f.bStart - 13)) do (i: Instr, streamOffset: int) -> tuple[prefix, comment, source: string]:
+  echo asmToStr(disasm fun, some(int f.bStart - 13), not args["--internal-names"]) do (i: Instr, streamOffset: int) -> tuple[prefix, comment, source: string]:
     if weaveCode:
       let lines = ndb.lines.filterIt(streamOffset.uint32 in (it.bStart - 13)..<(it.bEnd-13))
       if lines.len == 1 and lines[0] != currentLine:
@@ -79,4 +81,4 @@ if not args["-G"] and fileExists(sndb):
     ndbx.decompileFunction(f, sncsx)
 else:
   echo "# no .ndb found: disassembly will not show functions or metadata"
-  echo asmToStr disAsm(sncsx)
+  echo asmToStr(disAsm(sncsx), some(0), not args["--internal-names"])

@@ -41,7 +41,7 @@ proc findNwnRoot*(override: string = ""): string =
     elif defined(linux):
       let steamapps = r"~/.local/share/Steam/steamapps/common".expandTilde
     elif defined(windows):
-      let steamapps = r"c:\program files\steam\steamapps\common"
+      let steamapps = r"c:\program files (x86)\steam\steamapps\common"
     else: {.fatal: "Unsupported os for findNwnRoot".}
 
     if dirExists(steamapps / "Neverwinter Nights" / "data") and
@@ -58,21 +58,22 @@ proc findNwnRoot*(override: string = ""): string =
       let settingsFile = getHomeDir() / r"AppData\Roaming\Beamdog Client\settings.json"
     else: {.fatal: "Unsupported os for findNwnRoot"}
 
-    let data = readFile(settingsFile)
-    let j = data.parseJson
-    doAssert(j.hasKey("folders"))
-    doAssert(j["folders"].kind == JArray)
+    if fileExists(settingsFile):
+      let data = readFile(settingsFile)
+      let j = data.parseJson
+      doAssert(j.hasKey("folders"))
+      doAssert(j["folders"].kind == JArray)
 
-    # 00785: Stable
-    # 00829: Development
-    const releases = ["00829", "00785"]
-    for torrentId in releases:
-      var fo = j["folders"].mapIt(it.str / torrentId)
+      # 00785: Stable
+      # 00829: Development
+      const releases = ["00829", "00785"]
+      for torrentId in releases:
+        var fo = j["folders"].mapIt(it.str / torrentId)
 
-      fo.keepItIf(dirExists(it))
-      if fo.len > 0:
-        result = fo[0]
-        break
+        fo.keepItIf(dirExists(it))
+        if fo.len > 0:
+          result = fo[0]
+          break
 
   if result == "" or not dirExists(result):
     raise newException(ValueError, "Could not locate NWN; try --root")

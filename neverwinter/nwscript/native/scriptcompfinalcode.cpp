@@ -7004,6 +7004,11 @@ void CScriptCompiler::EmitModifyStackPointer(int32_t nModifyBy)
 	if (m_nOptimizationFlags & CSCRIPTCOMPILER_OPTIMIZE_MELD_INSTRUCTIONS)
 	{
 		char *last = InstructionLookback(1);
+
+		// Temporarily disabled. Compiler is generating dead MOVSP instructions
+		// in some cases when returning from a function, and merging a live one
+		// with a dead one causes issues, unsurprisingly.
+#if 0
 		// Multiple MODIFY_STACK_POINTER instructions can always be merged into a single one
 		if (last[CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER)
 		{
@@ -7012,7 +7017,7 @@ void CScriptCompiler::EmitModifyStackPointer(int32_t nModifyBy)
 			WriteByteSwap32(&last[CVIRTUALMACHINE_EXTRA_DATA_LOCATION], mod);
 			return;
 		}
-
+#endif
 		// The nwscript construct `int n = 3;` gets compiled into the following:
 		//     RUNSTACK_ADD, TYPE_INTEGER
 		//     CONSTANT, TYPE_INTEGER, 3

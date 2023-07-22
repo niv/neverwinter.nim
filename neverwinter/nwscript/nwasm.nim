@@ -292,25 +292,3 @@ proc disAsm*(io: Stream): seq[Instr] =
 
   while not io.atEnd:
     result.add readInstr(io)
-
-proc asmToStr*(ii: seq[Instr],
-               startOffset = none(int),
-               shorthandOpcodes = true,
-               commentCb: proc(i: Instr, offset: int): tuple[prefix, comment, source: string] = nil): string =
-  var globalOffset = startOffset.get(0)
-  var offset = 0
-  for idx, c in ii:
-    let (prefix, comment, source) = if not isNil commentCb: commentCb(c, offset) else: ("", "", "")
-    if source != "":
-      result &= prefix & source & "\n"
-    result &=
-      prefix &
-      (if startOffset.isSome: align($globalOffset, 6) & "  " else: "") &
-      align($offset, 6) & "  " &
-      alignLeft(c.canonicalName(not shorthandOpcodes), if shorthandOpcodes: 13 else: 40) &
-      alignLeft(c.extraStr, 20) &
-      (if comment.len > 0:("# " & comment) else: "") &
-      "\n"
-
-    inc offset, c.len
-    inc globalOffset, c.len

@@ -1,7 +1,7 @@
 import std/[os, streams, tables]
 
 import shared
-import neverwinter/nwscript/[nwasm, ndb]
+import neverwinter/nwscript/[nwasm, ndb, langspec]
 
 let args = DOC """
 Disassemble ncs.
@@ -20,6 +20,9 @@ Options:
   -S                          Do not attempt to read/load source code for interweaving (ndb only).
 
   --internal-names            Do not print shorthand opcodes, use internal constants instead.
+
+  -L                          Do not look up language spec
+  --langspec NSS              Language spec to load [default: nwscript]
 $OPTRESMAN
 """
 
@@ -29,6 +32,10 @@ let weaveCode = not args["-S"]
 
 let rm = newBasicResMan()
 rm.add newResFile(script.dir / script.name & ".nss")
+
+var spec: LanguageSpec
+if not args["-L"]:
+  spec = parseLanguageSpec rm.demand(newResolvedResRef($args["--langspec"] & ".nss")).readAll
 
 var fileLinesCache: Table[ResolvedResRef, seq[string]]
 
@@ -56,7 +63,11 @@ proc decompileFunction(ndb: Ndb, f: NdbFunction, ncs: Stream) =
 
     result.comment = (case i.op
     of EXECUTE_COMMAND:
-      $unpackExtra[int16](i)
+      let cmdId = unpackExtra[int16](i)
+      if cmdId in 0..spec.funcs.high:
+        spec.funcs[cmdId].name
+      else:
+        ""
     of JMP:
       " => " & $(unpackExtra[int32](i) + streamOffset)
     of JSR:

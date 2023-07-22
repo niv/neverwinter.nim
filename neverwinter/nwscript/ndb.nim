@@ -1,16 +1,17 @@
-import std/[strutils, sequtils, streams]
+import std/[strutils, sequtils, streams, enumutils]
 
 import neverwinter/util
 
 type
   NdbType* {.pure.} = enum
-    `float`  = "f"
-    `int`    = "i"
-    `void`   = "v"
-    `object` = "o"
-    `string` = "s"
-    `effect` = "e"
-    `struct` = "t"
+    `float`         = "f"
+    `int`           = "i"
+    `void`          = "v"
+    `object`        = "o"
+    `string`        = "s"
+    `effect`        = "e"
+    `struct`        = "t"
+    `unknown`       = "?"
 
   NdbFunction* = tuple
     label: string
@@ -39,9 +40,12 @@ type
     variables: seq[NdbVariable]
     lines: seq[NdbLine]
 
+func `$`*(t: NdbType): string =
+  symbolName t
+
 func `$`*(f: NdbFunction): string =
   format("$1 $2($3) [$4:$5]", f.retType, f.label, f.args.mapIt($it).join(", "),
-    toHex(f.bStart), toHex(f.bEnd))
+    f.bStart - 13, f.bEnd - 13)
 
 func parseType(s: string): NdbType =
   # Some types are longer than 1 char, e.g. structs: t001, t002 etc.

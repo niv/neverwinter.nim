@@ -129,23 +129,23 @@ proc canonicalName*(i: Instr, internal: bool = false): string =
     of NEGATION:                  "NEG"
     of ONES_COMPLEMENT:           "COMP"
     of MODIFY_STACK_POINTER:      "MOVSP"
-    of STORE_IP:                  "STORE_IP"
+    of STORE_IP:                  "STOREIP"
     of JMP:                       "JMP"
     of JSR:                       "JSR"
     of JZ:                        "JZ"
     of RET:                       "RET"
     of DE_STRUCT:                 "DESTRUCT"
     of BOOLEAN_NOT:               "NOT"
-    of DECREMENT:                 "DECISP"
-    of INCREMENT:                 "INCISP"
+    of DECREMENT:                 "DECSP"
+    of INCREMENT:                 "INCSP"
     of JNZ:                       "JNZ"
     of ASSIGNMENT_BASE:           "CPDOWNBP"
     of RUNSTACK_COPY_BASE:        "CPTOPBP"
-    of DECREMENT_BASE:            "DECIBP"
-    of INCREMENT_BASE:            "INCIBP"
+    of DECREMENT_BASE:            "DECBP"
+    of INCREMENT_BASE:            "INCBP"
     of SAVE_BASE_POINTER:         "SAVEBP"
     of RESTORE_BASE_POINTER:      "RESTOREBP"
-    of STORE_STATE:               "STORE_STATE"
+    of STORE_STATE:               "STORESTATE"
     of NO_OPERATION:              "NOP"
   ) & (
     case i.aux
@@ -223,12 +223,13 @@ proc unpackExtra*[T: tuple|object](i: Instr): T =
 
 func len*(i: Instr): int = 2 + i.extra.len
 
-proc extraStr*(i: Instr): string =
+proc extraStr*(i: Instr, maxStringLength: Natural = 15): string =
   let str = newStringStream(i.extra)
   case i.op
   of CONSTANT:
     case i.aux
-    of TYPE_STRING:           i.extra.substr(2).escape()
+    of TYPE_STRING:           i.extra.substr(2, maxStringLength).escape() &
+                              (if i.extra.len > maxStringLength + 2: ".." & $(i.extra.len - 2) else: "")
     of TYPE_INTEGER:          $str.readInt32().swapEndian()
     of TYPE_OBJECT:           "0x" & toHex str.readInt32().swapEndian()
     of TYPE_FLOAT:            $str.readFloat32().swapEndian()

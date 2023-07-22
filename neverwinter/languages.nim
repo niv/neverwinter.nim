@@ -14,10 +14,12 @@ type
     Italian = 3
     Spanish = 4
     Polish = 5
-    Korean = 128
-    ChineseTraditional = 129
-    ChineseSimplified = 130
-    Japanese = 131
+
+    # Not supported on EE:
+    #Korean = 128
+    #ChineseTraditional = 129
+    #ChineseSimplified = 130
+    #Japanese = 131
 
   Gender* {.pure.} = enum
     Male,

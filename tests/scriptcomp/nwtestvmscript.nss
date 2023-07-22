@@ -1,5 +1,7 @@
 // Dummy VM implementation used for test runner.
 
+// NB: When changing this file, also adjust tlangspec.nim to match.
+
 #define ENGINE_NUM_STRUCTURES   0
 // #define ENGINE_STRUCTURE_0      effect
 

@@ -254,14 +254,10 @@ proc demand*(self: ResMan, rr: ResRef, usecache = true): Res =
     if c.contains(rr):
       result = c.demand(rr)
       if self.cache != nil and usecache:
-        # echo "rr=", rr, " put in cache"
         self.cache[rr, result.ioSize] = result
-      break
+      return result
 
-proc count*(self: ResMan): int =
-  ## Returns the number of resrefs known to this resman.
-  result = 0
-  for c in self.containers: result += c.count()
+  raise newException(ValueError, "not found: " & $rr)
 
 proc contents*(self: ResMan): HashSet[ResRef] =
   ## Returns the contents of resman. This is a potentially *very expensive

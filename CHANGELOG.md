@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.2] - 2023-07-26
+
+### Script Compiler
+
+- Script compiler now supports raw string literals: `r".."` and `R".."`, which can also span multiple lines.
+- Temporarily disabled MOVSP merging optimization (fixing STACK_UNDERFLOW errors when using -O2).
+
+### Bytecode Disassembler
+
+- `nwn_asm` now prints shorter, canonical opcodes.
+- `nwn_asm` now parses `nwscript.nss` and prints the names of executed actions.
+- `nwn_asm` now prints in colour; indicates jump source/target IPs; improved column display.
+- `nwn_asm` now disassembles the whole file in debug mode (-g), not just known functions.
+
+### Fixed
+
+- Fixed the default steam path for Windows.
+- Fixed a crash when the Beamdog Client settings.json file could not be found.
+- Fixed `--language` not defaulting to `en` and overrides not working at all.
+- resman.nim: Fixed sometimes not throwing a ValueError when the requested resref does not exist.
+
+### Removed
+
+- Removed remaining double-byte language support (this is not supported on EE).
+
 ## [1.6.1] - 2023-07-19
 
 ### Script Compiler

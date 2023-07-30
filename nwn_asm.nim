@@ -1,4 +1,5 @@
 import std/[os, streams, tables, terminal]
+from std/terminal import isatty
 
 import shared
 import neverwinter/nwscript/[nwasm, ndb as ndblib, langspec]
@@ -31,6 +32,8 @@ Options:
   -n LEN                      Max string length printed [default: 15]
 
   --no-color                  Do not emit colors to terminal.
+  --term-width N              Override terminal width for cell wrapping (0: Don't wrap)
+  --cell-padding N            Cell padding between output columns [default: 2]
 $OPTRESMAN
 """
 
@@ -38,8 +41,19 @@ let script = ($args["<script>"]).splitFile()
 let weaveCode = not args["-S"]
 let maxStringLength = parseInt $args["-n"]
 
-from std/terminal import isatty
 setTermStyleColorsEnabled isatty(stdout) and not args["--no-color"]
+
+let termWidth =
+  if args["--term-width"]:
+    let v = parseInt($args["--term-width"])
+    if v == 0: int.high else: v
+  elif not isatty(stdout):
+    int.high
+  else:
+    terminalWidth()
+
+let padding = Natural parseInt $args["--cell-padding"]
+let indent = 2
 
 let rm = newBasicResMan()
 
@@ -106,7 +120,7 @@ proc addInstr(table: var TerminalTable, i: Instr, globalOffset, localOffset: int
       let rel = unpackExtra[int32](i)
       # Find the function this instruction is in
       let funcs = ndb.functions.filterIt(globalOffset + rel in (it.bStart.int-13)..<(it.bEnd.int-13))
-      $rel & green " => " & (if funcs.len == 1: funcs[0].label else: $(globalOffset + rel))
+      $rel & green " => " & bold cyan(if funcs.len == 1: funcs[0].label else: $(globalOffset + rel))
     else:
       i.extraStr(maxStringLength)
 
@@ -123,7 +137,11 @@ proc addInstr(table: var TerminalTable, i: Instr, globalOffset, localOffset: int
 
 let ii = disAsm newStringStream rm.demand(newResolvedResRef script.name & ".ncs").readAll
 
-var outputTables: OrderedTable[string, TerminalTable]
+type OutputFunctionLabel = tuple
+  label: string
+  file: string
+  offset: string
+var outputTables: OrderedTable[OutputFunctionLabel, TerminalTable]
 
 var currentFunction: NdbFunction
 var currentFunctionFile: string
@@ -148,13 +166,18 @@ for idx, i in ii:
         currentFunctionFile = ""
         for line in ndb.lines:
           if line.bStart == fn.bStart:
-            currentFunctionFile = format(" $#.$#:$#", ndb.files[line.fileNum], "nss", line.lineNum - 1)
+            currentFunctionFile = format("$#.$#:$#", ndb.files[line.fileNum], "nss", line.lineNum - 1)
             break
         localOffset = 0
       break
 
-  let label = if currentFunction.label != "": $currentFunction & currentFunctionFile
-              else: ""
+  var label: OutputFunctionLabel
+  if currentFunction.label != "":
+    label.label = format("$# $#($#):", currentFunction.retType, currentFunction.label,
+                                       currentFunction.args.mapIt($it).join(", "))
+    label.file = currentFunctionFile
+    label.offset = format("[$#:$#]", currentFunction.bStart - 13, currentFunction.bEnd - 13)
+
   addInstr outputTables.mgetOrPut(label, TerminalTable()),
            i, globalOffset, localOffset
 
@@ -162,18 +185,15 @@ for idx, i in ii:
   if currentFunction.label != "":
     inc localOffset, i.len
 
-let maxSize = terminalWidth()
-let indent = 2
-let padding = 2
-
 var outputSizes: seq[int]
 for label, table in outputTables:
-  getColumnSizes(table, outputSizes, maxSize = maxSize - indent, padding = padding)
+  getColumnSizes(table, outputSizes, maxSize = termWidth - indent, padding = padding)
 
 var first = true
 for label, table in outputTables:
-  if label != "":
+  if label.label != "":
     if not first: echo ""
-    if label != "": echo bold underline cyan label
     first = false
-  table.echoTable(outputSizes, maxSize = maxSize, padding = padding, indent = indent)
+    echo bold underline cyan label.label, " ", cyan label.file, " ", magenta label.offset
+
+  table.echoTable(outputSizes, maxSize = termWidth, indent = indent, padding = padding)

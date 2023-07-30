@@ -258,7 +258,7 @@ proc extraStr*(i: Instr, maxStringLength: Natural = 15): string =
                               (if i.extra.len > maxStringLength + 2: ".." & $(i.extra.len - 2) else: "")
     of TYPE_INTEGER:          $str.readInt32().swapEndian()
     of TYPE_OBJECT:           "0x" & toHex str.readInt32().swapEndian()
-    of TYPE_FLOAT:            $str.readFloat32().swapEndian()
+    of TYPE_FLOAT:            formatFloat(str.readFloat32().swapEndian(), precision = -1)
     of TYPE_ENGST2:           $str.readUInt32().swapEndian() # loc preset
     of TYPE_ENGST7:           i.extra.substr(2).escape() # json
     else: raise newException(Defect, "implement me: " & $i.op & ":" & $i.aux)

@@ -115,12 +115,12 @@ proc addInstr(table: var TerminalTable, i: Instr, globalOffset, localOffset: int
       if cmdId in 0..spec.funcs.high: red spec.funcs[cmdId].name else: ""
     of JMP, JZ, JNZ:
       let rel = unpackExtra[int32](i)
-      $rel & green " => " & $(rel + int32 globalOffset)
+      green $(rel + int32 globalOffset)
     of JSR:
       let rel = unpackExtra[int32](i)
       # Find the function this instruction is in
       let funcs = ndb.functions.filterIt(globalOffset + rel in (it.bStart.int-13)..<(it.bEnd.int-13))
-      $rel & green " => " & bold cyan(if funcs.len == 1: funcs[0].label else: $(globalOffset + rel))
+      bold cyan(if funcs.len == 1: funcs[0].label else: $(globalOffset + rel))
     else:
       i.extraStr(maxStringLength)
 

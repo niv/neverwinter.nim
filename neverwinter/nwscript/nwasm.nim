@@ -1,4 +1,4 @@
-import std/[streams, strutils, options]
+import std/[streams, strutils, sequtils, algorithm, typetraits, enumutils, options, tables]
 
 import neverwinter/util
 
@@ -98,97 +98,123 @@ type
     aux: Auxcode
     extra: string
 
+const
+  OpAuxSep = "."
+
+  OpcodeToCanonical = {
+    ASSIGNMENT:                "CPDOWNSP",
+    RUNSTACK_ADD:              "RSADD",
+    RUNSTACK_COPY:             "CPTOPSP",
+    CONSTANT:                  "CONST",
+    EXECUTE_COMMAND:           "ACTION",
+    LOGICAL_AND:               "LOGAND",
+    LOGICAL_OR:                "LOGOR",
+    INCLUSIVE_OR:              "INCOR",
+    EXCLUSIVE_OR:              "EXCOR",
+    BOOLEAN_AND:               "BOOLAND",
+    EQUAL:                     "EQUAL",
+    NOT_EQUAL:                 "NEQUAL",
+    GEQ:                       "GEQ",
+    GT:                        "GT",
+    LT:                        "LT",
+    LEQ:                       "LEQ",
+    SHIFT_LEFT:                "SHLEFT",
+    SHIFT_RIGHT:               "SHRIGHT",
+    USHIFT_RIGHT:              "USHRIGHT",
+    ADD:                       "ADD",
+    SUB:                       "SUB",
+    MUL:                       "MUL",
+    DIV:                       "DIV",
+    MODULUS:                   "MOD",
+    NEGATION:                  "NEG",
+    ONES_COMPLEMENT:           "COMP",
+    MODIFY_STACK_POINTER:      "MOVSP",
+    STORE_IP:                  "STOREIP",
+    JMP:                       "JMP",
+    JSR:                       "JSR",
+    JZ:                        "JZ",
+    RET:                       "RET",
+    DE_STRUCT:                 "DESTRUCT",
+    BOOLEAN_NOT:               "NOT",
+    DECREMENT:                 "DECSP",
+    INCREMENT:                 "INCSP",
+    JNZ:                       "JNZ",
+    ASSIGNMENT_BASE:           "CPDOWNBP",
+    RUNSTACK_COPY_BASE:        "CPTOPBP",
+    DECREMENT_BASE:            "DECBP",
+    INCREMENT_BASE:            "INCBP",
+    SAVE_BASE_POINTER:         "SAVEBP",
+    RESTORE_BASE_POINTER:      "RESTOREBP",
+    STORE_STATE:               "STORESTATE",
+    NO_OPERATION:              "NOP",
+  }.toOrderedTable
+
+  CanonicalToOpcode = block:
+    var result = initOrderedTable[string, Opcode]()
+    for k,v in OpcodeToCanonical:
+      result[v] = k
+    result
+
+  AuxcodeToCanonical = {
+    TYPE_INTEGER:              "I",
+    TYPE_FLOAT:                "F",
+    TYPE_STRING:               "S",
+    TYPE_OBJECT:               "O",
+    TYPE_ENGST0:               "E0",
+    TYPE_ENGST1:               "E1",
+    TYPE_ENGST2:               "E2",
+    TYPE_ENGST3:               "E3",
+    TYPE_ENGST4:               "E4",
+    TYPE_ENGST5:               "E5",
+    TYPE_ENGST6:               "E6",
+    TYPE_ENGST7:               "E7",
+    TYPE_ENGST8:               "E8",
+    TYPE_ENGST9:               "E9",
+    TYPETYPE_INTEGER_INTEGER:  "II",
+    TYPETYPE_FLOAT_FLOAT:      "FF",
+    TYPETYPE_OBJECT_OBJECT:    "OO",
+    TYPETYPE_STRING_STRING:    "SS",
+    TYPETYPE_STRUCT_STRUCT:    "TT",
+    TYPETYPE_INTEGER_FLOAT:    "IF",
+    TYPETYPE_FLOAT_INTEGER:    "FI",
+    TYPETYPE_ENGST0_ENGST0:    "E0E0",
+    TYPETYPE_ENGST1_ENGST1:    "E1E1",
+    TYPETYPE_ENGST2_ENGST2:    "E2E2",
+    TYPETYPE_ENGST3_ENGST3:    "E3E3",
+    TYPETYPE_ENGST4_ENGST4:    "E4E4",
+    TYPETYPE_ENGST5_ENGST5:    "E5E5",
+    TYPETYPE_ENGST6_ENGST6:    "E6E6",
+    TYPETYPE_ENGST7_ENGST7:    "E7E7",
+    TYPETYPE_ENGST8_ENGST8:    "E8E8",
+    TYPETYPE_ENGST9_ENGST9:    "E9E9",
+    TYPETYPE_VECTOR_VECTOR:    "VV",
+    TYPETYPE_VECTOR_FLOAT:     "VF",
+    TYPETYPE_FLOAT_VECTOR:     "FV",
+  }.toOrderedTable
+
+  CanonicalToAuxcode = block:
+    var result = initOrderedTable[string, Auxcode]()
+    for k,v in AuxcodeToCanonical:
+      result[v] = k
+    result
+
+static:
+  # This makes sure that adding new op/auxcodes also introduces them on the name LUTs
+  doAssert OpcodeToCanonical.len == Opcode.enumLen
+  for k in Opcode: doAssert OpcodeToCanonical.contains(k)
+  doAssert AuxcodeToCanonical.len == Auxcode.enumLen - 5
+  for k in Auxcode:
+    if not(k in [NONE, TYPE_VOID, TYPE_COMMAND, EVAL_INPLACE, EVAL_POSTPLACE]):
+      doAssert AuxcodeToCanonical.contains(k)
+
 proc canonicalName*(i: Instr, internal: bool = false): string =
-  if internal: return $i.op & "," & $i.aux
-  (
-    case i.op
-    of ASSIGNMENT:                "CPDOWNSP"
-    of RUNSTACK_ADD:              "RSADD"
-    of RUNSTACK_COPY:             "CPTOPSP"
-    of CONSTANT:                  "CONST"
-    of EXECUTE_COMMAND:           "ACTION"
-    of LOGICAL_AND:               "LOGAND"
-    of LOGICAL_OR:                "LOGOR"
-    of INCLUSIVE_OR:              "INCOR"
-    of EXCLUSIVE_OR:              "EXCOR"
-    of BOOLEAN_AND:               "BOOLAND"
-    of EQUAL:                     "EQUAL"
-    of NOT_EQUAL:                 "NEQUAL"
-    of GEQ:                       "GEQ"
-    of GT:                        "GT"
-    of LT:                        "LT"
-    of LEQ:                       "LEQ"
-    of SHIFT_LEFT:                "SHLEFT"
-    of SHIFT_RIGHT:               "SHRIGHT"
-    of USHIFT_RIGHT:              "USHRIGHT"
-    of ADD:                       "ADD"
-    of SUB:                       "SUB"
-    of MUL:                       "MUL"
-    of DIV:                       "DIV"
-    of MODULUS:                   "MOD"
-    of NEGATION:                  "NEG"
-    of ONES_COMPLEMENT:           "COMP"
-    of MODIFY_STACK_POINTER:      "MOVSP"
-    of STORE_IP:                  "STOREIP"
-    of JMP:                       "JMP"
-    of JSR:                       "JSR"
-    of JZ:                        "JZ"
-    of RET:                       "RET"
-    of DE_STRUCT:                 "DESTRUCT"
-    of BOOLEAN_NOT:               "NOT"
-    of DECREMENT:                 "DECSP"
-    of INCREMENT:                 "INCSP"
-    of JNZ:                       "JNZ"
-    of ASSIGNMENT_BASE:           "CPDOWNBP"
-    of RUNSTACK_COPY_BASE:        "CPTOPBP"
-    of DECREMENT_BASE:            "DECBP"
-    of INCREMENT_BASE:            "INCBP"
-    of SAVE_BASE_POINTER:         "SAVEBP"
-    of RESTORE_BASE_POINTER:      "RESTOREBP"
-    of STORE_STATE:               "STORESTATE"
-    of NO_OPERATION:              "NOP"
-  ) & (
-    case i.aux
-    of NONE:                      ""
-    of TYPE_VOID:                 ""
-    of TYPE_COMMAND:              ""
-    of TYPE_INTEGER:              "I"
-    of TYPE_FLOAT:                "F"
-    of TYPE_STRING:               "S"
-    of TYPE_OBJECT:               "O"
-    of TYPE_ENGST0:               "E0"
-    of TYPE_ENGST1:               "E1"
-    of TYPE_ENGST2:               "E2"
-    of TYPE_ENGST3:               "E3"
-    of TYPE_ENGST4:               "E4"
-    of TYPE_ENGST5:               "E5"
-    of TYPE_ENGST6:               "E6"
-    of TYPE_ENGST7:               "E7"
-    of TYPE_ENGST8:               "E8"
-    of TYPE_ENGST9:               "E9"
-    of TYPETYPE_INTEGER_INTEGER:  "II"
-    of TYPETYPE_FLOAT_FLOAT:      "FF"
-    of TYPETYPE_OBJECT_OBJECT:    "OO"
-    of TYPETYPE_STRING_STRING:    "SS"
-    of TYPETYPE_STRUCT_STRUCT:    "TT"
-    of TYPETYPE_INTEGER_FLOAT:    "IF"
-    of TYPETYPE_FLOAT_INTEGER:    "FI"
-    of TYPETYPE_ENGST0_ENGST0:    "E0E0"
-    of TYPETYPE_ENGST1_ENGST1:    "E1E1"
-    of TYPETYPE_ENGST2_ENGST2:    "E2E2"
-    of TYPETYPE_ENGST3_ENGST3:    "E3E3"
-    of TYPETYPE_ENGST4_ENGST4:    "E4E4"
-    of TYPETYPE_ENGST5_ENGST5:    "E5E5"
-    of TYPETYPE_ENGST6_ENGST6:    "E6E6"
-    of TYPETYPE_ENGST7_ENGST7:    "E7E7"
-    of TYPETYPE_ENGST8_ENGST8:    "E8E8"
-    of TYPETYPE_ENGST9_ENGST9:    "E9E9"
-    of TYPETYPE_VECTOR_VECTOR:    "VV"
-    of TYPETYPE_VECTOR_FLOAT:     "VF"
-    of TYPETYPE_FLOAT_VECTOR:     "FV"
-    of EVAL_INPLACE:              ""
-    of EVAL_POSTPLACE:            ""
-  )
+  if internal:
+    result &= $i.op & OpAuxSep & $i.aux
+
+  else:
+    result &= OpcodeToCanonical[i.op]
+    if AuxcodeToCanonical.contains(i.aux):
+      result &= OpAuxSep & AuxcodeToCanonical[i.aux]
 
 proc `$`*(i: Instr): string =
   i.canonicalName

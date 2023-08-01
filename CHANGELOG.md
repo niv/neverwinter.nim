@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.3] - 2023-08-01
+
+### Bytecode Disassembler
+
+- Canonical op representation separates op and aux with a dot now, to make visual and machine parsing easier.
+- Float formatting is now less noisy.
+- nwn_asm no longer prints relative jump offsets.
+- nwn_asm can now specify padding and term width for printing.
+
+### Fixed
+
+- Fixed encoding not initialising correctly when get*Encoding wasn't called.
+
 ## [1.6.2] - 2023-07-26
 
 ### Script Compiler

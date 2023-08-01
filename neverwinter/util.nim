@@ -68,12 +68,12 @@ proc setNativeEncoding*(e: string) = nativeEncoding = e
 template toNwnEncoding*(s: string): string =
   ## Converts a string from the local/os encoding (probably UTF-8) to the
   ## configured NWN encoding.
-  s.convert(nwnEncoding, nativeEncoding)
+  s.convert(getNwnEncoding(), getNativeEncoding())
 
 template fromNwnEncoding*(s: string): string =
   ## Converts a string to the local/os encoding (probably UTF-8) from the
   ## configured NWN encoding.
-  s.convert(nativeEncoding, nwnEncoding)
+  s.convert(getNativeEncoding(), getNwnEncoding())
 
 # --------------------------------
 #  Other helpers/stdlib additions

@@ -16,7 +16,7 @@
 ## inherits from ResConainer and then creating the required methods (see below).
 
 
-import options, streams, sets, times, strutils, std/sha1
+import options, streams, sets, times, strutils, checksums/sha1
 export options, streams, sets
 
 import resref, restype, util, lru, exo, compressedbuf

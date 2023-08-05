@@ -1,4 +1,4 @@
-import shared, std/sha1
+import shared, checksums/sha1
 
 const ServerPackageExtensions = [
   # walkmeshes: needed to pathfind

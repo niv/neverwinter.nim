@@ -1,4 +1,4 @@
-import shared, std/sha1
+import shared, checksums/sha1
 
 let args = DOC """
 This utility packs a .key file and all associated bifs from directory tree.

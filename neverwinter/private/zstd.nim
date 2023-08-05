@@ -2,20 +2,36 @@ import neverwinter/private/zstd/binding
 
 const ZSTD_CLEVEL_DEFAULT* = 3
 
-type CompressionContext = ref object of RootObj
-  ctx: ZSTD_CCtx
+type
+  CompressionContextObj = object of RootObj
+    ctx: ZSTD_CCtx
 
-type DecompressionContext = ref object of RootObj
-  ctx: ZSTD_DCtx
+  CompressionContext = ref CompressionContextObj
+
+  DecompressionContextObj = object of RootObj
+    ctx: ZSTD_DCtx
+
+  DecompressionContext = ref DecompressionContextObj
+
+when NimMajor >= 2:
+  proc `=destroy`*(self: CompressionContextObj) =
+    discard ZSTD_freeCCtx(self.ctx)
+
+  proc `=destroy`*(self: DecompressionContextObj) =
+    discard ZSTD_freeDCtx(self.ctx)
+else:
+  proc `=destroy`*(self: var CompressionContextObj) =
+    discard ZSTD_freeCCtx(self.ctx)
+
+  proc `=destroy`*(self: var DecompressionContextObj) =
+    discard ZSTD_freeDCtx(self.ctx)
 
 proc newCompressionContext*(): CompressionContext =
-  new(result) do (r: CompressionContext):
-    discard ZSTD_freeCCtx(r.ctx)
+  new(result)
   result.ctx = ZSTD_createCCtx()
 
 proc newDecompressionContext*(): DecompressionContext =
-  new(result) do (r: DecompressionContext):
-    discard ZSTD_freeDCtx(r.ctx)
+  new(result)
   result.ctx = ZSTD_createDCtx()
 
 proc getCompressBound*(inputlen: int): int =
@@ -26,7 +42,7 @@ proc getFrameContentSize*(input: string): int =
   if result == -1: raise newException(ValueError, "ContentSize Unknown")
   if result == -2: raise newException(ValueError, "ContentSize Error")
 
-proc compress*(input: string, level: int = 3, ctx: CompressionContext = nil): string =
+proc compress*(input: string, level: int = 3, ctx: ref CompressionContext = nil): string =
   let strlen = ZSTD_compressBound(input.len.csize_t)
   if ZSTD_isError(strlen) > 0:
     raise newException(ValueError, $ZSTD_getErrorName(strlen))
@@ -44,7 +60,7 @@ proc compress*(input: string, level: int = 3, ctx: CompressionContext = nil): st
     raise newException(ValueError, $ZSTD_getErrorName(err))
   result.setLen(err)
 
-proc decompress*(input: string, ctx: DecompressionContext = nil): string =
+proc decompress*(input: string, ctx: ref DecompressionContext = nil): string =
   let strlen = ZSTD_getFrameContentSize(unsafeAddr(input[0]), input.len.csize_t).csize_t
   if ZSTD_isError(strlen) > 0:
     raise newException(ValueError, $ZSTD_getErrorName(strlen))

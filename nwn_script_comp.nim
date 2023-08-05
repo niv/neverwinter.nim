@@ -1,4 +1,4 @@
-import std/[tables, threadpool, cpuinfo, atomics, strutils, sequtils, setutils]
+import std/[tables, threadpool, cpuinfo, atomics, strutils, sequtils]
 
 import shared
 import neverwinter/nwscript/compiler

@@ -1,4 +1,4 @@
-import std/[streams, strutils, sequtils, algorithm, typetraits, enumutils, options, tables]
+import std/[streams, strutils, typetraits, enumutils, tables]
 
 import neverwinter/util
 

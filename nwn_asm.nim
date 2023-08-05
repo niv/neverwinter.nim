@@ -1,5 +1,4 @@
 import std/[os, streams, tables, terminal]
-from std/terminal import isatty
 
 import shared
 import neverwinter/nwscript/[nwasm, ndb as ndblib, langspec]

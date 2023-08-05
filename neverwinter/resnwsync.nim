@@ -1,5 +1,10 @@
 import std/streams, std/tables, std/os, std/sequtils, std/strutils, std/times, std/logging,
-  std/sha1, std/db_sqlite, std/hashes
+  std/sha1, std/hashes
+
+when NimMajor == 2:
+  import db_connector/db_sqlite
+else:
+  import std/db_sqlite
 
 import resman, compressedbuf
 

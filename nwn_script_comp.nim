@@ -144,7 +144,7 @@ var chDemandResRef: Channel[tuple[
 chDemandResRef.open()
 
 var demandResRefThread: Thread[void]
-createThread(demandResRefThread) do:
+createThread(demandResRefThread) do ():
   # TODO: Make shared init less sucky. We need to call this here to set up args (again)
   #       so newBasicResMan can refer to it.
   discard DOC(ArgsHelp)

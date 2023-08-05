@@ -17,7 +17,7 @@ proc ask*(socket: AsyncSocket, host: string, port: Port,
   let tstart = epochTime() * 1000
   when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
     try:
-      socket.sendTo(host, port, data):
+      socket.sendTo(host, port, data)
     except:
       raise newException(IOError, "Send failed: " & getCurrentExceptionMsg())
   else:

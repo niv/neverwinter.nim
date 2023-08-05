@@ -142,7 +142,7 @@ proc toJson*[T: (tuple|object)](t: T, flags = DefaultSerializerFlags): JsonNode 
   for k, v in fieldPairs(t):
     # don't bother serialising fields we have no serialiser for
     when compiles(toJson(v, flags)):
-      when compiles(isNil(v)):
+      when v is ref and compiles(isNil(v)):
         if not (SerializerFlags.SkipNil in flags and isNil(v)):
           let serialised = toJson(v, flags)
           if serialised != nil: result[k] = serialised

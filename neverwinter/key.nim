@@ -167,7 +167,7 @@ proc filename*(self: Bif): string =
   ## Returns the filename with which this bif was referenced in the key table.
   self.filename
 
-proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Stream): KeyTable =
+proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Stream {.gcsafe.}): KeyTable =
   ## Read a key table from a stream.
   ## The optional label contains debug info that describes where the table came from;
   ## you usually want to set this to the path/filename.
@@ -283,7 +283,7 @@ proc readKeyTable*(io: Stream, label: string, resolveBif: proc (fn: string): Str
     vra.resref = rr
     vra.sha1 = sha1
 
-proc readKeyTable*(io: Stream, resolveBif: proc (fn: string): Stream): KeyTable =
+proc readKeyTable*(io: Stream, resolveBif: proc (fn: string): Stream {.gcsafe.}): KeyTable =
   ## Alias for readKeyTable, just without a label.
   readKeyTable(io, label = "(anon-io)", resolveBif)
 

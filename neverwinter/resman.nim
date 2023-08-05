@@ -62,34 +62,34 @@ type
 #  ResContainer
 # --------------
 
-method `$`*(self: ResContainer): string {.base.} = "ResContainer:?"
+method `$`*(self: ResContainer): string {.base,gcsafe.} = "ResContainer:?"
   ## Implement this in a ResContainer. See the proc on ResMan for a description.
   ##
   ## This should output a short description of this ResContainer; it should at
   ## the very least include any backing storage info.
 
-method contains*(self: ResContainer, rr: ResRef): bool {.base.} =
+method contains*(self: ResContainer, rr: ResRef): bool {.base,gcsafe.} =
   ## Implement this in a ResContainer. See the proc on ResMan for a description.
   ##
   ## It needs to return true if the ResContainer has knowledge of the given ResRef.
   ## It must never error.
   raise newException(ValueError, "Implement me!")
 
-method demand*(self: ResContainer, rr: ResRef): Res {.base.} =
+method demand*(self: ResContainer, rr: ResRef): Res {.base,gcsafe.} =
   ## Implement this in any ResContainer. See the proc on ResMan for a description.
   ##
   ## This needs to return a Res. It must be safe to call even if contains() was
   ## not checked beforehand; a missing entry must raise.
   raise newException(ValueError, "Implement me!")
 
-method count*(self: ResContainer): int {.base.} =
+method count*(self: ResContainer): int {.base,gcsafe.} =
   ## Implement this in any ResContainer. See the proc on ResMan for a description.
   ##
   ## This needs to return the total count of *available/readable* resrefs in this
   ## container.
   raise newException(ValueError, "Implement me!")
 
-method contents*(self: ResContainer): OrderedSet[ResRef] {.base.} =
+method contents*(self: ResContainer): OrderedSet[ResRef] {.base,gcsafe.} =
   ## Implement this in any ResContainer. See the proc on ResMan for a description.
   ##
   ## Returns the contents of this container, as a set.
@@ -184,7 +184,7 @@ proc origin*(self: Res): ResOrigin =
   ## label the reader attached to it (if any).
   self.origin
 
-method readAll*(self: Res, useCache: bool = true): string {.base.} =
+method readAll*(self: Res, useCache: bool = true): string {.base,gcsafe.} =
   ## Reads the full data of this res. Transparently decompresses.
   ## The value is cached, as long as it fits inside MemoryCacheThreshold.
   if useCache and self.cached:

@@ -30,11 +30,12 @@ if not args["--force"] and dirExists(dest):
 createDir(dest)
 
 let kt = readKeyTable(openFileStream(keyfile)) do (bif: string) -> Stream:
-  let bifn = keyfileLocation / extractFilename(bif) # eat "data\"
-  doAssert(fileExists(bifn), "keyfile attempted to read nonexistant file '" & bif & "'")
-  info "Loading bif: ", bifn
-  openFileStream(bifn)
-
+  # This is NOT threadsafe, but this main app doesn't run on threads
+  {.cast(gcsafe).}:
+    let bifn = keyfileLocation / extractFilename(bif) # eat "data\"
+    doAssert(fileExists(bifn), "keyfile attempted to read nonexistant file '" & bif & "'")
+    info "Loading bif: ", bifn
+    openFileStream(bifn)
 
 let metaKeyOrder = openFileStream(dest / "key_order.txt", fmWrite)
 for e in kt.contents: metaKeyOrder.writeLine($e)

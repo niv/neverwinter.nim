@@ -3,7 +3,7 @@ name: Binaries
 on: [push, pull_request]
 
 jobs:
-  test:
+  compile-binaries:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

@@ -243,6 +243,9 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
 # Global mainloop. This queues up all files to be compiled onto the threadpool.
 
 proc canCompileFile(path: string): bool =
+  # Never compile language spec files
+  if extractFilename(path) == "nwscript.nss":
+    return false
   fileExists(path) and path.endsWith(".nss")
 
 # Collect files to compile first in one go, and verify they exist.

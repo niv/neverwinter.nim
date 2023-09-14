@@ -1,6 +1,6 @@
 {.passL: "-lstdc++".}
 const cppFlags = "-std=c++14"
-when defined(linux) or defined(mingw):
+when defined(mingw):
   {.passL: "-static".}
 {.compile("native/exostring.cpp", cppFlags).}
 {.compile("native/scriptcompcore.cpp", cppFlags).}

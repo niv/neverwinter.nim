@@ -639,6 +639,4 @@ private:
 
 	CExoString  m_sCapturedError;
     STRREF      m_nCapturedErrorStrRef;
-
-    void* m_pUserData;
 };

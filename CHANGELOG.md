@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.4] - 2023-10-14
+
+### Added
+
+- Preliminary support for nim 2.0.
+
+### Fixed
+
+- script_comp: Don't ever compile nwscript.nss.
+- script_comp: Don't link libstdc++ statically on LINUX.
+
 ## [1.6.3] - 2023-08-01
 
 ### Bytecode Disassembler

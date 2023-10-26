@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Script compiler: Optional `-i <inc>` dir or file, which are added to the search path for includes but not compiled.
+
 ## [1.6.4] - 2023-10-14
 
 ### Added

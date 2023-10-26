@@ -21,6 +21,8 @@ Usage:
   $USAGE
 
   -o OUT                      When compiling single file, specify outfile.
+  -i INC                      Adds INC file or directory to include search path.
+                              Split multiple paths with `;` - `-i dir/one;file/two.nss`
 
   -c                          Compile multiple files and/or directories.
   -d DIR                      Write all build artifacts into DIR.
@@ -184,7 +186,7 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     state.cNSS.setOptimizations(params.optFlags)
   state
 
-proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.gcsafe.} =
+proc doCompile(num, total: Positive, p: string, includePaths: seq[RMSearchPathEntry], overrideOutPath: string = "") {.gcsafe.} =
   let parts = splitFile(absolutePath(p))
   doAssert(parts.dir != "")
   let outParts = if overrideOutPath != "": splitFile(absolutePath(overrideOutPath)) else: parts
@@ -200,6 +202,7 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
     # This allows resolving includes. We need to pass this info to the RM worker
     # so it can set up the include path for this.
     getThreadState().currentRMSearchPath = @[(pcDir, parts.dir), (pcFile, p)]
+    if includePaths != @[] : getThreadState().currentRMSearchPath.add(includePaths)
 
     # Always remove the ndb file - in case of not generating it, it'd crash
     # the game or confuse the disassember. And in case of generating, a correct
@@ -248,6 +251,20 @@ proc canCompileFile(path: string): bool =
     return false
   fileExists(path) and path.endsWith(".nss")
 
+# Process include args into RMSearchPathEntry
+proc collectIncludes(into: var seq[RMSearchPathEntry], path: string) =
+  if fileExists(path):
+    into.add(@[(pcFile, path)])
+  elif dirExists(path):
+    into.add(@[(pcDir, path)])
+  else:
+    warn "include path ", path,  ": Does not exist"
+
+var incPaths: seq[RMSearchPathEntry]
+if globalState.args["-i"]:
+  for fn in ($globalState.args["-i"]).split(';'):
+    collectIncludes(incPaths, fn)
+
 # Collect files to compile first in one go, and verify they exist.
 proc collect(into: var seq[string], path: string) =
   if fileExists(path):
@@ -275,13 +292,13 @@ if globalState.args["<spec>"]:
 
   let queueLen = queue.len
   for idx, q in queue:
-    spawn doCompile(idx+1, queueLen, q)
+    spawn doCompile(idx+1, queueLen, q, incPaths)
 
 elif globalState.args["<file>"]:
   let file = $globalState.args["<file>"]
   if not canCompileFile file:
     fatal file, ": Don't know how to compile or does not exist"
-  spawn doCompile(1, 1, file, if globalState.args["-o"]: $globalState.args["-o"] else: "")
+  spawn doCompile(1, 1, file, incPaths, if globalState.args["-o"]: $globalState.args["-o"] else: "")
 
 else:
   doAssert(false)

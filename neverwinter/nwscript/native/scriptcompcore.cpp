@@ -1467,26 +1467,41 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 	{
 		if (nLineNumber > 0)
 		{
-			sFullErrorText.Format("%s(%d): %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sErrorText.CStr());
+			sFullErrorText.Format("%s(%d): %s", psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sErrorText.CStr());
 		}
 		else
 		{
-			sFullErrorText.Format("%s: %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),sErrorText.CStr());
+			sFullErrorText.Format("%s: %s", psFileName->Right(psFileName->GetLength()-1).CStr(),sErrorText.CStr());
 		}
 	}
 	else
 	{
 		if (nLineNumber > 0)
 		{
-			sFullErrorText.Format("%s.nss(%d): %s\n",psFileName->CStr(),nLineNumber,sErrorText.CStr());
+			sFullErrorText.Format("%s.nss(%d): %s", psFileName->CStr(),nLineNumber,sErrorText.CStr());
 		}
 		else
 		{
-			sFullErrorText.Format("%s.nss: %s\n",psFileName->CStr(),sErrorText.CStr());
+			sFullErrorText.Format("%s.nss: %s", psFileName->CStr(),sErrorText.CStr());
 		}
 	}
 
 	m_sCapturedError = sFullErrorText;
+
+    CExoString sTraceIncludes = "";
+    for (int i = 1; i < m_nCompileFileLevel; i++)
+    {
+        sTraceIncludes = sTraceIncludes + " " + m_pcIncludeFileStack[i].m_sCompiledScriptName + ".nss";
+
+        if (m_pcIncludeFileStack[i].m_nLine > 0)
+            sTraceIncludes = sTraceIncludes + "(" + m_pcIncludeFileStack[i].m_nLine + ")";
+    }
+
+    if (!sTraceIncludes.IsEmpty())
+    {
+        m_sCapturedError.Format("%s [via:%s]", m_sCapturedError.CStr(), sTraceIncludes.CStr());
+    }
+
     m_nCapturedErrorStrRef = nError;
 
 	// Print the full error text to the log file.

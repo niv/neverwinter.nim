@@ -25,6 +25,7 @@ Usage:
   -c                          Compile multiple files and/or directories.
   -d DIR                      When compiling multiple files, write all build artifacts into DIR.
   -R                          Recurse into subdirectories for each given directory.
+  --follow-symlinks           Follow symlinks when compiling recursively.
 
   -g                          Write debug symbol files (NDB).
   -y                          Continue processing input files even on error.
@@ -59,6 +60,7 @@ type
     parallel: Positive
     outDirectory: string
     maxIncludeDepth: 1..200
+    followSymlinks: bool
 
   GlobalState = object
     successes, errors, skips: Atomic[uint]
@@ -99,7 +101,8 @@ globalState.params = Params(
   continueOnError: globalState.args["-y"].to_bool,
   parallel: (if globalState.args["-j"]: parseInt($globalState.args["-j"]) else: countProcessors()).Positive,
   outDirectory: if globalState.args["-d"]: ($globalState.args["-d"]) else: "",
-  maxIncludeDepth: parseInt($globalState.args["--max-include-depth"])
+  maxIncludeDepth: parseInt($globalState.args["--max-include-depth"]),
+  followSymlinks: globalState.args["--follow-symlinks"],
 )
 
 if globalState.params.outDirectory != "" and not dirExists(globalState.params.outDirectory):
@@ -261,6 +264,8 @@ proc canCompileFile(path: string): bool =
 
 # Collect files to compile first in one go, and verify they exist.
 proc collect(into: var seq[string], path: string) =
+  let dirMask = if params.followSymlinks: {pcDir, pcLinkToDir} else: {pcDir}
+  let fileMask = if params.followSymlinks: {pcFile, pcLinkToFile} else: {pcFile}
   if fileExists(path):
     if not canCompileFile(path):
       fatal path, ": Don't know how to compile file type"
@@ -269,9 +274,9 @@ proc collect(into: var seq[string], path: string) =
   elif dirExists(path):
     for subpath in walkDir(path, relative=true, checkdir=true):
       let absSubPath = path / subpath.path
-      if subpath.kind == pcDir and params.recurse:
+      if subpath.kind in dirMask and params.recurse:
         collect(into, absSubPath)
-      elif subpath.kind == pcFile and canCompileFile(absSubPath):
+      elif subpath.kind in fileMask and canCompileFile(absSubPath):
         into.add(absSubPath)
   else:
     fatal path,  ": Does not exist"

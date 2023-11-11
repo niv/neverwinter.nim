@@ -17,13 +17,13 @@ overridden with -o or -d.
 
 Usage:
   $0 [options] [-o <out>] <file>
-  $0 [options] -c <spec>...
+  $0 [options] [-d <out>] [-R] -c <spec>...
   $USAGE
 
   -o OUT                      When compiling single file, specify outfile.
 
   -c                          Compile multiple files and/or directories.
-  -d DIR                      Write all build artifacts into DIR.
+  -d DIR                      When compiling multiple files, write all build artifacts into DIR.
   -R                          Recurse into subdirectories for each given directory.
 
   -g                          Write debug symbol files (NDB).

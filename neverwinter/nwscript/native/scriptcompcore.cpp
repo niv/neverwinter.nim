@@ -334,6 +334,8 @@ CScriptCompiler::CScriptCompiler(RESTYPE nSource, RESTYPE nCompiled, RESTYPE nDe
 	m_pIdentifierHashTable = new CScriptCompilerIdentifierHashTableEntry[CSCRIPTCOMPILER_SIZE_IDENTIFIER_HASH_TABLE];
 
 	m_nCompileFileLevel = 0;
+    m_nMaxIncludeDepth = CSCRIPTCOMPILER_INCLUDE_LEVELS;
+
 	m_bCompileConditionalFile = FALSE;
 	m_bOldCompileConditionalFile = FALSE;
 	m_bCompileConditionalOrMain = FALSE;
@@ -1202,7 +1204,7 @@ int32_t CScriptCompiler::CompileFile(const CExoString &sFileName)
 		Initialize();
 	}
 
-	if (m_nCompileFileLevel >= CSCRIPTCOMPILER_MAX_INCLUDE_LEVELS)
+	if (m_nCompileFileLevel >= m_nMaxIncludeDepth)
 	{
 		return STRREF_CSCRIPTCOMPILER_ERROR_INCLUDE_TOO_MANY_LEVELS;
 	}

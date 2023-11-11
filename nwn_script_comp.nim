@@ -36,6 +36,8 @@ Usage:
 """ & indent(join(toSeq(OptimizationFlagsO2).mapIt("+" & $it), "\n"), 36) & """
 
 
+  --max-include-depth=N       Maximum include depth [default: 16]
+
   -s                          Simulate: Compile, but write no filee.
                               Use --verbose to see what would be written.
 
@@ -56,6 +58,7 @@ type
     continueOnError: bool
     parallel: Positive
     outDirectory: string
+    maxIncludeDepth: 1..200
 
   GlobalState = object
     successes, errors, skips: Atomic[uint]
@@ -95,7 +98,8 @@ globalState.params = Params(
   ),
   continueOnError: globalState.args["-y"].to_bool,
   parallel: (if globalState.args["-j"]: parseInt($globalState.args["-j"]) else: countProcessors()).Positive,
-  outDirectory: if globalState.args["-d"]: ($globalState.args["-d"]) else: ""
+  outDirectory: if globalState.args["-d"]: ($globalState.args["-d"]) else: "",
+  maxIncludeDepth: parseInt($globalState.args["--max-include-depth"])
 )
 
 if globalState.params.outDirectory != "" and not dirExists(globalState.params.outDirectory):
@@ -180,7 +184,7 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     #       will depend on logging and related to be set up.
     discard DOC(ArgsHelp)
     state.chDemandResRefResponse.open(maxItems=1)
-    state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile)
+    state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile, params.maxIncludeDepth)
     state.cNSS.setOptimizations(params.optFlags)
   state
 

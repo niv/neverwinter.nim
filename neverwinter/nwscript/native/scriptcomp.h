@@ -17,6 +17,7 @@
 #pragma once
 
 #include <vector>
+#include <algorithm>
 
 #include "exobase.h"
 #include "scripterrors.h"
@@ -37,7 +38,8 @@ class CScriptCompilerIdentifierHashTableEntry;
 // Defines required for static size of values.
 #define CSCRIPTCOMPILER_MAX_TABLE_FILENAMES  512
 #define CSCRIPTCOMPILER_MAX_TOKEN_LENGTH     8192
-#define CSCRIPTCOMPILER_MAX_INCLUDE_LEVELS   16
+#define CSCRIPTCOMPILER_INCLUDE_LEVELS       16
+#define CSCRIPTCOMPILER_MAX_INCLUDE_LEVELS   200   // gcc also defaults to 200.
 #define CSCRIPTCOMPILER_MAX_RUNTIME_VARS     8192
 
 #define CSCRIPTCOMPILERIDLISTENTRY_MAX_PARAMETERS 32
@@ -159,6 +161,13 @@ public:
 	///////////////////////////////////////////////////////////////////////
 	void SetOptimizationFlags(uint32_t nFlags) { m_nOptimizationFlags = nFlags; }
 	uint32_t GetOptimizationFlags() { return m_nOptimizationFlags; }
+
+	///////////////////////////////////////////////////////////////////////
+	void SetMaxIncludeDepth(uint32_t nDepth)
+    {
+        m_nMaxIncludeDepth = std::min<uint32_t>(CSCRIPTCOMPILER_MAX_INCLUDE_LEVELS, nDepth);
+    }
+    uint32_t GetMaxIncludeDepth() const { return m_nMaxIncludeDepth; }
 
 	///////////////////////////////////////////////////////////////////////
 	void SetAutomaticCleanUpAfterCompiles(BOOL bValue);
@@ -491,6 +500,7 @@ private:
 	int32_t m_nCompileFileLevel;
 	CScriptCompilerIncludeFileStackEntry m_pcIncludeFileStack[CSCRIPTCOMPILER_MAX_INCLUDE_LEVELS];
 
+    int32_t m_nMaxIncludeDepth;
 
 	// A Variable Stack
 	int32_t m_nVarStackRecursionLevel;

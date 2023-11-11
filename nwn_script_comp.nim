@@ -1,4 +1,4 @@
-import std/[tables, threadpool, cpuinfo, atomics, strutils, sequtils]
+import std/[tables, threadpool, cpuinfo, atomics, strutils, sequtils, monotimes]
 
 import shared
 import neverwinter/nwscript/compiler
@@ -206,7 +206,13 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
     # version will come back.
     removeFile(parts.dir / parts.name & "." & getResExt(params.langSpec.dbg))
 
+    let timeStart = getMonoTime()
     let ret = compileFile(getThreadState().cNSS, parts.name)
+    proc timingPostfix(): string =
+      let diff = getMonoTime() - timeStart
+      let ms = diff.inMilliseconds()
+      if ms == 0: " [<0ms]"
+      else: " [" & $ms & "ms]"
 
     # This cast is here only to access globalState.
     # We know the atomics are threadsafe to touch, and so is logging.
@@ -220,19 +226,20 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
           else: writeFile(fn, data)
 
         atomicInc globalState.successes
-        debug prefix, "Success"
-
         writeData(outFilePrefix & "." & getResExt(params.langSpec.bin), ret.bytecode)
         writeData(outFilePrefix & "." & getResExt(params.langSpec.dbg), ret.debugcode)
+
+        debug prefix, "Success", timingPostfix()
+
       of 623:
         atomicInc globalState.skips
-        debug prefix, "no main (include?)"
+        debug prefix, "no main (include?)", timingPostfix()
       else:
         atomicInc globalState.errors
         if params.continueOnError:
-          error prefix, ret.str
+          error prefix, ret.str, timingPostfix()
         else:
-          fatal prefix, ret.str
+          fatal prefix, ret.str, timingPostfix()
           # This might not be so safe in conjunction with the threadpool being loaded
           # We'll see if it starts crashing ..
           quit(1)

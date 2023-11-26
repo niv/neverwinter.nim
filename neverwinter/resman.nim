@@ -30,15 +30,22 @@ type
   ResOrigin* = tuple[container: ResContainer, label: string]
     ## Used for debug printing and origin tracing (see Res.origin)
 
+  ResIoSpawner* = proc(res: Res): Stream {.gcsafe.}
+    ## Individual io handles need to be created on a per-demand level when a file
+    ## is read. For the builtin readAll(), the file handle will be closed immediately after.
+
   Res* = ref object of RootObj
     ## A "pointer" to resource data, held inside a ResContainer, identified by
     ## a resref.
     mtime: Time
-    io: Stream
-    ioOwned: bool
-    resref: ResRef
+
+    ioStream: Stream   # Only valid if this Res is backed by a persistent (non-owned) IO.
     ioOffset: int      # offset into stream where the raw data is
     ioSize: int        # size of raw data (before decompression)
+
+    ioSpawner: ResIoSpawner
+
+    resref: ResRef
 
     sha1: SecureHash   # hash of object (can be zeroed out if no hash was provided)
 
@@ -131,18 +138,39 @@ proc newRes*(
     origin: ResOrigin, resref: ResRef,
     mtime: Time,
     io: Stream, ioSize: int, ioOffset = 0,
-    ioOwned = false,
     compression = ExoResFileCompressionType.None, uncompressedSize = 0,
     sha1: SecureHash = EmptySecureHash): Res =
-
+  ## Create a new Res instance that is backed by a pre-existing IO instance (such as an ERF file).
   new(result)
-  result.io = io
+  result.ioStream = io
   result.resref = resref
   result.ioOffset = ioOffset
   result.ioSize = ioSize
   result.mtime = mtime
   result.origin = origin
-  result.ioOwned = ioOwned
+
+  result.compression = compression
+  result.uncompressedSize =
+    if compression == ExoResFileCompressionType.None and uncompressedSize == 0: ioSize
+    else: uncompressedSize
+  result.sha1 = sha1
+
+proc newRes*(
+    origin: ResOrigin, resref: ResRef,
+    mtime: Time,
+    ioSpawner: ResIoSpawner, ioSize: int, ioOffset = 0,
+    compression = ExoResFileCompressionType.None, uncompressedSize = 0,
+    sha1: SecureHash = EmptySecureHash): Res =
+  ## Create a new Res instance that is backed by a dynamic IO spawner.
+  new(result)
+
+  result.resref = resref
+  result.ioSpawner = ioSpawner
+  result.ioOffset = ioOffset
+  result.ioSize = ioSize
+  result.mtime = mtime
+  result.origin = origin
+
   result.compression = compression
   result.uncompressedSize =
     if compression == ExoResFileCompressionType.None and uncompressedSize == 0: ioSize
@@ -155,14 +183,29 @@ proc mtime*(self: Res): Time =
   ## When this Res was last modified (This is highly experimental.)
   self.mtime
 
-proc io*(self: Res): Stream =
+func ioOwned*(self: Res): bool =
+  ## Returns true if this Res owns the IO (e.g. is not spawned dynamically)
+  not isNil(self.ioStream) and isNil(self.ioSpawner)
+
+proc io*(self: Res, cacheIO = true): Stream =
   ## The backing IO (a stream) for this Res.  This is NOT guaranteed to be
   ## safe for concurrent readers, nor are there any guarantees as to length,
   ## current positioning, or data availability.
   ## This is also the raw data stream, NOT decompressed data (if the Res is compressed).
-  self.io
+
+  if not isNil(self.ioStream):
+    return self.ioStream
+  elif not isNil(self.ioSpawner) and cacheIO:
+    self.ioStream = self.ioSpawner(self)
+    return self.ioStream
+  elif not isNil(self.ioSpawner):
+    return self.ioSpawner(self)
+  else:
+    return nil
 
 proc ioOffset*(self: Res): int =
+  ## Return the offset into `getIO` on where the data for this Res starts.
+  ## Only valid for Res that are backed by a IO.
   self.ioOffset
 
 proc ioSize*(self: Res): int =
@@ -186,31 +229,37 @@ proc origin*(self: Res): ResOrigin =
 
 method readAll*(self: Res, useCache: bool = true): string {.base,gcsafe.} =
   ## Reads the full data of this res. Transparently decompresses.
-  ## The value is cached, as long as it fits inside MemoryCacheThreshold.
+  ## If `useCache` is true, then the value is cached in memory (if fitting into MemoryCacheThreshold).
+  ## This method has special handling for dynamically backed IO (e.g. reading single files) to
+  ## make sure we don't exhaust the available fd.
   if useCache and self.cached:
-    result = self.cache
+    return self.cache
 
+  var io = self.io(cacheIO = false)
+  defer:
+    # We need to be aggressive about closing the open IO handle we summoned,
+    # otherwise we'll exhaust fdlimit before gc has a chance to collect.
+    if not self.ioOwned:
+      io.close()
+
+  io.setPosition(self.ioOffset)
+
+  let rawData = if self.ioSize == -1:
+    io.readAll
   else:
-    self.io.setPosition(self.ioOffset)
+    io.readStrOrErr(self.ioSize)
 
-    let rawData = if self.ioSize == -1:
-      self.io.readAll
-    else:
-      self.io.readStrOrErr(self.ioSize)
+  self.ioSize = rawData.len
 
-    self.ioSize = rawData.len
-
-    result = case self.compression
+  result = case self.compression
     of ExoResFileCompressionType.None:
       rawData
     of ExoResFileCompressionType.CompressedBuf:
       decompress(rawData, ExoResFileCompressedBufMagic)
 
-    if useCache and self.ioSize < MemoryCacheThreshold:
-      self.cached = true
-      self.cache = result
-      if self.ioOwned: self.io.close()
-      self.io = nil
+  if useCache and self.ioSize < MemoryCacheThreshold:
+    self.cached = true
+    self.cache = result
 
 proc `$`*(self: Res): string =
   "$#@$#".format(self.resref, self.origin)
@@ -244,6 +293,8 @@ proc contains*(self: ResMan, rr: ResRef, usecache = true): bool =
 
 proc demand*(self: ResMan, rr: ResRef, usecache = true): Res =
   ## Resolves the given resref. Will raise an error if things fail.
+  ## Will not actually open a IO handle or read data; this is done in readAll(); or manually
+  ## with the io accessors.
   if self.cache != nil and usecache:
     let cached = self.cache[rr]
     if cached.isSome:

@@ -29,8 +29,10 @@ method demand*(self: ResDir, rr: ResRef): Res =
   let mtime = getLastModificationTime(fp)
   let sz = getFileSize(fp).int
 
-  let fs = openFileStream(fp, fmRead)
-  result = newRes(newResOrigin(self, self.directory), rr, mtime, fs, ioSize = sz, ioOwned = true)
+  let spawner = proc(self: Res): Stream = openFileStream(fp)
+
+  result = newRes(newResOrigin(self, self.directory), rr, mtime,
+    ioSpawner = spawner, ioSize = sz)
 
 method count*(self: ResDir): int =
   self.contents.card

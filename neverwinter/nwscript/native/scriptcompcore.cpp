@@ -1629,7 +1629,19 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 		int resultBool = -1;
 		switch (pNode->nOperation)
 		{
-			case CSCRIPTCOMPILER_OPERATION_ADD:                 result = left +  right; break;
+			case CSCRIPTCOMPILER_OPERATION_ADD:
+			{
+				//
+				// The NCS format only has an int16 for the string length, so
+				// don't fold massive string concatenations where the result would exceed that.
+				//
+				// TODO: Print something advisory to the log if it wasn't able to optimize.
+				//
+				if ((left.GetLength() + right.GetLength()) >= 0x8000)
+					return FALSE;
+				result = left +  right;
+				break;
+			}
 			// Relational ops on string produce a bool result
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL:     resultBool = left == right; break;
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_NOT_EQUAL: resultBool = left != right; break;
@@ -1924,4 +1936,3 @@ const char *OperationToString(int nOperation)
 	}
 	return "(unknown operation)";
 }
-

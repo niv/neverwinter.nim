@@ -1639,6 +1639,7 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 				//
 				if ((left.GetLength() + right.GetLength()) >= 0x8000)
 					return FALSE;
+				assert(CSCRIPTCOMPILER_MAX_TOKEN_LENGTH >= 0x8000);
 				result = left +  right;
 				break;
 			}

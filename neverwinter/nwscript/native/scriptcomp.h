@@ -37,7 +37,7 @@ class CScriptCompilerIdentifierHashTableEntry;
 
 // Defines required for static size of values.
 #define CSCRIPTCOMPILER_MAX_TABLE_FILENAMES  512
-#define CSCRIPTCOMPILER_MAX_TOKEN_LENGTH     8192
+#define CSCRIPTCOMPILER_MAX_TOKEN_LENGTH     65536
 #define CSCRIPTCOMPILER_INCLUDE_LEVELS       16
 #define CSCRIPTCOMPILER_MAX_INCLUDE_LEVELS   200   // gcc also defaults to 200.
 #define CSCRIPTCOMPILER_MAX_RUNTIME_VARS     8192

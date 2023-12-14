@@ -60,6 +60,22 @@ const string S3 = S1 + "_" + S2;
 const int CONSTSTR_CONDITION_EQUAL     = S1 == S2;
 const int CONSTSTR_CONDITION_NOT_EQUAL = S1 != S2;
 
+// Concatenating large strings:
+const string S16 = "0123456789ABCDEF";
+const string S64 = S16 + S16 + S16 + S16;
+const string S256 = S64 + S64 + S64 + S64;
+const string S1K = S256 + S256 + S256 + S256;
+const string S4K = S1K + S1K + S1K + S1K;
+const string S16K = S4K + S4K + S4K + S4K;
+// Max *const* string size is 32k
+const string S32KminusOne = S16K +
+                            S4K + S4K + S4K +
+                            S1K + S1K + S1K +
+                            S256 + S256 + S256 +
+                            S64 + S64 + S64 +
+                            S16 + S16 + S16 +
+                            "0123456789ABCDE";
+
 // Raw strings
 const string RAW_STRING_SIMPLE_LOWERCASE = r"Neverwinter\nNights";
 const string RAW_STRING_SIMPLE_UPPERCASE = R"Neverwinter\nNights";
@@ -107,4 +123,6 @@ void main()
     Assert(RAW_STRING_MULTILINE == "AAA\nBBB\nCCC");
     Assert(RAW_STRING_QUOTE == "_\"_");
 
+    // non-const strings can be larger than 32k
+    string S64k = S16K + S16K + S16K + S16K;
 }

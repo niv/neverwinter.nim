@@ -154,7 +154,7 @@ var demandResRefThread: Thread[void]
 createThread(demandResRefThread) do ():
   # TODO: Make shared init less sucky. We need to call this here to set up args (again)
   #       so newBasicResMan can refer to it.
-  discard DOC(ArgsHelp)
+  discard DOC(ArgsHelp, false)
 
   let rm = newBasicResMan()
 
@@ -185,7 +185,7 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     new(state)
     # TODO: make shared init less sucky. We need to init this here because workers
     #       will depend on logging and related to be set up.
-    discard DOC(ArgsHelp)
+    discard DOC(ArgsHelp, false)
     state.chDemandResRefResponse.open(maxItems=1)
     state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile, params.maxIncludeDepth)
     state.cNSS.setOptimizations(params.optFlags)

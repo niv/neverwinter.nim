@@ -1527,15 +1527,19 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 	if (!pNode)
 		return FALSE;
 
-	// Only fold operations that have two operands
-	// TODO: ~0 unary op?
-	if (!pNode->pLeft || !pNode->pRight)
+	BOOL bUnary = pNode->nOperation == CSCRIPTCOMPILER_OPERATION_BOOLEAN_NOT ||
+	              pNode->nOperation == CSCRIPTCOMPILER_OPERATION_ONES_COMPLEMENT ||
+	              pNode->nOperation == CSCRIPTCOMPILER_OPERATION_NEGATION;
+
+	// Only fold operations that have all operands
+	if (!pNode->pLeft || (!bUnary && !pNode->pRight))
 		return FALSE;
 
 	// In case of complex expression, start folding at the leaf nodes
 	// e.g.:  C = 3 + 2*4 - First fold 2*4 into 8, then 3+8 into 11
 	ConstantFoldNode(pNode->pLeft, bForce);
-	ConstantFoldNode(pNode->pRight, bForce);
+	if (pNode->pRight)
+		ConstantFoldNode(pNode->pRight, bForce);
 
 	// Can only fold if the operands are constants.
 	if (pNode->pLeft->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER &&
@@ -1546,14 +1550,14 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 	}
 
 	// Only fold operations on same type. Expressions like "3.0f + 1" are not folded
-	if (pNode->pLeft->nOperation != pNode->pRight->nOperation)
+	if (pNode->pRight && (pNode->pLeft->nOperation != pNode->pRight->nOperation))
 		return FALSE;
 
 	if (pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
 	{
 		int32_t result;
 		int32_t left = pNode->pLeft->nIntegerData;
-		int32_t right = pNode->pRight->nIntegerData;
+		int32_t right = pNode->pRight ? pNode->pRight->nIntegerData : 0;
 		switch (pNode->nOperation)
 		{
 			case CSCRIPTCOMPILER_OPERATION_LOGICAL_OR:          result = left || right; break;
@@ -1574,10 +1578,16 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 			case CSCRIPTCOMPILER_OPERATION_MULTIPLY:            result = left *  right; break;
 			case CSCRIPTCOMPILER_OPERATION_DIVIDE:              result = left /  right; break;
 			case CSCRIPTCOMPILER_OPERATION_MODULUS:             result = left %  right; break;
+			// Unary ops
+			case CSCRIPTCOMPILER_OPERATION_BOOLEAN_NOT:         result = !left; break;
+			case CSCRIPTCOMPILER_OPERATION_ONES_COMPLEMENT:     result = ~left; break;
+			case CSCRIPTCOMPILER_OPERATION_NEGATION:            result = -left; break;
+
 			default: return FALSE;
 		}
 		pNode->pLeft->Clean();
-		pNode->pRight->Clean();
+		if (pNode->pRight)
+			pNode->pRight->Clean();
 		pNode->Clean();
 		pNode->nOperation = CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER;
 		pNode->nIntegerData = result;
@@ -1589,7 +1599,7 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 		float result;
 		int resultBool = -1;
 		float left = pNode->pLeft->fFloatData;
-		float right = pNode->pRight->fFloatData;
+		float right = pNode->pRight ? pNode->pRight->fFloatData : 0.0f;
 		switch (pNode->nOperation)
 		{
 			case CSCRIPTCOMPILER_OPERATION_ADD:                 result = left +  right; break;
@@ -1603,10 +1613,14 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_GT:        resultBool = left >  right; break;
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_LT:        resultBool = left <  right; break;
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_LEQ:       resultBool = left <= right; break;
+			// Unary ops
+			case CSCRIPTCOMPILER_OPERATION_NEGATION:            result = -left; break;
+
 			default: return FALSE;
 		}
 		pNode->pLeft->Clean();
-		pNode->pRight->Clean();
+		if (pNode->pRight)
+			pNode->pRight->Clean();
 		pNode->Clean();
 		if (resultBool != -1)
 		{

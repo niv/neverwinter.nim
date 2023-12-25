@@ -397,7 +397,9 @@ private:
 	int32_t InVisitGenerateCode(CScriptParseTreeNode *pNode);
 	int32_t PostVisitGenerateCode(CScriptParseTreeNode *pNode);
 
+	void WriteByteSwap16(char *buffer, int16_t value);
 	void WriteByteSwap32(char *buffer, int32_t value);
+	int16_t ReadByteSwap16(char *buffer);
 	int32_t ReadByteSwap32(char *buffer);
 	char *EmitInstruction(uint8_t nOpCode, uint8_t nAuxCode = 0, int32_t nDataSize = 0);
 	void EmitModifyStackPointer(int32_t nModifyBy);

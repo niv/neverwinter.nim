@@ -6981,9 +6981,18 @@ void CScriptCompiler::WriteByteSwap32(char *buffer, int32_t value)
 	buffer[2] = (char)((value >> 8)  & 0xff);
 	buffer[3] = (char)((value)       & 0xff);
 }
+void CScriptCompiler::WriteByteSwap16(char *buffer, int16_t value)
+{
+	buffer[0] = (char)((value >> 8)  & 0xff);
+	buffer[1] = (char)((value)       & 0xff);
+}
 int32_t CScriptCompiler::ReadByteSwap32(char *buffer)
 {
 	return ((int32_t)buffer[0] << 24) | ((int32_t)buffer[1] << 16) | ((int32_t)buffer[2] << 8) | (int32_t)buffer[3];
+}
+int16_t CScriptCompiler::ReadByteSwap16(char *buffer)
+{
+	return ((int16_t)buffer[0] << 8) | (int16_t)buffer[1];
 }
 
 char *CScriptCompiler::EmitInstruction(uint8_t nOpCode, uint8_t nAuxCode, int32_t nDataSize)
@@ -7052,6 +7061,59 @@ void CScriptCompiler::EmitModifyStackPointer(int32_t nModifyBy)
 				return;
 			}
 		}
+		// The common loop pattern of `for (i = 0; i < 1000; ++i)` gets compiled into
+		//    10  CONSTANT, TYPE_INTEGER, 0               
+		//    16  RUNSTACK_COPY, TYPE_VOID, -4, 4         
+		//    24  CONSTANT, TYPE_INTEGER, 1000            
+		//    30  LT, TYPETYPE_INTEGER_INTEGER            
+		//    32  JZ, 32                                  
+		//    38  INCREMENT, TYPE_INTEGER, -4             
+		//    44  RUNSTACK_COPY, TYPE_VOID, -4, 4         
+		//    52  MODIFY_STACK_POINTER, -4                
+		//    58  JMP, -42                                
+		// The inc/dec operations can reach all across the stack and don't need
+		// to be copied over to top of stack. However, since `++i` returns a value
+		// we have to emit the RUNSTACK_COPY. But, when we don't use that value,
+		// we just immediately clear it with MODIFY_STACK_POINTER.
+		// Just don't do either
+		if (last[CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY)
+		{
+			int32_t nCopySize = ReadByteSwap16(&last[CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 4]);
+			if ((nModifyBy + nCopySize) == 0)
+			{
+				// Undo RUNSTACK_COPY instruction
+				m_nOutputCodeLength -= (CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6);
+				m_aOutputCodeInstructionBoundaries.pop_back();
+				return;
+			}
+		}
+		// Similar to the above, it's also common to write the last step as `i++`,
+		// which makes the INCREMENT and RUNSTACK_COPY instructions swap places..
+		if (last[CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_INCREMENT ||
+			last[CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_DECREMENT)
+		{
+			char *instRunstackCopy = InstructionLookback(2);
+			if (instRunstackCopy[CVIRTUALMACHINE_OPCODE_LOCATION] == CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY)
+			{
+				int32_t nCopySize = ReadByteSwap16(&instRunstackCopy[CVIRTUALMACHINE_EXTRA_DATA_LOCATION + 4]);
+				if ((nModifyBy + nCopySize) == 0)
+				{
+					// Undo INCREMENT and RUNSTACK_COPY instructions, write INCREMENT again
+					m_nOutputCodeLength -= (CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6);
+
+					// Correct the offset of INCREMENT variable because we no longer copy to top of stack
+					int32_t nOffset = ReadByteSwap32(&last[CVIRTUALMACHINE_EXTRA_DATA_LOCATION]);
+					WriteByteSwap32(&last[CVIRTUALMACHINE_EXTRA_DATA_LOCATION], nOffset + nCopySize);
+
+					memmove(instRunstackCopy, last, CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4);
+					m_aOutputCodeInstructionBoundaries.pop_back();
+					m_aOutputCodeInstructionBoundaries.pop_back();
+					m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+					return;
+				}
+			}
+		}
+
 	}
 
 	char *buf = EmitInstruction(CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER, 0, 4);

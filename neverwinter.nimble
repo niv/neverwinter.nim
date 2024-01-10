@@ -6,8 +6,8 @@ description   = "Neverwinter Nights 1: Enhanced Edition data accessor library an
 license       = "MIT"
 
 requires "nim >= 1.6.4"
-requires "checksums"
 when NimMajor == 2:
+  requires "checksums"
   requires "https://github.com/docopt/docopt.nim#head"
   requires "db_connector >= 0.1.0"
 else:

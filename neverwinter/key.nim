@@ -1,7 +1,7 @@
-import streams, sequtils, strutils, tables, times, os, sets, math, checksums/sha1, std/oids
+import streams, sequtils, strutils, tables, times, os, sets, math, std/oids
 doAssert(($genOid()).len == 24)
 
-import resman, util, compressedbuf, exo
+import resman, util, compressedbuf, exo, checksums
 
 # bif and key version NEEDS to match
 type KeyBifVersion* {.pure.} = enum

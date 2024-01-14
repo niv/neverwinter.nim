@@ -1,4 +1,4 @@
-import std/[tables, threadpool, cpuinfo, atomics, strutils, sequtils]
+import std/[tables, threadpool, cpuinfo, atomics, strutils, sequtils, monotimes]
 
 import shared
 import neverwinter/nwscript/compiler
@@ -17,14 +17,15 @@ overridden with -o or -d.
 
 Usage:
   $0 [options] [-o <out>] <file>
-  $0 [options] -c <spec>...
+  $0 [options] [-d <out>] [-R] -c <spec>...
   $USAGE
 
   -o OUT                      When compiling single file, specify outfile.
 
   -c                          Compile multiple files and/or directories.
-  -d DIR                      Write all build artifacts into DIR.
+  -d DIR                      When compiling multiple files, write all build artifacts into DIR.
   -R                          Recurse into subdirectories for each given directory.
+  --follow-symlinks           Follow symlinks when compiling recursively.
 
   -g                          Write debug symbol files (NDB).
   -y                          Continue processing input files even on error.
@@ -35,6 +36,8 @@ Usage:
                                 2: Aggressive optimisations; fastest and smallest code size:
 """ & indent(join(toSeq(OptimizationFlagsO2).mapIt("+" & $it), "\n"), 36) & """
 
+
+  --max-include-depth=N       Maximum include depth [default: 16]
 
   -s                          Simulate: Compile, but write no filee.
                               Use --verbose to see what would be written.
@@ -56,6 +59,8 @@ type
     continueOnError: bool
     parallel: Positive
     outDirectory: string
+    maxIncludeDepth: 1..200
+    followSymlinks: bool
 
   GlobalState = object
     successes, errors, skips: Atomic[uint]
@@ -95,7 +100,9 @@ globalState.params = Params(
   ),
   continueOnError: globalState.args["-y"].to_bool,
   parallel: (if globalState.args["-j"]: parseInt($globalState.args["-j"]) else: countProcessors()).Positive,
-  outDirectory: if globalState.args["-d"]: ($globalState.args["-d"]) else: ""
+  outDirectory: if globalState.args["-d"]: ($globalState.args["-d"]) else: "",
+  maxIncludeDepth: parseInt($globalState.args["--max-include-depth"]),
+  followSymlinks: globalState.args["--follow-symlinks"],
 )
 
 if globalState.params.outDirectory != "" and not dirExists(globalState.params.outDirectory):
@@ -147,7 +154,7 @@ var demandResRefThread: Thread[void]
 createThread(demandResRefThread) do ():
   # TODO: Make shared init less sucky. We need to call this here to set up args (again)
   #       so newBasicResMan can refer to it.
-  discard DOC(ArgsHelp)
+  discard DOC(ArgsHelp, false)
 
   let rm = newBasicResMan()
 
@@ -178,9 +185,9 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     new(state)
     # TODO: make shared init less sucky. We need to init this here because workers
     #       will depend on logging and related to be set up.
-    discard DOC(ArgsHelp)
+    discard DOC(ArgsHelp, false)
     state.chDemandResRefResponse.open(maxItems=1)
-    state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile)
+    state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile, params.maxIncludeDepth)
     state.cNSS.setOptimizations(params.optFlags)
   state
 
@@ -206,7 +213,13 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
     # version will come back.
     removeFile(parts.dir / parts.name & "." & getResExt(params.langSpec.dbg))
 
+    let timeStart = getMonoTime()
     let ret = compileFile(getThreadState().cNSS, parts.name)
+    proc timingPostfix(): string =
+      let diff = getMonoTime() - timeStart
+      let ms = diff.inMilliseconds()
+      if ms == 0: " [<0ms]"
+      else: " [" & $ms & "ms]"
 
     # This cast is here only to access globalState.
     # We know the atomics are threadsafe to touch, and so is logging.
@@ -220,19 +233,20 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
           else: writeFile(fn, data)
 
         atomicInc globalState.successes
-        debug prefix, "Success"
-
         writeData(outFilePrefix & "." & getResExt(params.langSpec.bin), ret.bytecode)
         writeData(outFilePrefix & "." & getResExt(params.langSpec.dbg), ret.debugcode)
+
+        debug prefix, "Success", timingPostfix()
+
       of 623:
         atomicInc globalState.skips
-        debug prefix, "no main (include?)"
+        debug prefix, "no main (include?)", timingPostfix()
       else:
         atomicInc globalState.errors
         if params.continueOnError:
-          error prefix, ret.str
+          error prefix, ret.str, timingPostfix()
         else:
-          fatal prefix, ret.str
+          fatal prefix, ret.str, timingPostfix()
           # This might not be so safe in conjunction with the threadpool being loaded
           # We'll see if it starts crashing ..
           quit(1)
@@ -250,6 +264,8 @@ proc canCompileFile(path: string): bool =
 
 # Collect files to compile first in one go, and verify they exist.
 proc collect(into: var seq[string], path: string) =
+  let dirMask = if params.followSymlinks: {pcDir, pcLinkToDir} else: {pcDir}
+  let fileMask = if params.followSymlinks: {pcFile, pcLinkToFile} else: {pcFile}
   if fileExists(path):
     if not canCompileFile(path):
       fatal path, ": Don't know how to compile file type"
@@ -258,9 +274,9 @@ proc collect(into: var seq[string], path: string) =
   elif dirExists(path):
     for subpath in walkDir(path, relative=true, checkdir=true):
       let absSubPath = path / subpath.path
-      if subpath.kind == pcDir and params.recurse:
+      if subpath.kind in dirMask and params.recurse:
         collect(into, absSubPath)
-      elif subpath.kind == pcFile and canCompileFile(absSubPath):
+      elif subpath.kind in fileMask and canCompileFile(absSubPath):
         into.add(absSubPath)
   else:
     fatal path,  ": Does not exist"

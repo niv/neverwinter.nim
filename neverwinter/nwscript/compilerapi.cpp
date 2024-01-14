@@ -6,7 +6,8 @@ extern "C" CScriptCompiler* scriptCompApiNewCompiler(
     int32_t (*ResManWriteToFile)(const char* sFileName, RESTYPE nResType, const uint8_t* pData, size_t nSize, bool bBinary),
     const char* (*ResManLoadScriptSourceFile)(const char* fn, RESTYPE rt),
     const char* (*TlkResolve)(STRREF strRef),
-    bool writeDebug
+    bool writeDebug,
+    int maxIncludeDepth
 )
 {
     CScriptCompilerAPI api;
@@ -20,6 +21,7 @@ extern "C" CScriptCompiler* scriptCompApiNewCompiler(
     instance->SetCompileConditionalOrMain(1);
     instance->SetIdentifierSpecification(lang);
     instance->SetOutputAlias("scriptout");
+    instance->SetMaxIncludeDepth(maxIncludeDepth);
     return instance;
 }
 

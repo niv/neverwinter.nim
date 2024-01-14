@@ -69,7 +69,7 @@ type OptArgs* = Table[string, docopt_internal.Value]
 
 var Args {.threadvar.}: OptArgs
 
-proc DOC*(body: string): OptArgs =
+proc DOC*(body: string, mainThread = true): OptArgs =
   let body2 = body.replace("$USAGE", GlobalUsage).
                    replace("$0", getAppFilename().extractFilename()).
                    replace("$OPTRESMAN", getResmanOpts()).
@@ -93,8 +93,9 @@ proc DOC*(body: string): OptArgs =
   setNwnEncoding($Args["--nwn-encoding"])
   setNativeEncoding($Args["--other-encoding"])
 
-  debug("NWN file encoding: " & getNwnEncoding())
-  debug("Other file encoding: " & getNativeEncoding())
+  if mainThread:
+    debug("NWN file encoding: " & getNwnEncoding())
+    debug("Other file encoding: " & getNativeEncoding())
 
   if Args.hasKey("--add-restypes") and Args["--add-restypes"]:
     let types = ($Args["--add-restypes"]).split(",").mapIt(it.split(":"))

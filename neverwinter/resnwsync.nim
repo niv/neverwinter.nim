@@ -112,7 +112,7 @@ method demand*(self: ResNWSyncManifest, rr: ResRef): Res =
   let data = self.nwcsync.shards[shardId].conn.getValue(
     sql"select data from resrefs where sha1 = ?", sha1)
   newRes(origin = newResOrigin(self), resref = rr, mtime = self.mtime,
-    io = newStringStream(data), ioSize = data.len, ioOwned = true,
+    io = newStringStream(data), ioSize = data.len,
     sha1 = sha1)
 
 method count*(self: ResNWSyncManifest): int =

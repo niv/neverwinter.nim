@@ -334,6 +334,8 @@ CScriptCompiler::CScriptCompiler(RESTYPE nSource, RESTYPE nCompiled, RESTYPE nDe
 	m_pIdentifierHashTable = new CScriptCompilerIdentifierHashTableEntry[CSCRIPTCOMPILER_SIZE_IDENTIFIER_HASH_TABLE];
 
 	m_nCompileFileLevel = 0;
+    m_nMaxIncludeDepth = CSCRIPTCOMPILER_INCLUDE_LEVELS;
+
 	m_bCompileConditionalFile = FALSE;
 	m_bOldCompileConditionalFile = FALSE;
 	m_bCompileConditionalOrMain = FALSE;
@@ -1202,7 +1204,7 @@ int32_t CScriptCompiler::CompileFile(const CExoString &sFileName)
 		Initialize();
 	}
 
-	if (m_nCompileFileLevel >= CSCRIPTCOMPILER_MAX_INCLUDE_LEVELS)
+	if (m_nCompileFileLevel >= m_nMaxIncludeDepth)
 	{
 		return STRREF_CSCRIPTCOMPILER_ERROR_INCLUDE_TOO_MANY_LEVELS;
 	}
@@ -1465,26 +1467,41 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 	{
 		if (nLineNumber > 0)
 		{
-			sFullErrorText.Format("%s(%d): %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sErrorText.CStr());
+			sFullErrorText.Format("%s(%d): %s", psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sErrorText.CStr());
 		}
 		else
 		{
-			sFullErrorText.Format("%s: %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),sErrorText.CStr());
+			sFullErrorText.Format("%s: %s", psFileName->Right(psFileName->GetLength()-1).CStr(),sErrorText.CStr());
 		}
 	}
 	else
 	{
 		if (nLineNumber > 0)
 		{
-			sFullErrorText.Format("%s.nss(%d): %s\n",psFileName->CStr(),nLineNumber,sErrorText.CStr());
+			sFullErrorText.Format("%s.nss(%d): %s", psFileName->CStr(),nLineNumber,sErrorText.CStr());
 		}
 		else
 		{
-			sFullErrorText.Format("%s.nss: %s\n",psFileName->CStr(),sErrorText.CStr());
+			sFullErrorText.Format("%s.nss: %s", psFileName->CStr(),sErrorText.CStr());
 		}
 	}
 
 	m_sCapturedError = sFullErrorText;
+
+    CExoString sTraceIncludes = "";
+    for (int i = 1; i < m_nCompileFileLevel; i++)
+    {
+        sTraceIncludes = sTraceIncludes + " " + m_pcIncludeFileStack[i].m_sCompiledScriptName + ".nss";
+
+        if (m_pcIncludeFileStack[i].m_nLine > 0)
+            sTraceIncludes = sTraceIncludes + "(" + m_pcIncludeFileStack[i].m_nLine + ")";
+    }
+
+    if (!sTraceIncludes.IsEmpty())
+    {
+        m_sCapturedError.Format("%s [via:%s]", m_sCapturedError.CStr(), sTraceIncludes.CStr());
+    }
+
     m_nCapturedErrorStrRef = nError;
 
 	// Print the full error text to the log file.
@@ -1544,15 +1561,19 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 			return FALSE;
 	}
 
-	// Only fold operations that have two operands
-	// TODO: ~0 unary op?
-	if (!pNode->pLeft || !pNode->pRight)
+	BOOL bUnary = pNode->nOperation == CSCRIPTCOMPILER_OPERATION_BOOLEAN_NOT ||
+	              pNode->nOperation == CSCRIPTCOMPILER_OPERATION_ONES_COMPLEMENT ||
+	              pNode->nOperation == CSCRIPTCOMPILER_OPERATION_NEGATION;
+
+	// Only fold operations that have all operands
+	if (!pNode->pLeft || (!bUnary && !pNode->pRight))
 		return FALSE;
 
 	// In case of complex expression, start folding at the leaf nodes
 	// e.g.:  C = 3 + 2*4 - First fold 2*4 into 8, then 3+8 into 11
 	ConstantFoldNode(pNode->pLeft, bForce);
-	ConstantFoldNode(pNode->pRight, bForce);
+	if (pNode->pRight)
+		ConstantFoldNode(pNode->pRight, bForce);
 
 	// Can only fold if the operands are constants.
 	if (pNode->pLeft->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER &&
@@ -1563,14 +1584,14 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 	}
 
 	// Only fold operations on same type. Expressions like "3.0f + 1" are not folded
-	if (pNode->pLeft->nOperation != pNode->pRight->nOperation)
+	if (pNode->pRight && (pNode->pLeft->nOperation != pNode->pRight->nOperation))
 		return FALSE;
 
 	if (pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
 	{
 		int32_t result;
 		int32_t left = pNode->pLeft->nIntegerData;
-		int32_t right = pNode->pRight->nIntegerData;
+		int32_t right = pNode->pRight ? pNode->pRight->nIntegerData : 0;
 		switch (pNode->nOperation)
 		{
 			case CSCRIPTCOMPILER_OPERATION_LOGICAL_OR:          result = left || right; break;
@@ -1591,10 +1612,16 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 			case CSCRIPTCOMPILER_OPERATION_MULTIPLY:            result = left *  right; break;
 			case CSCRIPTCOMPILER_OPERATION_DIVIDE:              result = left /  right; break;
 			case CSCRIPTCOMPILER_OPERATION_MODULUS:             result = left %  right; break;
+			// Unary ops
+			case CSCRIPTCOMPILER_OPERATION_BOOLEAN_NOT:         result = !left; break;
+			case CSCRIPTCOMPILER_OPERATION_ONES_COMPLEMENT:     result = ~left; break;
+			case CSCRIPTCOMPILER_OPERATION_NEGATION:            result = -left; break;
+
 			default: return FALSE;
 		}
 		pNode->pLeft->Clean();
-		pNode->pRight->Clean();
+		if (pNode->pRight)
+			pNode->pRight->Clean();
 		pNode->Clean();
 		pNode->nOperation = CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER;
 		pNode->nIntegerData = result;
@@ -1606,7 +1633,7 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 		float result;
 		int resultBool = -1;
 		float left = pNode->pLeft->fFloatData;
-		float right = pNode->pRight->fFloatData;
+		float right = pNode->pRight ? pNode->pRight->fFloatData : 0.0f;
 		switch (pNode->nOperation)
 		{
 			case CSCRIPTCOMPILER_OPERATION_ADD:                 result = left +  right; break;
@@ -1620,10 +1647,14 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_GT:        resultBool = left >  right; break;
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_LT:        resultBool = left <  right; break;
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_LEQ:       resultBool = left <= right; break;
+			// Unary ops
+			case CSCRIPTCOMPILER_OPERATION_NEGATION:            result = -left; break;
+
 			default: return FALSE;
 		}
 		pNode->pLeft->Clean();
-		pNode->pRight->Clean();
+		if (pNode->pRight)
+			pNode->pRight->Clean();
 		pNode->Clean();
 		if (resultBool != -1)
 		{
@@ -1646,7 +1677,20 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 		int resultBool = -1;
 		switch (pNode->nOperation)
 		{
-			case CSCRIPTCOMPILER_OPERATION_ADD:                 result = left +  right; break;
+			case CSCRIPTCOMPILER_OPERATION_ADD:
+			{
+				//
+				// The NCS format only has an int16 for the string length, so
+				// don't fold massive string concatenations where the result would exceed that.
+				//
+				// TODO: Print something advisory to the log if it wasn't able to optimize.
+				//
+				if ((left.GetLength() + right.GetLength()) >= 0x8000)
+					return FALSE;
+				assert(CSCRIPTCOMPILER_MAX_TOKEN_LENGTH >= 0x8000);
+				result = left +  right;
+				break;
+			}
 			// Relational ops on string produce a bool result
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL:     resultBool = left == right; break;
 			case CSCRIPTCOMPILER_OPERATION_CONDITION_NOT_EQUAL: resultBool = left != right; break;
@@ -1941,4 +1985,3 @@ const char *OperationToString(int nOperation)
 	}
 	return "(unknown operation)";
 }
-

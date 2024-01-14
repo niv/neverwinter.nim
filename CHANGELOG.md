@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.1] - 2023-12-17
+
+### Changed
+
+- ResDir instances now cache their contents on creation time. This is a change from previous behaviour, where additions to a local directory were reflected immediately.
+
+### Fixed
+
+- ResDir is now case-insensitive, same as base game and other ResContainer types.
+- scriptcomp: Messages about encoding are no longer printed multiple times when using threads.
+
+## [1.7.0] - 2023-11-26
+
+### Added
+
+- script_comp: Add cli flag to optionally follow symlinks.
+- script_comp: Add cli flag to allow raising the max include depth.
+- script_comp: Now also prints the full include chain for each error.
+- script_comp: Now prints timing for each handled file; updated some help text to be clearer.
+
+### Fixed
+
+- ResMan/Res: Fix prematurely opening FDs and exhausting allowed pool when sourcing many files (e.g. script_comp *.nss).
+
 ## [1.6.4] - 2023-10-14
 
 ### Added

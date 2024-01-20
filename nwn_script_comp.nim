@@ -39,7 +39,7 @@ Usage:
 
   --max-include-depth=N       Maximum include depth [default: 16]
 
-  -s                          Simulate: Compile, but write no filee.
+  -s                          Simulate: Compile, but write no file.
                               Use --verbose to see what would be written.
 
   --langspec NSS              Language spec to load [default: nwscript]

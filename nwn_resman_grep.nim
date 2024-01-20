@@ -1,4 +1,4 @@
-import shared, checksums/sha1, checksums/md5
+import shared, checksums
 
 let args = DOC """
 Find files in resman

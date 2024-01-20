@@ -1,6 +1,6 @@
-import streams, strutils, tables, times, algorithm, logging, checksums/sha1, std/oids
+import streams, strutils, tables, times, algorithm, logging, std/oids
 
-import resman, util, resref, exo, compressedbuf
+import resman, util, resref, exo, compressedbuf, checksums
 
 # This is advisory only. We will emit a warning on mismatch (so library users
 # get more debug hints), but still attempt to load the file.

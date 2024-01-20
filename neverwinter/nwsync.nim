@@ -2,7 +2,7 @@ import std/[streams, critbits, os, algorithm, strutils, sequtils, math, options]
 
 import neverwinter/restype, neverwinter/resref, neverwinter/streamext
 
-import checksums/sha1
+import checksums
 
 # Bit of a hack, sorry: always print securehash in lowercase
 proc `$`*(s: SecureHash): string =

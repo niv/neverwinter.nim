@@ -1,4 +1,4 @@
-import shared, checksums, std/oids
+import shared, std/oids
 
 import critbits, os, tables, options, sets, sequtils, strutils, logging
 

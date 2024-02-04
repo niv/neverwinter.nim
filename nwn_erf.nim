@@ -1,4 +1,4 @@
-import shared, checksums, std/oids
+import shared, std/oids
 
 let args = DOC """
 Un/packs erf files.

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.2] - 2024-02-04
+
+### Changed
+
+- All binaries now build with stacktraces enabled, to make user reports more useful.
+
+### Fixed
+
+- Fixed installation on nim 1.6 due to changed checksums package upstream.
+
+### Performance Improvements
+
+- scriptcomp: Optimized the common for loop construct `for (i = 0; i < N; ++i)`.
+
 ## [1.7.1] - 2023-12-17
 
 ### Changed

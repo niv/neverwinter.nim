@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.3] - 2024-02-17
+
+### Fixed
+
+- Fixed checksums import when using neverwinter.nim as library (#110).
+- scriptcomp: Fixed regression not utilising all threads when compiling (#109).
+
 ## [1.7.2] - 2024-02-04
 
 ### Changed

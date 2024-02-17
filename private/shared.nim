@@ -7,12 +7,13 @@ import neverwinter/util, neverwinter/resman,
   neverwinter/erf, neverwinter/gff, neverwinter/gffjson,
   neverwinter/languages, neverwinter/compressedbuf,
   neverwinter/exo,
-  neverwinter/game
+  neverwinter/game,
+  neverwinter/checksums
 
 # The things we do to cut down import hassle in tools.
 # Should clean this up at some point and let the utils deal with it.
 export util, resman, resref, key, resfile, resmemfile, resdir, erf, gff, gffjson,
-  languages, compressedbuf, exo, game
+  languages, compressedbuf, exo, game, checksums
 
 import version
 

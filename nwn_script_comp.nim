@@ -124,13 +124,19 @@ let params: ptr Params = globalState.params.addr
 # over a channel and services them sequentially. This was preferable to having one
 # resman per worker thread, since bringing up rm takes quite a bit of IO and cpu.
 
+# Cache container instances so resDir does not reload every time a file is queried.
+# Variable is only valid on service thread.
+var resContainerCache {.threadvar.}: Table[string, ResContainer]
+
 proc serviceRmDemand(rm: ResMan, resref: ResRef, searchPath: seq[RMSearchPathEntry]): string =
   var containers: seq[ResContainer]
   for q in searchPath:
-    case q[0]
-    of pcDir:  containers.add newResDir(q[1])
-    of pcFile: containers.add newResFile(q[1])
-    else: continue
+    if not resContainerCache.hasKey(q[1]):
+      case q[0]
+      of pcDir:  resContainerCache[q[1]] = newResDir(q[1])
+      of pcFile: resContainerCache[q[1]] = newResFile(q[1])
+      else: continue
+    containers.add resContainerCache[q[1]]
   for c in containers:
     rm.add(c)
   defer:

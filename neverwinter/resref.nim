@@ -77,8 +77,6 @@ proc `<`*(a, b: ResRef): bool =
   a.resRef < b.resRef or a.resType < b.resType
 
 proc `cmp`*[T: ResRef](a, b: T): int {.procvar.} =
-  # We compare uppercase resrefs, just like NWN does too.
-  # This matters for sorting things like "_" versus "A".
   if a.resType != b.resType: return a.resType.int - b.resType.int
   else: return cmpIgnoreCase(a.resRef, b.resRef)
 

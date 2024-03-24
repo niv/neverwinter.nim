@@ -477,6 +477,7 @@ private:
 	CScriptCompilerStackEntry *m_pSRStack;
 	int32_t m_nSRStackEntries;
 	int32_t m_nSRStackStates;
+    CExoString m_sCurrentFunction;
 
 
 	// Identifiers (read from language definition file)

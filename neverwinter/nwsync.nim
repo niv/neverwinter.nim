@@ -4,10 +4,6 @@ import neverwinter/restype, neverwinter/resref, neverwinter/streamext
 
 import checksums
 
-# Bit of a hack, sorry: always print securehash in lowercase
-proc `$`*(s: SecureHash): string =
-  toLowerAscii(sha1.`$`(s))
-
 const HashTreeDepth = 2 # this needs to match with the nwn sources
 
 const Version = 3

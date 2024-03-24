@@ -920,160 +920,174 @@ void CScriptCompiler::InitializeSwitchLabelList()
 ///////////////////////////////////////////////////////////////////////////////
 int32_t CScriptCompiler::TraverseTreeForSwitchLabels(CScriptParseTreeNode *pNode)
 {
-	// First, we scan to see if there are multiple labels of the same type.
-	int nReturnValue;
+	//
+	// This function uses the in-order tree traversal, meaning that the left
+	// subtree is processed first, then the current node, then the right subtree.
+	// Or, as pseudocode, something like:
+	//    TraverseTreeForSwitchLabels(pNode->pLeft);
+	//    ProcessNode(pNode);
+	//    TraverseTreeForSwitchLabels(pNode->pRight);
+	// However, recursively processing the tree means we run the risk of a stack
+	// overflow if the tree depth is too large. What is 'too large' depends on
+	// the platform, but there will always be a switch/case statement complex
+	// enough that processing it causes a crash.
+	// So, instead we use a heap-allocated custom stack to store the nodes and
+	// process them iteratively instead.
+	//
+	std::vector<CScriptParseTreeNode *> nodestack;
 
-	if (pNode == NULL)
+	while (pNode || !nodestack.empty())
 	{
-		return 0;
-	}
-	// First of all, if we are about to go into another switch block, abort!
-	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_SWITCH_BLOCK)
-	{
-		return 0;
-	}
-
-	nReturnValue = TraverseTreeForSwitchLabels(pNode->pLeft);
-	if (nReturnValue < 0)
-	{
-		return nReturnValue;
-	}
-
-	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_DEFAULT)
-	{
-		if (m_bSwitchLabelDefault == TRUE)
+		// First of all, if we are about to go into another switch block, abort!
+		while (pNode && pNode->nOperation != CSCRIPTCOMPILER_OPERATION_SWITCH_BLOCK)
 		{
-			return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_MULTIPLE_DEFAULT_STATEMENTS_WITHIN_SWITCH, pNode);
-		}
-		m_bSwitchLabelDefault = TRUE;
-	}
-
-	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CASE)
-	{
-		int32_t nCaseValue;
-
-		ConstantFoldNode(pNode->pLeft, TRUE);
-		// Evaluate the constant value that is contained.
-		if (pNode->pLeft != NULL &&
-		        pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_NEGATION &&
-		        pNode->pLeft->pLeft != NULL &&
-		        pNode->pLeft->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
-		{
-			nCaseValue = -pNode->pLeft->pLeft->nIntegerData;
-		}
-		else if (pNode->pLeft != NULL &&
-		         pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
-		{
-			nCaseValue = pNode->pLeft->nIntegerData;
-		}
-		else if (pNode->pLeft != NULL &&
-		         pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING)
-		{
-			nCaseValue = pNode->pLeft->m_psStringData->GetHash();
-		}
-		else
-		{
-			return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_CASE_PARAMETER_NOT_A_CONSTANT_INTEGER,pNode);
+			nodestack.push_back(pNode);
+			pNode = pNode->pLeft;
 		}
 
-		// Now, we have to check if any of the previous case statements have the same value.
-		int nCount;
+		if (nodestack.empty())
+			break;
 
-		for (nCount = 0; nCount < m_nSwitchLabelNumber; ++nCount)
+		pNode = nodestack.back();
+		nodestack.pop_back();
+
+		//
+		// At this point, we have processed all the nodes to the left of pNode.
+		//
+
+		if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_DEFAULT)
 		{
-			if (m_pnSwitchLabelStatements[nCount] == nCaseValue)
+			if (m_bSwitchLabelDefault == TRUE)
 			{
-				return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_MULTIPLE_CASE_CONSTANT_STATEMENTS_WITHIN_SWITCH,pNode);
+				return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_MULTIPLE_DEFAULT_STATEMENTS_WITHIN_SWITCH, pNode);
 			}
+			m_bSwitchLabelDefault = TRUE;
 		}
 
-		// Add the case statement to the list.
-		if (m_nSwitchLabelNumber >= m_nSwitchLabelArraySize)
+		if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_CASE)
 		{
-			int32_t *pNewIntArray = new int32_t[m_nSwitchLabelArraySize * 2];
+			int32_t nCaseValue;
+
+			ConstantFoldNode(pNode->pLeft, TRUE);
+			// Evaluate the constant value that is contained.
+			if (pNode->pLeft != NULL &&
+			        pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_NEGATION &&
+			        pNode->pLeft->pLeft != NULL &&
+			        pNode->pLeft->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
+			{
+				nCaseValue = -pNode->pLeft->pLeft->nIntegerData;
+			}
+			else if (pNode->pLeft != NULL &&
+			         pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
+			{
+				nCaseValue = pNode->pLeft->nIntegerData;
+			}
+			else if (pNode->pLeft != NULL &&
+			         pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING)
+			{
+				nCaseValue = pNode->pLeft->m_psStringData->GetHash();
+			}
+			else
+			{
+				return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_CASE_PARAMETER_NOT_A_CONSTANT_INTEGER,pNode);
+			}
+
+			// Now, we have to check if any of the previous case statements have the same value.
+			int nCount;
+
 			for (nCount = 0; nCount < m_nSwitchLabelNumber; ++nCount)
 			{
-				pNewIntArray[nCount] = m_pnSwitchLabelStatements[nCount];
+				if (m_pnSwitchLabelStatements[nCount] == nCaseValue)
+				{
+					return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_MULTIPLE_CASE_CONSTANT_STATEMENTS_WITHIN_SWITCH,pNode);
+				}
 			}
-			m_nSwitchLabelArraySize *= 2;
-			delete[] m_pnSwitchLabelStatements;
-			m_pnSwitchLabelStatements = pNewIntArray;
+
+			// Add the case statement to the list.
+			if (m_nSwitchLabelNumber >= m_nSwitchLabelArraySize)
+			{
+				int32_t *pNewIntArray = new int32_t[m_nSwitchLabelArraySize * 2];
+				for (nCount = 0; nCount < m_nSwitchLabelNumber; ++nCount)
+				{
+					pNewIntArray[nCount] = m_pnSwitchLabelStatements[nCount];
+				}
+				m_nSwitchLabelArraySize *= 2;
+				delete[] m_pnSwitchLabelStatements;
+				m_pnSwitchLabelStatements = pNewIntArray;
+			}
+
+			m_pnSwitchLabelStatements[m_nSwitchLabelNumber] = nCaseValue;
+			++m_nSwitchLabelNumber;
+
+			// Now, we add the pseudocode:
+			// COPYTOP fffffffc,0004  // copies the switch result so that we can use it.
+			// CONSTI  nCaseValue     // adds the constant that we're to compare against.
+			// EQUALII                // compares the two, leaving the result on the stack.
+			// JNZ    _SC_nCaseValue_nSwitchIdentifier  // result goes away, jump executed.
+
+			// CODE GENERATION
+			// Here, we would dump the "appropriate" data from the run-time stack
+			// on to the top of the stack, making a copy of it ... that's why
+			// we're adding one to the appropriate run time stack.
+
+			int32_t nStackElementsDown = -4;
+			int32_t nSize = 4;
+
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
+
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
+
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
+
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+
+			// CODE GENERATION
+			// Here, we have a "constant integer" op-code that would be added.
+			int32_t nIntegerData = nCaseValue;
+
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
+
+			// Enter the integer constant.
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
+			m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
+
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+
+			// CODE GENERATION
+			// Write an "condition EQUALII" operation.
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+
+			// CODE GENERATION
+			// Add the "JNZ _SC_nCaseValue_nSwitchIdentifier" operation.
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JNZ;
+			m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
+
+			/* CExoString sSymbolName;
+			sSymbolName.Format("_SC_%08x_%08x",nCaseValue,m_nSwitchIdentifier); */
+			AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
+			                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_CASE,
+			                     nCaseValue,m_nSwitchIdentifier);
+
+			m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
+			m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
+
 		}
 
-		m_pnSwitchLabelStatements[m_nSwitchLabelNumber] = nCaseValue;
-		++m_nSwitchLabelNumber;
-
-		// Now, we add the pseudocode:
-		// COPYTOP fffffffc,0004  // copies the switch result so that we can use it.
-		// CONSTI  nCaseValue     // adds the constant that we're to compare against.
-		// EQUALII                // compares the two, leaving the result on the stack.
-		// JNZ    _SC_nCaseValue_nSwitchIdentifier  // result goes away, jump executed.
-
-		// CODE GENERATION
-		// Here, we would dump the "appropriate" data from the run-time stack
-		// on to the top of the stack, making a copy of it ... that's why
-		// we're adding one to the appropriate run time stack.
-
-		int32_t nStackElementsDown = -4;
-		int32_t nSize = 4;
-
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_RUNSTACK_COPY;
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_VOID;
-
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nStackElementsDown) >> 24) & 0x0ff);
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nStackElementsDown) >> 16) & 0x0ff);
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nStackElementsDown) >> 8) & 0x0ff);
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nStackElementsDown)) & 0x0ff);
-
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+4] = (char) (((nSize) >> 8) & 0x0ff);
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+5] = (char) (((nSize)) & 0x0ff);
-
-		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 6;
-		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
-
-		// CODE GENERATION
-		// Here, we have a "constant integer" op-code that would be added.
-		int32_t nIntegerData = nCaseValue;
-
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_CONSTANT;
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPE_INTEGER;
-
-		// Enter the integer constant.
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION] = (char) (((nIntegerData) >> 24) & 0x0ff);
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+1] = (char) (((nIntegerData) >> 16) & 0x0ff);
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+2] = (char) (((nIntegerData) >> 8) & 0x0ff);
-		m_pchOutputCode[m_nOutputCodeLength+CVIRTUALMACHINE_EXTRA_DATA_LOCATION+3] = (char) (((nIntegerData)) & 0x0ff);
-
-		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
-
-		// CODE GENERATION
-		// Write an "condition EQUALII" operation.
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_EQUAL;
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = CVIRTUALMACHINE_AUXCODE_TYPETYPE_INTEGER_INTEGER;
-		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE;
-		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
-
-		// CODE GENERATION
-		// Add the "JNZ _SC_nCaseValue_nSwitchIdentifier" operation.
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_OPCODE_LOCATION] = CVIRTUALMACHINE_OPCODE_JNZ;
-		m_pchOutputCode[m_nOutputCodeLength + CVIRTUALMACHINE_AUXCODE_LOCATION] = 0;
-
-		/* CExoString sSymbolName;
-		sSymbolName.Format("_SC_%08x_%08x",nCaseValue,m_nSwitchIdentifier); */
-		AddSymbolToQueryList(m_nOutputCodeLength + CVIRTUALMACHINE_EXTRA_DATA_LOCATION,
-		                     CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_SWITCH_CASE,
-		                     nCaseValue,m_nSwitchIdentifier);
-
-		m_nOutputCodeLength += CVIRTUALMACHINE_OPERATION_BASE_SIZE + 4;
-		m_aOutputCodeInstructionBoundaries.push_back(m_nOutputCodeLength);
-
-	}
-
-	nReturnValue = TraverseTreeForSwitchLabels(pNode->pRight);
-	if (nReturnValue < 0)
-	{
-		return nReturnValue;
+		// Done with current node. Move one to the right, then process left subtree again.
+		pNode = pNode->pRight;
 	}
 
 	return 0;

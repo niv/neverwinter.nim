@@ -63,6 +63,7 @@ jobs:
           cd dll
           wget https://nim-lang.org/download/dlls.zip
           unzip dlls.zip
+          rm dlls.zip
 
       - name: Compile for Windows i386
         if: matrix.bintype == 'win-i386'

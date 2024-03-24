@@ -593,6 +593,9 @@ void CScriptCompiler::Initialize( )
         m_pcKeyWords[39].Add("JSON_ARRAY"            ,HashString("JSON_ARRAY"),           CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_ARRAY);
         m_pcKeyWords[40].Add("JSON_STRING"           ,HashString("JSON_STRING"),          CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_STRING);
 		m_pcKeyWords[41].Add("LOCATION_INVALID"      ,HashString("LOCATION_INVALID"),     CSCRIPTCOMPILER_TOKEN_KEYWORD_LOCATION_INVALID);
+        m_pcKeyWords[42].Add("__FUNCTION__"          ,HashString("__FUNCTION__"),         CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FUNCTION);
+        m_pcKeyWords[43].Add("__FILE__"              ,HashString("__FILE__"),             CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FILE);
+        m_pcKeyWords[44].Add("__LINE__"              ,HashString("__LINE__"),             CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE);
 
 		int32_t nCount;
 		for (nCount = 0; nCount < CSCRIPTCOMPILER_MAX_KEYWORDS; ++nCount)
@@ -1802,6 +1805,9 @@ const char *TokenKeywordToString(int nTokenKeyword)
 		case CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_ARRAY:                        return "KEYWORD_JSON_ARRAY";
 		case CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_STRING:                       return "KEYWORD_JSON_STRING";
 		case CSCRIPTCOMPILER_TOKEN_KEYWORD_LOCATION_INVALID:                  return "KEYWORD_LOCATION_INVALID";
+        case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FUNCTION:                 return "KEYWORD_DASHDASH_FUNCTION";
+        case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FILE:                     return "KEYWORD_DASHDASH_FILE";
+        case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE:                     return "KEYWORD_DASHDASH_LINE";
 	}
 	return "(unknown token keyword)";
 }

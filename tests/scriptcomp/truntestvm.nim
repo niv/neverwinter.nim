@@ -1,4 +1,4 @@
-import std/[streams, strutils, random, os, logging, options, enumutils, sequtils, setutils]
+import std/[streams, strutils, random, os, logging, options, pegs]
 import neverwinter/nwscript/[nwtestvm, compiler, ndb]
 import neverwinter/[restype, resfile, resdir, resman]
 
@@ -29,6 +29,7 @@ type VMCommand = enum
   Random
   TakeInt
   TakeClosure
+  PegMatch
 
 vm.defineCommand(Assert.int) do (script: VMScript):
   let boo = script.popIntBool()
@@ -60,6 +61,11 @@ vm.defineCommand(TakeInt.int) do (script: VMScript):
 
 vm.defineCommand(TakeClosure.int) do (script: VMScript):
   discard
+
+vm.defineCommand(PegMatch.int) do (script: VMScript):
+  let test    = script.popString
+  let pattern = peg script.popString
+  script.pushInt if test.match(pattern): 1 else: 0
 
 proc testFileSingle(file: string, debugSymbols: bool, optFlags: set[OptimizationFlag]) =
   let ff = splitFile(file).name

@@ -527,7 +527,6 @@ int32_t CScriptCompiler::GenerateParseTree()
                 else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FUNCTION)
                 {
                     CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
-                    // ??? m_pchToken[m_nTokenCharacters] = 0;
                     pNewNode->m_psStringData = new CExoString(m_sCurrentFunction.CStr());
                     ModifySRStackReturnTree(pNewNode);
                     return 0;
@@ -535,7 +534,6 @@ int32_t CScriptCompiler::GenerateParseTree()
                 else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FILE)
                 {
                     CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
-                    // ??? m_pchToken[m_nTokenCharacters] = 0;
                     pNewNode->m_psStringData = new CExoString(m_pcIncludeFileStack[m_nCompileFileLevel-1].m_sCompiledScriptName.CStr());
                     ModifySRStackReturnTree(pNewNode);
                     return 0;
@@ -543,7 +541,6 @@ int32_t CScriptCompiler::GenerateParseTree()
                 else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE)
                 {
                     CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER,NULL,NULL);
-                    // ??? m_pchToken[m_nTokenCharacters] = 0;
                     pNewNode->nIntegerData = m_nLines;
                     ModifySRStackReturnTree(pNewNode);
                     return 0;

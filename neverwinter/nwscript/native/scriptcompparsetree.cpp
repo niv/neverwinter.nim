@@ -567,6 +567,13 @@ int32_t CScriptCompiler::GenerateParseTree()
                     ModifySRStackReturnTree(pNewNode);
                     return 0;
                 }
+                else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_SCRIPTCOMP_VERSION)
+                {
+                    CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
+                    pNewNode->m_psStringData = new CExoString(SCRIPTCOMP_VERSION);
+                    ModifySRStackReturnTree(pNewNode);
+                    return 0;
+                }
 				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT_INVALID)
 				{
 					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_OBJECT,NULL,NULL);
@@ -742,6 +749,7 @@ int32_t CScriptCompiler::GenerateParseTree()
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME ||
+                        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_SCRIPTCOMP_VERSION ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_NULL ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_FALSE ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_TRUE ||

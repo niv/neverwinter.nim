@@ -1,5 +1,7 @@
+const NimblePkgVersion {.strdefine.} = ""
+
 {.passL: "-lstdc++".}
-const cppFlags = "-std=c++14"
+const cppFlags = "-std=c++14 -DSCRIPTCOMP_VERSION='\"" & NimblePkgVersion & "\"'"
 when defined(mingw):
   {.passL: "-static".}
 {.compile("native/exostring.cpp", cppFlags).}

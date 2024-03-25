@@ -22,4 +22,5 @@ void main()
     outer();
     Assert(PegMatch(__DATE__, "^\\d\\d\\d\\d'-'\\d\\d'-'\\d\\d$"));
     Assert(PegMatch(__TIME__, "^\\d\\d':'\\d\\d':'\\d\\d$"));
+    Assert(PegMatch(__SCRIPTCOMP_VERSION__, "^\\d+\\.\\d+\\.\\d+$"));
 }

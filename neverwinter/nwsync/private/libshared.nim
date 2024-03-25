@@ -16,6 +16,15 @@ proc newResMan*(entries: seq[string], includeModContents: bool, lookupPaths: seq
   ## Reindexes the given module.
   let resman = newResMan(0)
 
+  for p in lookupPaths:
+    if not dirExists(p) and not fileExists(p):
+      abort "not found or not accessible: ", p
+
+  if includeModContents:
+    notice "Search path will include module contents"
+  else:
+    notice "Search path will not include module contents"
+
   for entry in entries:
     let pa = splitFile(entry)
     let isDir = dirExists(entry)
@@ -46,7 +55,6 @@ proc newResMan*(entries: seq[string], includeModContents: bool, lookupPaths: seq
         let erf = readErf(fs, entry)
 
         if includeModContents:
-          info "Including module contents"
           resman.add erf
 
         let ifo = erf.demand(newResolvedResRef "module.ifo").readAll(useCache=false)

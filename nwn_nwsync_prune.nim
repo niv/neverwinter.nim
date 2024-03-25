@@ -1,6 +1,6 @@
-import docopt; let ARGS = docopt """
-nwsync_prune
+import shared
 
+let ARGS = DOC """
 This utility will perform housekeeping on a nwsync repository.
 
 It will:
@@ -11,28 +11,18 @@ It will:
 - Clean up the directory structure.
 
 Usage:
-  nwsync_prune [options] <root>
-  nwsync_prune (-h | --help)
-  nwsync_prune --version
+  $0 [options] <root>
+  $USAGE
 
 Options:
-  -h --help         Show this screen.
-  -V --version      Show version.
-  -v --verbose      Verbose operation (>= DEBUG).
-  -q --quiet        Quiet operation (>= WARN).
-
-  -n --dry-run      Simulate, don't actually do anything.
+  -n --dry-run                Simulate, don't actually do anything.
+  $OPT
 """
 
-from libversion import handleVersion
-if ARGS["--version"]: handleVersion()
+import std/[os, strutils, logging, critbits, sequtils, sets, times]
 
-import os,streams, strutils, logging, critbits, sequtils, sets
-
-import neverwinter/resref
 import neverwinter/nwsync
-
-import libshared
+import neverwinter/nwsync/private/libshared
 
 proc isSha1*(candidate: string): bool =
   candidate.len == 40 and candidate.count({'a'..'f', '0'..'9'}) == 40

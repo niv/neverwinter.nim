@@ -1,8 +1,6 @@
-import neverwinter/compressedbuf
+import shared
 
-import docopt; let ARGS = docopt """
-nwsync_write
-
+let ARGS = DOC """
 This utility creates a new manifest in a serverside nwsync
 repository.
 
@@ -30,60 +28,52 @@ if the server admin does not specify a hash to serve explicitly.
 
 
 Usage:
-  nwsync_write [options] [--path PATH]... [--description=D] <root> <spec>...
-  nwsync_write (-h | --help)
-  nwsync_write --version
+  $0 [options] [--path PATH]... [--description=D] <root> <spec>...
+  $USAGE
 
 Options:
-  -h --help              Show this screen.
-  -V --version           Show version.
-  -v --verbose           Verbose operation (>= DEBUG).
-  -q --quiet             Quiet operation (>= WARN).
+  --with-module               Include module contents. This is only useful when packing up
+                              a module for full distribution.
+                              DO NOT USE THIS FOR PERSISTENT WORLDS.
 
-  --with-module          Include module contents. This is only useful when packing up
-                         a module for full distribution.
-                         DO NOT USE THIS FOR PERSISTENT WORLDS.
+  -p --path PATH...           Add a path to lookup when resolving module.ifo dependencies (haks, tlk).
+                              Can be given multiple times.
 
-  -p --path PATH...      Add a path to lookup when resolving module.ifo dependencies (haks, tlk).
-                         Can be given multiple times.
-
-  -n --dry-run           Don't actually touch repository, only simulate checksumming/writing.
+  -n --dry-run                Don't actually touch repository, only simulate checksumming/writing.
 
 When running --with-module:
-  --mod-uuid=UUID        The module UUID to save. Required if the module does not
-                         have a UUID. Must be a UUIDv4.
-  --no-latest            Don't update the latest pointer.
+  --mod-uuid=UUID             The module UUID to save. Required if the module does not
+                              have a UUID. Must be a UUIDv4.
+  --no-latest                 Don't update the latest pointer.
 
-  --name=N               Override the visible name. Will extract the module name
-                         if a module is sourced.
+  --name=N                    Override the visible name. Will extract the module name
+                              if a module is sourced.
 
-  --description=D        Override the visible description. Will extract module
-                         description if a module is sourced.
+  --description=D             Override the visible description. Will extract module
+                              description if a module is sourced.
 
-  -f                     Force rewrite of existing data.
-  --compression=T        Compress repostory data. [default: zstd]
-                         This saves disk space and speeds up transfers if your
-                         webserver does not speak gzip or deflate compression.
-                         Supported compression types: """ & SupportedAlgorithms & """
+  -f                          Force rewrite of existing data.
+  --compression=T             Compress repostory data. [default: zstd]
+                              This saves disk space and speeds up transfers if your
+                              webserver does not speak gzip or deflate compression.
+                              Supported compression types: """ & SupportedAlgorithms & """
 
-  --group-id ID          Set a group ID. Do this if you run multiple servers
-                         from the same repository. Manifests with the same ID
-                         are considered for auto-removal by clients when
-                         superseded by a newer download. [default: 0]
+  --group-id ID               Set a group ID. Do this if you run multiple servers
+                              from the same repository. Manifests with the same ID
+                              are considered for auto-removal by clients when
+                              superseded by a newer download. [default: 0]
 
-  --limit-file-size MB   Error out if any file in the manifest written would
-                         exceed the stated limit (in megabytes). [default: 15]
+  --limit-file-size MB        Error out if any file in the manifest written would
+                              exceed the stated limit (in megabytes). [default: 15]
 
-  --write-origins        Write out .origins file, which can be used to reconstruct
-                         the hak structure from a NWSync manifest.
+  --write-origins             Write out .origins file, which can be used to reconstruct
+                              the hak structure from a NWSync manifest.
+  $OPT
 """
 
-from libversion import handleVersion
-if ARGS["--version"]: handleVersion()
+import neverwinter/nwsync/private/[libupdate, libshared]
 
 import logging, sequtils, strutils
-
-import libupdate, libshared
 
 let ForceWriteIfExists = ARGS["-f"]
 

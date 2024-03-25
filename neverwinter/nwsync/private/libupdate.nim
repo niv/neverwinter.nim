@@ -1,11 +1,9 @@
 import options, logging, critbits, std/sha1, strutils, sequtils,
   os, algorithm, math, times, json, sets, tables
 
-import neverwinter/gff, neverwinter/resman, neverwinter/compressedbuf
-
-import neverwinter/nwsync
-import libshared
-import libversion
+import neverwinter/[gff, resman, resref, compressedbuf, nwsync]
+import private/version
+import neverwinter/nwsync/private/libshared
 
 type Limits* = tuple
   fileSize: uint64
@@ -140,7 +138,7 @@ proc reindex*(
   var moduleUUID = ""
   var moduleName = ""
   var moduleDescription = ""
-  let ifo = resman["module.ifo"]
+  let ifo = resman[newResolvedResRef "module.ifo"]
   if ifo.isSome:
     let rr = ifo.get()
     rr.seek()
@@ -280,7 +278,7 @@ proc reindex*(
     "total_bytes": totalbytes,
     "on_disk_bytes": diskbytes,
     "created": %int epochTime(),
-    "created_with": "nwsync.nim " & VersionString
+    "created_with": getVersionString()
   }
 
   if withModuleContents.enabled:

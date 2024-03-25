@@ -1,6 +1,6 @@
-import docopt; let ARGS = docopt """
-nwsync_fetch
+import shared
 
+let ARGS = DOC """
 Build a download list for external downloaders to fully sync a manifest
 into a repository. Can be used for mirroring.
 
@@ -11,21 +11,14 @@ Currently only supports aria2c. Example:
     4e1243bd22c66e76c2ba9eddc1f91394e57f9f83 | aria2c --input-file - -c
 
 Usage:
-  nwsync_fetch [options] <root> <url> <sha1>
-  nwsync_fetch (-h | --help)
-  nwsync_fetch --version
+  $0 [options] <root> <url> <sha1>
+  $USAGE
 
 Options:
-  -h --help         Show this screen.
-  -V --version      Show version.
-  -v --verbose      Verbose operation (>= DEBUG).
-  -q --quiet        Quiet operation (>= WARN).
+  $OPT
 """
 
-from libversion import handleVersion
-if ARGS["--version"]: handleVersion()
-
-import httpclient, streams, sets
+import std/[httpclient, streams, sets]
 
 import neverwinter/nwsync
 

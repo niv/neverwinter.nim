@@ -29,6 +29,7 @@ const GlobalUsage = """
 proc getGlobalOpts(): string = """
 
 Logging:
+  -h --help                   Show this screen
   --verbose                   Turn on debug logging
   --quiet                     Turn off all logging, except errors and above
   --silent                    Suppress all logging

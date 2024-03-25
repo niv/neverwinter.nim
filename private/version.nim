@@ -7,12 +7,15 @@ const Licence: string  = slurp(currentSourcePath().splitFile().dir & "/../LICENC
 const GitBranch*: string = staticExec("git symbolic-ref -q --short HEAD").strip
 const GitRev*: string    = staticExec("git rev-parse HEAD").strip
 
-proc printVersion*() =
+proc getVersionString*(): string =
   let nimbleConfig       = loadConfig(newStringStream(Nimble))
   let PackageVersion     = nimbleConfig.getSectionValue("", "version")
-  let VersionString      = "neverwinter " & PackageVersion & " (" & GitBranch & "/" & GitRev[0..5] & ", nim " & NimVersion & ")"
+  result = "neverwinter " & PackageVersion & " (" & GitBranch & "/" & GitRev[0..5] & ", nim " & NimVersion & ")"
+
+proc printVersion*() =
+  let versionString = getVersionString()
 
   echo Template.
        replace("$LICENCE", Licence).
-       replace("$VERSION", VersionString)
+       replace("$VERSION", versionString)
   quit(0)

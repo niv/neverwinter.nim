@@ -1,28 +1,21 @@
-import docopt; let ARGS = docopt """
-nwsync_print
+import shared
 
+let ARGS = DOC """
 This utility prints a manifest in human-readable form.
 
 Usage:
-  nwsync_print [options] <manifest>
-  nwsync_print (-h | --help)
-  nwsync_print --version
+  $0 [options] <manifest>
+  $USAGE
 
 Options:
-  -h --help         Show this screen.
-  -V --version      Show version.
-  -v --verbose      Verbose operation (>= DEBUG).
-  -q --quiet        Quiet operation (>= WARN).
-
-  --verify          Verify presence and checksum of files in manifest.
+  --verify                    Verify presence and checksum of files in manifest.
+  $OPT
 """
 
-from libversion import handleVersion
-if ARGS["--version"]: handleVersion()
+import std/[logging, streams, strutils, options, os]
 
-import logging, streams, strutils, options, os, std/sha1
-
-import neverwinter/nwsync, libupdate, neverwinter/compressedbuf, neverwinter/resref
+import neverwinter/[nwsync]
+import neverwinter/nwsync/private/libupdate
 
 addHandler newFileLogger(stderr, fmtStr = verboseFmtStr)
 setLogFilter(if ARGS["--verbose"]: lvlDebug elif ARGS["--quiet"]: lvlWarn else: lvlInfo)

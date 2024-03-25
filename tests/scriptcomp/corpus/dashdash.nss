@@ -16,11 +16,10 @@ void outer(string inp = __FUNCTION__)
 void main()
 {
     inner("outer");
-    Assert(__LINE__ == 19);
     Assert(__FUNCTION__ == "main");
-    Assert(__LINE__ == 21);
     outer();
-    Assert(PegMatch(__DATE__, "^\\d\\d\\d\\d'-'\\d\\d'-'\\d\\d$"));
-    Assert(PegMatch(__TIME__, "^\\d\\d':'\\d\\d':'\\d\\d$"));
-    Assert(PegMatch(__SCRIPTCOMP_VERSION__, "^\\d+\\.\\d+\\.\\d+$"));
+    Assert(PegMatch(__DATE__, "^\\d\\d\\d\\d'-'\\d\\d'-'\\d\\d$"), "Value: " + __DATE__);
+    Assert(PegMatch(__TIME__, "^\\d\\d':'\\d\\d':'\\d\\d$"), "Value: " + __TIME__);
+    Assert(PegMatch(__SCRIPTCOMP_VERSION__, "^\\d+\\.\\d+\\.\\d+$"), "Value: " + __SCRIPTCOMP_VERSION__);
+    Assert(__LINE__ == 24);
 }

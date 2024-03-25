@@ -20,4 +20,6 @@ void main()
     Assert(__FUNCTION__ == "main");
     Assert(__LINE__ == 21);
     outer();
+    Assert(PegMatch(__DATE__, "^\\d\\d\\d\\d'-'\\d\\d'-'\\d\\d$"));
+    Assert(PegMatch(__TIME__, "^\\d\\d':'\\d\\d':'\\d\\d$"));
 }

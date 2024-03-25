@@ -545,6 +545,28 @@ int32_t CScriptCompiler::GenerateParseTree()
                     ModifySRStackReturnTree(pNewNode);
                     return 0;
                 }
+                else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE)
+                {
+                    CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
+                    char buffer[32];
+                    time_t now = time(0);
+                    struct tm tstruct = *localtime(&now);
+                    strftime(buffer, sizeof(buffer), "%Y-%m-%d", &tstruct);
+                    pNewNode->m_psStringData = new CExoString(buffer);
+                    ModifySRStackReturnTree(pNewNode);
+                    return 0;
+                }
+                else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME)
+                {
+                    CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
+                    char buffer[32];
+                    time_t now = time(0);
+                    struct tm tstruct = *localtime(&now);
+                    strftime(buffer, sizeof(buffer), "%H:%M:%S", &tstruct);
+                    pNewNode->m_psStringData = new CExoString(buffer);
+                    ModifySRStackReturnTree(pNewNode);
+                    return 0;
+                }
 				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT_INVALID)
 				{
 					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_OBJECT,NULL,NULL);
@@ -718,6 +740,8 @@ int32_t CScriptCompiler::GenerateParseTree()
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FUNCTION ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FILE ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE ||
+                        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE ||
+                        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_NULL ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_FALSE ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_TRUE ||

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2024-03-26
+
+### Added
+
+- The nwsync utilities from beamdog/nwsync have been moved into this repository.
+- nwsync: prune utility will not trim recently-written files (default: 2 weeks).
+
+### Fixed
+
+- nwsync: Will now correctly error out if any lookup path element cannot be found.
+- nwsync: Do not create directories in dryrun mode.
+
 ## [1.7.3] - 2024-02-17
 
 ### Fixed

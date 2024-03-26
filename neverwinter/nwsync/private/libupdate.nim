@@ -221,7 +221,7 @@ proc reindex*(
 
     else:
       # Not in storage yet, write it to disk.
-      let path = pathForEntry(manifest, rootDirectory, sha1str, true)
+      let path = pathForEntry(manifest, rootDirectory, sha1str, not dryRun)
 
       info percentPrefix, "Writing: ", path, " (", $resRef, ")"
 

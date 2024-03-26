@@ -16,6 +16,9 @@ Usage:
 
 Options:
   -n --dry-run                Simulate, don't actually do anything.
+
+  --min-age AGE               Do not prune data files that have been written within
+                              AGE seconds. 2 weeks = [default: 1209600]
   $OPT
 """
 
@@ -35,6 +38,8 @@ proc act*(hr: varargs[string, `$`], runnable: proc()) =
   else: notice "Dry run: ", foldl(@hr, a & " " & b)
 
 let root = $ARGS["<root>"]
+
+let minAge: int64 = parseBiggestInt($ARGS["--min-age"]).clamp(0, int64.high)
 
 ### CHECK: Ensure `latest` points to a valid manifest file
 
@@ -111,9 +116,12 @@ proc pruneUnreferencedFiles*(rootDirectory: string) =
       join(", ")
     error "MISSING: ", m, ", referenced in ", mfh
 
+  let now = getTime()
   for o in orphans:
     let f = inStorage[o]
-    act("Would delete file: ", f) do (): removeFile(f)
+    let age = now - getLastModificationTime(f)
+    if age.inSEconds > minAge:
+      act("Would delete file: ", f) do (): removeFile(f)
 
 pruneUnreferencedFiles(root)
 

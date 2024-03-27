@@ -60,7 +60,6 @@ proc allowedToExpose(it: ResRef): bool =
 
 proc readAndRewrite(res: Res, uuid: string): string =
   var data = res.readAll(useCache=false)
-  # TODO: Close the file, we won't need it ever again this run.
 
   if toLowerAscii($res.resRef) == "module.ifo":
     info "Rewriting module.ifo to strip all HAKs, UUID=", uuid

@@ -146,7 +146,6 @@ proc serviceRmDemand(rm: ResMan, resref: ResRef, searchPath: seq[RMSearchPathEnt
   if not rm.contains(resref):
     return ""
   else:
-    # TODO: will run into open fd ulimit on some systems because of how resman handles fds currently
     return rm.demand(resref).readAll
 
 var chDemandResRef: Channel[tuple[

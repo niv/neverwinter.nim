@@ -36,7 +36,7 @@ jobs:
           ${{ runner.os }}-nimble-${{ matrix.nim-version}}-
 
     - name: Setup nim
-      uses: jiro4989/setup-nim-action@v1
+      uses: jiro4989/setup-nim-action@f6b28cfdfcbc9c2364429bd585ad5f850ea64498
       with:
         nim-version: ${{ matrix.nim-version }}
 

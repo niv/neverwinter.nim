@@ -1,7 +1,7 @@
-import options, logging, critbits, std/sha1, strutils, sequtils,
+import options, logging, critbits, strutils, sequtils,
   os, algorithm, math, times, json, sets, tables
 
-import neverwinter/[gff, resman, resref, compressedbuf, nwsync]
+import neverwinter/[gff, resman, resref, compressedbuf, nwsync, checksums]
 import private/version
 import neverwinter/nwsync/private/libshared
 

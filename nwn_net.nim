@@ -1,11 +1,6 @@
-import arpie, net, strutils, os, jser, docopt, times
+import arpie, net, strutils, os, jser, docopt, times, asyncnet
 import net, asyncdispatch, netutil, nativesockets
 import shared
-
-when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
-  import asyncnet
-else:
-  import asyncnetudp
 
 let args = DOC """
 Generic NWN1 game server query tool.

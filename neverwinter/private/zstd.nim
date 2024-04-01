@@ -13,18 +13,11 @@ type
 
   DecompressionContext = ref DecompressionContextObj
 
-when NimMajor >= 2:
-  proc `=destroy`*(self: CompressionContextObj) =
-    discard ZSTD_freeCCtx(self.ctx)
+proc `=destroy`*(self: CompressionContextObj) =
+  discard ZSTD_freeCCtx(self.ctx)
 
-  proc `=destroy`*(self: DecompressionContextObj) =
-    discard ZSTD_freeDCtx(self.ctx)
-else:
-  proc `=destroy`*(self: var CompressionContextObj) =
-    discard ZSTD_freeCCtx(self.ctx)
-
-  proc `=destroy`*(self: var DecompressionContextObj) =
-    discard ZSTD_freeDCtx(self.ctx)
+proc `=destroy`*(self: DecompressionContextObj) =
+  discard ZSTD_freeDCtx(self.ctx)
 
 proc newCompressionContext*(): CompressionContext =
   new(result)

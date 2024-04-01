@@ -1,7 +1,4 @@
-when NimMajor == 2:
-  import checksums/[sha1, md5]
-else:
-  import std/[sha1, md5]
+import checksums/[sha1, md5]
 
 from std/strutils import toLowerAscii
 

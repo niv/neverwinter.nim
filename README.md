@@ -3,7 +3,8 @@
 This is a nim-lang library and utility collection to read and write data files used
 by Neverwinter Nights: Enhanced Edition.
 
-It also includes the official script compiler source code and CLI utility.
+It also includes the official script compiler source code and CLI utility, as well
+as tools to maintain a serverside NWSync repository.
 
 Binary releases are available on the Github Releases page of this project. You do
 not need to install anything else.
@@ -51,3 +52,14 @@ interested in.
 
 * `nwn_script_comp`: NWScript compiler using the official open-source compiler library.
 * `nwn_asm`: Utility to deal with nwscript assembly.
+
+### NWSync
+
+These utilities are the official way to maintain a NWSync serverside repository.
+
+Note that all of these were previously at home on Beamdog/nwsync, but were moved here.
+
+* `nwn_nwsync_write`: Generate a serverside NWSync manifest.
+* `nwn_nwsync_prune`: Trim serverside NWSync repository of unreferenced data, to save diskspace.
+* `nwn_nwsync_print`: Print manifest contents in human-readable format.
+* `nwn_nwsync_fetch`: Helper to synchronise a manifest server-to-server with aria2c.

@@ -500,6 +500,10 @@ public:
     /* int32_t   m_nNodeLocation; ???? */
     int32_t   m_nStackPointer;
 
+    // Optionally disallow using as default value in function args:
+    // This is a hackaround to prevent __FUNCTION__ from being filled in.
+    bool m_bAllowAsDefaultValueInFunctionDecl;
+
     CScriptParseTreeNode() { m_psStringData = NULL; m_psTypeName = NULL; Clean(); }
 
     void Clean()
@@ -531,6 +535,7 @@ public:
         nChar = 0;
         nType = 0;
         m_nStackPointer = 0;
+        m_bAllowAsDefaultValueInFunctionDecl = true;
     }
 
     ~CScriptParseTreeNode()

@@ -528,6 +528,7 @@ int32_t CScriptCompiler::GenerateParseTree()
                 {
                     CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
                     pNewNode->m_psStringData = new CExoString(m_sCurrentFunction.CStr());
+                    pNewNode->m_bAllowAsDefaultValueInFunctionDecl = false;
                     ModifySRStackReturnTree(pNewNode);
                     return 0;
                 }
@@ -535,12 +536,14 @@ int32_t CScriptCompiler::GenerateParseTree()
                 {
                     CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
                     pNewNode->m_psStringData = new CExoString(m_pcIncludeFileStack[m_nCompileFileLevel-1].m_sCompiledScriptName.CStr());
+                    pNewNode->m_bAllowAsDefaultValueInFunctionDecl = false;
                     ModifySRStackReturnTree(pNewNode);
                     return 0;
                 }
                 else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE)
                 {
                     CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER,NULL,NULL);
+                    pNewNode->m_bAllowAsDefaultValueInFunctionDecl = false;
                     pNewNode->nIntegerData = m_nLines;
                     ModifySRStackReturnTree(pNewNode);
                     return 0;
@@ -4071,6 +4074,17 @@ int32_t CScriptCompiler::AddUserDefinedIdentifier(CScriptParseTreeNode *pFunctio
 				int nError = STRREF_CSCRIPTCOMPILER_ERROR_NON_OPTIONAL_PARAMETER_CANNOT_FOLLOW_OPTIONAL_PARAMETER;
 				return nError;
 			}
+
+            // This is a hackaround for __FUNCTION__, __FILE__, and __LINE;
+            // which are abusing constants to inject their real values.
+            // We don't allow them as default args to functions, since the parser
+            // (incorrectly?) inserts the value at parse time instead of the caller.
+            // Until someone goes and codifies/fixes it, we simply disallow
+            // using the macro as a default argument.
+            if (pNode->pRight->pRight && !pNode->pRight->pRight->m_bAllowAsDefaultValueInFunctionDecl)
+            {
+                return STRREF_CSCRIPTCOMPILER_ERROR_NON_CONSTANT_IN_FUNCTION_DECLARATION;
+            }
 
 			if (nNewParameterType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT)
 			{

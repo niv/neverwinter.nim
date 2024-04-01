@@ -1,5 +1,5 @@
 import std/[net, strutils, os, times, asyncnet, asyncdispatch, nativesockets]
-import arpie, jser, shared, netutil
+import arpie, shared, netutil
 
 let args = DOC """
 Generic NWN1 game server query tool.

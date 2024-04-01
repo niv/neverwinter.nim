@@ -1,4 +1,4 @@
-import std/[logging, net, asyncdispatch, times, json, nativesockets, asyncnet]
+import std/[logging, net, asyncdispatch, times, json, nativesockets, asyncnet, jsonutils]
 import arpie
 
 type AskResult* = tuple

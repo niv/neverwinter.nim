@@ -25,7 +25,7 @@ Options:
   $OPT
 """
 
-include packets
+import packets
 
 let timeout = parseInt($args["--timeout"])
 

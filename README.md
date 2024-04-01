@@ -63,3 +63,11 @@ Note that all of these were previously at home on Beamdog/nwsync, but were moved
 * `nwn_nwsync_prune`: Trim serverside NWSync repository of unreferenced data, to save diskspace.
 * `nwn_nwsync_print`: Print manifest contents in human-readable format.
 * `nwn_nwsync_fetch`: Helper to synchronise a manifest server-to-server with aria2c.
+
+## Development
+
+neverwinter.nim requires nim 2.0 or later set up to develop against.
+
+Since moving to 2.0, the file nimble.lock is used to pin dependencies to specific versions.
+
+You can keep building it simply by typing `nimble build -d:release` (where -d:release is optional). If you want to use nim or testament directly, you need to set up the local search path file with `nimble setup`.

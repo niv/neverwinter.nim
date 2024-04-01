@@ -41,5 +41,8 @@ jobs:
     - name: Install Packages
       run: nimble install -y --depsOnly
 
+    - name: Setup nimble search path
+      run: nimble setup
+
     - name: Build
       run: nimble build -d:release

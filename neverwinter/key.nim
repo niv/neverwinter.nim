@@ -1,4 +1,4 @@
-import streams, sequtils, strutils, tables, times, os, sets, math, std/oids
+import std/[streams, sequtils, strutils, tables, times, os, sets, math, oids]
 doAssert(($genOid()).len == 24)
 
 import resman, util, compressedbuf, exo, checksums

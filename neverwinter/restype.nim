@@ -4,7 +4,7 @@
 ## There are a few builtins (all that NWN1 knows about); and if that makes you
 ## unhappy, you can call the global proc registerResType to add more at runtime.
 
-import tables, strutils, options
+import std/[tables, strutils, options]
 
 import util
 

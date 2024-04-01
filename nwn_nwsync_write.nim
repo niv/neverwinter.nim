@@ -73,7 +73,7 @@ When running --with-module:
 
 import neverwinter/nwsync/private/[libupdate, libshared]
 
-import logging, sequtils, strutils
+import std/[logging, sequtils, strutils]
 
 let ForceWriteIfExists = ARGS["-f"]
 

@@ -1,4 +1,4 @@
-import strutils, options
+import std/[strutils, options]
 from hashes import hash, Hash, `!&`
 
 import restype, util

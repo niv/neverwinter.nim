@@ -1,5 +1,5 @@
-import arpie, logging, net, asyncdispatch, times, json,
-  nativesockets, asyncnet
+import std/[logging, net, asyncdispatch, times, json, nativesockets, asyncnet]
+import arpie
 
 type AskResult* = tuple
   time: int64

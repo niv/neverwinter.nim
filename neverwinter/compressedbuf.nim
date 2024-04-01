@@ -2,7 +2,7 @@
 ## storage concerns, such as SQLite embedding, campaign database blob compression,
 ## and NWSync.
 
-import streams
+import std/streams
 when defined(zlib):
   import zip/zlib
 import private/zstd

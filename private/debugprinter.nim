@@ -1,4 +1,4 @@
-import typetraits, strutils, streams
+import std/[typetraits, strutils, streams]
 
 type DebugPrinter* = ref object
   input: Stream

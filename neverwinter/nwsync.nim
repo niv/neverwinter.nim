@@ -1,8 +1,6 @@
 import std/[streams, critbits, os, algorithm, strutils, sequtils, math, options]
 
-import neverwinter/restype, neverwinter/resref, neverwinter/streamext
-
-import checksums
+import neverwinter/[restype, resref, streamext, checksums]
 
 const HashTreeDepth = 2 # this needs to match with the nwn sources
 

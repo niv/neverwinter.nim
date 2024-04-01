@@ -1,5 +1,4 @@
-import std/streams, std/tables, std/os, std/sequtils, std/strutils, std/times, std/logging,
-  std/hashes
+import std/[streams, tables, os, sequtils, strutils, times, logging, hashes]
 
 import db_connector/db_sqlite
 

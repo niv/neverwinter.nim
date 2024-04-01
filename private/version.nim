@@ -1,4 +1,4 @@
-import os, strutils, parsecfg, streams
+import std/[os, strutils, parsecfg, streams]
 
 const Nimble: string   = slurp(currentSourcePath().splitFile().dir & "/../neverwinter.nimble")
 const Template: string = slurp(currentSourcePath().splitFile().dir & "/../VERSION.tpl").strip

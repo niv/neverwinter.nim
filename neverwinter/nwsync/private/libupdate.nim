@@ -1,5 +1,5 @@
-import options, logging, critbits, strutils, sequtils,
-  os, algorithm, math, times, json, sets, tables
+import std/[options, logging, critbits, strutils, sequtils,
+  os, algorithm, math, times, json, sets, tables]
 
 import neverwinter/[gff, resman, resref, compressedbuf, nwsync, checksums]
 import private/version

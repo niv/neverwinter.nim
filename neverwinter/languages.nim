@@ -1,4 +1,4 @@
-import tables, strutils
+import std/[tables, strutils]
 
 type
   StrRef* = uint32

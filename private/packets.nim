@@ -1,4 +1,5 @@
-import arpie, hashes
+import std/hashes
+import arpie
 
 type
   SLocation* = object

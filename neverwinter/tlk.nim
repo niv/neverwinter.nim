@@ -1,4 +1,4 @@
-import streams, strutils, options, sequtils, tables, math
+import std/[streams, strutils, options, sequtils, tables, math]
 
 import util, lru, resman, languages
 export languages

@@ -1,6 +1,4 @@
-import net, nativesockets, asyncdispatch, os
-# patchypatch
-include asyncnet
+import std/[net, nativesockets, asyncdispatch, os, asyncnet]
 
 type RecvFromResult* = tuple[data: string, address: string, port: Port]
 

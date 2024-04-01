@@ -1,4 +1,4 @@
-import json
+import std/[json]
 
 ## A module to easily de/serialize json data into/from native types, like tuples,
 ## seqs, or single variables.

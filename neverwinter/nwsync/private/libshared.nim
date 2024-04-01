@@ -1,6 +1,5 @@
-import logging, os, sequtils, critbits, algorithm
-import neverwinter/resman, neverwinter/resdir, neverwinter/key,
-  neverwinter/erf, neverwinter/gff, neverwinter/resfile
+import std/[logging, os, sequtils, critbits, algorithm]
+import neverwinter/[resman, resdir, key, erf, gff, resfile]
 
 proc abort*(args: varargs[string, `$`]) = fatal(args); quit(1)
 

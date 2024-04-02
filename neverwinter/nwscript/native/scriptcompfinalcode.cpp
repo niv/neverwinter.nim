@@ -763,7 +763,6 @@ int32_t CScriptCompiler::OutputIdentifierError(const CExoString &sFunctionName, 
 int32_t CScriptCompiler::ResolveLabels()
 {
 
-	CExoString sFunctionName;
 	BOOL bFoundLabel;
 	BOOL bFoundIdentifier;
 
@@ -886,7 +885,7 @@ int32_t CScriptCompiler::ResolveLabels()
 					return OutputWalkTreeError(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER, NULL);
 				}
 
-				return OutputIdentifierError(sFunctionName,STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER,0);
+				return OutputIdentifierError(sNewFunctionName,STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER,0);
 			}
 		}
 	}

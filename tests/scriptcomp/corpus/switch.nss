@@ -16,4 +16,30 @@ void main()
         case S+S:  Assert(FALSE); break;
         default:   Assert(FALSE); break;
     }
+
+    // Nested switch
+    switch (N)
+    {
+        case N:
+        {
+            switch (N+1)
+            {
+                case N+1: Assert(TRUE);  break;
+                case 0:   Assert(FALSE); break;
+                default:  Assert(FALSE); break;
+            }
+            break;
+        }
+        case 0:
+        {
+            switch (N+1)
+            {
+                case N+1: Assert(TRUE);  break;
+                case 0:   Assert(FALSE); break;
+                default:  Assert(FALSE); break;
+            }
+            break;
+        }
+        default: Assert(FALSE); break;
+    }
 }

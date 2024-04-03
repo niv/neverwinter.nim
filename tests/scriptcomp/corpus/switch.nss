@@ -28,6 +28,7 @@ void main()
                 case 0:   Assert(FALSE); break;
                 default:  Assert(FALSE); break;
             }
+            break;
         }
         case 0:
         {
@@ -37,6 +38,7 @@ void main()
                 case 0:   Assert(FALSE); break;
                 default:  Assert(FALSE); break;
             }
+            break;
         }
         default: Assert(FALSE); break;
     }

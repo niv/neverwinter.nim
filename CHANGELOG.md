@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2024-03-26
+
+### Added
+
+- The nwsync utilities from beamdog/nwsync have been moved into this repository.
+- nwsync: prune utility will not trim recently-written files (default: 2 weeks).
+
+### Fixed
+
+- nwsync: Will now correctly error out if any lookup path element cannot be found.
+- nwsync: Do not create directories in dryrun mode.
+
+## [1.7.3] - 2024-02-17
+
+### Fixed
+
+- Fixed checksums import when using neverwinter.nim as library (#110).
+- scriptcomp: Fixed regression not utilising all threads when compiling (#109).
+
+## [1.7.2] - 2024-02-04
+
+### Changed
+
+- All binaries now build with stacktraces enabled, to make user reports more useful.
+
+### Fixed
+
+- Fixed installation on nim 1.6 due to changed checksums package upstream.
+
+### Performance Improvements
+
+- scriptcomp: Optimized the common for loop construct `for (i = 0; i < N; ++i)`.
+
 ## [1.7.1] - 2023-12-17
 
 ### Changed

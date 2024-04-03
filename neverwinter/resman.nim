@@ -16,10 +16,10 @@
 ## inherits from ResConainer and then creating the required methods (see below).
 
 
-import options, streams, sets, times, strutils, checksums/sha1
+import std/[options, streams, sets, times, strutils]
 export options, streams, sets
 
-import resref, restype, util, lru, exo, compressedbuf
+import resref, restype, util, lru, exo, compressedbuf, checksums
 export resref, restype
 
 const MemoryCacheThreshold* = 1024 * 1024 # 1MB

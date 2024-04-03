@@ -21,3 +21,5 @@ tests/*/*.exe
 
 *.ncs
 *.ndb
+nimble.develop
+nimble.paths

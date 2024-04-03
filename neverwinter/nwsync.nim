@@ -1,12 +1,6 @@
 import std/[streams, critbits, os, algorithm, strutils, sequtils, math, options]
 
-import neverwinter/restype, neverwinter/resref, neverwinter/streamext
-
-import checksums/sha1
-
-# Bit of a hack, sorry: always print securehash in lowercase
-proc `$`*(s: SecureHash): string =
-  toLowerAscii(sha1.`$`(s))
+import neverwinter/[restype, resref, streamext, checksums]
 
 const HashTreeDepth = 2 # this needs to match with the nwn sources
 

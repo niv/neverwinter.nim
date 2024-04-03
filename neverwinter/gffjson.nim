@@ -1,6 +1,6 @@
 # json support for gff reading/writing
 
-import json, tables, strutils, base64
+import std/[json, tables, strutils, base64]
 
 import gff, util, languages
 

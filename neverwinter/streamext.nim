@@ -1,4 +1,4 @@
-import streams, sequtils
+import std/[streams, sequtils]
 
 type SizePrefix* = uint8 | uint16 | uint32 | uint64
 

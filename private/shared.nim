@@ -1,18 +1,13 @@
-import strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets
-export strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets
+import std/[strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets]
 
-import neverwinter/util, neverwinter/resman,
-  neverwinter/resref, neverwinter/key,
-  neverwinter/resfile, neverwinter/resmemfile, neverwinter/resdir,
-  neverwinter/erf, neverwinter/gff, neverwinter/gffjson,
-  neverwinter/languages, neverwinter/compressedbuf,
-  neverwinter/exo,
-  neverwinter/game
+import neverwinter/[util, resman, resref, key, resfile, resmemfile, resdir,
+  erf, gff, gffjson, languages, compressedbuf, exo, game, checksums]
 
 # The things we do to cut down import hassle in tools.
 # Should clean this up at some point and let the utils deal with it.
+export strutils, algorithm, os, streams, json, sequtils, logging, times, tables, sets
 export util, resman, resref, key, resfile, resmemfile, resdir, erf, gff, gffjson,
-  languages, compressedbuf, exo, game
+  languages, compressedbuf, exo, game, checksums
 
 import version
 
@@ -28,6 +23,7 @@ const GlobalUsage = """
 proc getGlobalOpts(): string = """
 
 Logging:
+  -h --help                   Show this screen
   --verbose                   Turn on debug logging
   --quiet                     Turn off all logging, except errors and above
   --silent                    Suppress all logging

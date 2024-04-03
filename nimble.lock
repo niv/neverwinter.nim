@@ -1,0 +1,60 @@
+{
+  "version": 2,
+  "packages": {
+    "unicodedb": {
+      "version": "0.12.0",
+      "vcsRevision": "b055310c08db8f879057b4fec15c8301ee93bb2a",
+      "url": "https://github.com/nitely/nim-unicodedb",
+      "downloadMethod": "git",
+      "dependencies": [],
+      "checksums": {
+        "sha1": "4452416471e2fe8726eb6070ed6ea7368171cc09"
+      }
+    },
+    "checksums": {
+      "version": "0.1.0",
+      "vcsRevision": "b4c73320253f78e3a265aec6d9e8feb83f97c77b",
+      "url": "https://github.com/nim-lang/checksums",
+      "downloadMethod": "git",
+      "dependencies": [],
+      "checksums": {
+        "sha1": "078a49356b171a6c3c096bd00afc911288c49886"
+      }
+    },
+    "regex": {
+      "version": "0.20.2",
+      "vcsRevision": "1f21ff2069c5d58aa3f326aa7b2ea458cf0a50cf",
+      "url": "https://github.com/nitely/nim-regex",
+      "downloadMethod": "git",
+      "dependencies": [
+        "unicodedb"
+      ],
+      "checksums": {
+        "sha1": "f376a11f34d2dfbfd18abdd31e6379e3cf2e7c6d"
+      }
+    },
+    "db_connector": {
+      "version": "0.1.0",
+      "vcsRevision": "e65693709dd042bc723c8f1d46cc528701f1c479",
+      "url": "https://github.com/nim-lang/db_connector",
+      "downloadMethod": "git",
+      "dependencies": [],
+      "checksums": {
+        "sha1": "05c335ec678614b973d8a80651971e0719045d14"
+      }
+    },
+    "docopt": {
+      "version": "0.7.0",
+      "vcsRevision": "d2ad95f4f95bae7d41493afa7a95c8aaab10b630",
+      "url": "https://github.com/docopt/docopt.nim",
+      "downloadMethod": "git",
+      "dependencies": [
+        "regex"
+      ],
+      "checksums": {
+        "sha1": "60fda67c990733c58ca227a09277c8e8e9dbfa70"
+      }
+    }
+  },
+  "tasks": {}
+}

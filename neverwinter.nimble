@@ -1,17 +1,15 @@
 import sequtils, os, strutils
 
-version       = "1.7.1"
+version       = "2.0.0"
 author        = "Bernhard Stöckner <n@e-ix.net>"
 description   = "Neverwinter Nights 1: Enhanced Edition data accessor library and utilities"
 license       = "MIT"
 
-requires "nim >= 1.6.4"
-requires "checksums"
-when NimMajor == 2:
-  requires "https://github.com/docopt/docopt.nim#head"
-  requires "db_connector >= 0.1.0"
-else:
-  requires "docopt >= 0.6.8"
+requires "nim >= 2.0.0"
+
+requires "checksums >= 0.1.0"
+requires "https://github.com/docopt/docopt.nim#head"
+requires "db_connector >= 0.1.0"
 
 installDirs = @["neverwinter"]
 

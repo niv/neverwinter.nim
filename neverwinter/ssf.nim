@@ -1,4 +1,4 @@
-import streams, strutils
+import std/[streams, strutils]
 import languages, util
 
 type

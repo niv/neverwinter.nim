@@ -67,17 +67,11 @@ proc `[]=`*(self: TwoDA, row: Natural, column: string, value: Cell) =
   ## Sets a single cell value.
   ## Will raise IndexDefect if either row or column don't exist.
   if row >= self.rows.len:
-    when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
-      raise newException(IndexDefect, "Row out of bounds")
-    else:
-      raise newException(IndexError, "Row out of bounds")
+    raise newException(IndexDefect, "Row out of bounds")
 
   let colId = self.headersForLookup.find(column.toLowerAscii)
   if colId == -1:
-    when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
-      raise newException(IndexDefect, "Column not found: " & column)
-    else:
-      raise newException(IndexError, "Column not found: " & column)
+    raise newException(IndexDefect, "Column not found: " & column)
 
   self.rows[row][colId] = value
 

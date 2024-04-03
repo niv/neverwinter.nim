@@ -1,4 +1,4 @@
-import streams, times
+import std/[streams, times]
 
 import resman
 

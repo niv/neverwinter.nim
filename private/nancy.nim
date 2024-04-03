@@ -1,4 +1,5 @@
-import sequtils, ansiparse, terminal, algorithm
+import std/[sequtils, terminal, algorithm]
+import ansiparse
 import unicode except repeat
 from strutils import Whitespace, tokenize, split, repeat, join
 

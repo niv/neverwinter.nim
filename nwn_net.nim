@@ -1,11 +1,5 @@
-import arpie, net, strutils, os, jser, docopt, times
-import net, asyncdispatch, netutil, nativesockets
-import shared
-
-when (NimMajor, NimMinor, NimPatch) >= (1, 4, 0):
-  import asyncnet
-else:
-  import asyncnetudp
+import std/[net, strutils, os, times, asyncnet, asyncdispatch, nativesockets]
+import arpie, shared, netutil
 
 let args = DOC """
 Generic NWN1 game server query tool.
@@ -31,7 +25,7 @@ Options:
   $OPT
 """
 
-include packets
+import packets
 
 let timeout = parseInt($args["--timeout"])
 

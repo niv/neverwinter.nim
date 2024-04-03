@@ -1,4 +1,4 @@
-import std/os, std/logging, std/json, std/sequtils, std/strutils
+import std/[os, logging, json, sequtils, strutils]
 
 import neverwinter/[resman, key, erf, resdir, resnwsync]
 

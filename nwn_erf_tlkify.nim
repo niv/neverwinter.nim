@@ -1,9 +1,8 @@
-import shared, checksums/sha1, std/oids
+import shared
 
-import critbits, os, tables, options, sets, sequtils, strutils, logging
+import std/[critbits, os, tables, options, sets, sequtils, strutils, logging, oids]
 
-import neverwinter/gff, neverwinter/erf, neverwinter/resman,
-  neverwinter/resref, neverwinter/tlk
+import neverwinter/[gff, erf, resman, resref, tlk]
 
 let Args = DOC """
 This utility reads a ERF (mod, hak), extracting all strings in

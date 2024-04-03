@@ -1,5 +1,4 @@
-import strutils, sequtils, streams, sugar, tables, sets, encodings,
-  typetraits
+import std/[strutils, sequtils, streams, sugar, tables, sets, encodings, typetraits]
 
 import util, languages
 export languages

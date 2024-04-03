@@ -12,9 +12,7 @@ jobs:
           # - windows-latest
           # - macOS-latest
         nim-version:
-          - stable
-          - 1.6.14
-          # - devel
+          - 2.0.x
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -36,12 +34,15 @@ jobs:
           ${{ runner.os }}-nimble-${{ matrix.nim-version}}-
 
     - name: Setup nim
-      uses: jiro4989/setup-nim-action@v1
+      uses: jiro4989/setup-nim-action@f6b28cfdfcbc9c2364429bd585ad5f850ea64498
       with:
         nim-version: ${{ matrix.nim-version }}
 
     - name: Install Packages
       run: nimble install -y --depsOnly
 
+    - name: Setup nimble search path
+      run: nimble setup
+
     - name: Build
-      run: nimble build
+      run: nimble build -d:release

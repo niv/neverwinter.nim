@@ -1,12 +1,8 @@
-import std/streams, std/tables, std/os, std/sequtils, std/strutils, std/times, std/logging,
-  checksums/sha1, std/hashes
+import std/[streams, tables, os, sequtils, strutils, times, logging, hashes]
 
-when NimMajor == 2:
-  import db_connector/db_sqlite
-else:
-  import std/db_sqlite
+import db_connector/db_sqlite
 
-import resman, compressedbuf
+import resman, compressedbuf, checksums
 
 const NWSyncCompressedBufMagicStr* = "NSYC"
 const NWSyncCompressedBufMagic* = makeMagic(NWSyncCompressedBufMagicStr)

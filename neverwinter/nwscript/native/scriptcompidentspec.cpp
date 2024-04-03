@@ -810,7 +810,7 @@ int32_t CScriptCompiler::PrintParseIdentifierFileError(int32_t nParsingError)
 int32_t CScriptCompiler::ParseIdentifierFile()
 {
 
-	char *pScript;
+	const char *pScript;
 	uint32_t nScriptLength;
 	uint32_t i;
 	int32_t ch;

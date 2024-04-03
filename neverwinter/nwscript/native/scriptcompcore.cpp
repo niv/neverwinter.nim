@@ -50,6 +50,7 @@
 // external header files
 #include "exobase.h"
 #include "scriptcomp.h"
+#include "instrumentation.h"
 
 // internal header files
 #include "scriptinternal.h"
@@ -712,7 +713,7 @@ uint32_t CScriptCompiler::HashString(const CExoString &sString)
 	uint32_t nHashValue = 0;
 	uint32_t nStringLength = sString.GetLength();
 	uint32_t nStringCount = 0;
-	char *pcString = sString.CStr();
+	const char *pcString = sString.CStr();
 
 	for (nStringCount = 0; nStringCount < nStringLength; nStringCount++)
 	{
@@ -1195,8 +1196,10 @@ void CScriptCompiler::CleanUpAfterCompiles()
 
 int32_t CScriptCompiler::CompileFile(const CExoString &sFileName)
 {
+    INSTR_SCOPE();
+    INSTR_SCOPE_TEXT(sFileName.CStr(), sFileName.GetLength());
 
-	char *pScript;
+	const char *pScript;
 	uint32_t nScriptLength;
 
 	if (m_nCompileFileLevel == 0)
@@ -1302,6 +1305,9 @@ int32_t CScriptCompiler::CompileFile(const CExoString &sFileName)
 
 int32_t CScriptCompiler::CompileScriptChunk(const CExoString &sScriptChunk, BOOL bWrapIntoMain)
 {
+	INSTR_SCOPE();
+    INSTR_SCOPE_TEXT(sScriptChunk.CStr(), sScriptChunk.GetLength());
+
 	char *pScript;
 	uint32_t nScriptLength;
 
@@ -1365,6 +1371,8 @@ int32_t CScriptCompiler::CompileScriptChunk(const CExoString &sScriptChunk, BOOL
 
 int32_t CScriptCompiler::CompileScriptConditional(const CExoString &sScriptConditional)
 {
+	INSTR_SCOPE();
+    INSTR_SCOPE_TEXT(sScriptConditional.CStr(), sScriptConditional.GetLength());
 
 	char *pScript;
 	uint32_t nScriptLength;
@@ -1467,22 +1475,22 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 	{
 		if (nLineNumber > 0)
 		{
-			sFullErrorText.Format("%s(%d): %s", psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sErrorText.CStr());
+			sFullErrorText.Format("%s(%d): %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sErrorText.CStr());
 		}
 		else
 		{
-			sFullErrorText.Format("%s: %s", psFileName->Right(psFileName->GetLength()-1).CStr(),sErrorText.CStr());
+			sFullErrorText.Format("%s: %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),sErrorText.CStr());
 		}
 	}
 	else
 	{
 		if (nLineNumber > 0)
 		{
-			sFullErrorText.Format("%s.nss(%d): %s", psFileName->CStr(),nLineNumber,sErrorText.CStr());
+			sFullErrorText.Format("%s.nss(%d): %s\n",psFileName->CStr(),nLineNumber,sErrorText.CStr());
 		}
 		else
 		{
-			sFullErrorText.Format("%s.nss: %s", psFileName->CStr(),sErrorText.CStr());
+			sFullErrorText.Format("%s.nss: %s\n",psFileName->CStr(),sErrorText.CStr());
 		}
 	}
 
@@ -1526,6 +1534,40 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 
 	if (!pNode)
 		return FALSE;
+
+	// Only proceed if the operation is something we can actually const-fold.
+	// Sometimes the parse tree is *really* deep and we recursively call this
+	// function thousands of times until we run out of stack space, but that
+	// only tends to happen on giant switches and/or nested structures, which
+	// we don't care about here.
+	switch (pNode->nOperation)
+	{
+		case CSCRIPTCOMPILER_OPERATION_LOGICAL_OR:
+		case CSCRIPTCOMPILER_OPERATION_LOGICAL_AND:
+		case CSCRIPTCOMPILER_OPERATION_INCLUSIVE_OR:
+		case CSCRIPTCOMPILER_OPERATION_EXCLUSIVE_OR:
+		case CSCRIPTCOMPILER_OPERATION_BOOLEAN_AND:
+		case CSCRIPTCOMPILER_OPERATION_CONDITION_EQUAL:
+		case CSCRIPTCOMPILER_OPERATION_CONDITION_NOT_EQUAL:
+		case CSCRIPTCOMPILER_OPERATION_CONDITION_GEQ:
+		case CSCRIPTCOMPILER_OPERATION_CONDITION_GT:
+		case CSCRIPTCOMPILER_OPERATION_CONDITION_LT:
+		case CSCRIPTCOMPILER_OPERATION_CONDITION_LEQ:
+		case CSCRIPTCOMPILER_OPERATION_SHIFT_LEFT:
+		case CSCRIPTCOMPILER_OPERATION_SHIFT_RIGHT:
+		case CSCRIPTCOMPILER_OPERATION_ADD:
+		case CSCRIPTCOMPILER_OPERATION_SUBTRACT:
+		case CSCRIPTCOMPILER_OPERATION_MULTIPLY:
+		case CSCRIPTCOMPILER_OPERATION_DIVIDE:
+		case CSCRIPTCOMPILER_OPERATION_MODULUS:
+		case CSCRIPTCOMPILER_OPERATION_NEGATION:
+		case CSCRIPTCOMPILER_OPERATION_UNSIGNED_SHIFT_RIGHT:
+		case CSCRIPTCOMPILER_OPERATION_ONES_COMPLEMENT:
+		case CSCRIPTCOMPILER_OPERATION_BOOLEAN_NOT:
+			break;
+		default:
+			return FALSE;
+	}
 
 	BOOL bUnary = pNode->nOperation == CSCRIPTCOMPILER_OPERATION_BOOLEAN_NOT ||
 	              pNode->nOperation == CSCRIPTCOMPILER_OPERATION_ONES_COMPLEMENT ||

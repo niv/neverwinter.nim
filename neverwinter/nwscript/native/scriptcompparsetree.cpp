@@ -4497,7 +4497,7 @@ int32_t CScriptCompiler::CleanUpDuringCompile(int32_t nReturnValue)
 //   specified in pScript (of length nScriptLength).
 ///////////////////////////////////////////////////////////////////////////////
 
-int32_t CScriptCompiler::ParseSource(char *pScript, int32_t nScriptLength)
+int32_t CScriptCompiler::ParseSource(const char *pScript, int32_t nScriptLength)
 {
 
 	int32_t i;                     // location in the string

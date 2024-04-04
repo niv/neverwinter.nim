@@ -112,7 +112,7 @@ proc testFileSingle(file: string, debugSymbols: bool, optFlags: set[Optimization
 var scriptsRan = 0
 
 for optFlags in [OptimizationFlagsO0, OptimizationFlagsO2]:
-  for dbg in [false, true]:
+  for dbg in [true, false]:
     for file in walkFiles(SourcePath / "corpus" / "*.nss"):
       testFileSingle(file, dbg, optFlags)
       inc scriptsRan

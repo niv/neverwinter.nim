@@ -138,18 +138,12 @@ CExoString::CExoString(const char *source, int32_t length)
 }
 
 // Creates a CExoString representing the int value
-CExoString::CExoString(int32_t value)
+CExoString CExoString::ToString(int32_t value)
 {
-	char buffer[33];
-
-	sprintf( buffer, "%i", value );
-
-    m_nBufferLength = (uint32_t)strlen(buffer) + 1;
-	m_sString = new char[m_nBufferLength];
-	strcpy(m_sString, buffer);
-
+    char buffer[33];
+    sprintf( buffer, "%i", value );
+    return CExoString(buffer);
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //  CExoString::~CExoString()

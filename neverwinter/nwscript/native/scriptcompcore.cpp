@@ -50,6 +50,7 @@
 // external header files
 #include "exobase.h"
 #include "scriptcomp.h"
+#include "instrumentation.h"
 
 // internal header files
 #include "scriptinternal.h"
@@ -712,7 +713,7 @@ uint32_t CScriptCompiler::HashString(const CExoString &sString)
 	uint32_t nHashValue = 0;
 	uint32_t nStringLength = sString.GetLength();
 	uint32_t nStringCount = 0;
-	char *pcString = sString.CStr();
+	const char *pcString = sString.CStr();
 
 	for (nStringCount = 0; nStringCount < nStringLength; nStringCount++)
 	{
@@ -1195,8 +1196,10 @@ void CScriptCompiler::CleanUpAfterCompiles()
 
 int32_t CScriptCompiler::CompileFile(const CExoString &sFileName)
 {
+    INSTR_SCOPE();
+    INSTR_SCOPE_TEXT(sFileName.CStr(), sFileName.GetLength());
 
-	char *pScript;
+	const char *pScript;
 	uint32_t nScriptLength;
 
 	if (m_nCompileFileLevel == 0)
@@ -1302,6 +1305,9 @@ int32_t CScriptCompiler::CompileFile(const CExoString &sFileName)
 
 int32_t CScriptCompiler::CompileScriptChunk(const CExoString &sScriptChunk, BOOL bWrapIntoMain)
 {
+	INSTR_SCOPE();
+    INSTR_SCOPE_TEXT(sScriptChunk.CStr(), sScriptChunk.GetLength());
+
 	char *pScript;
 	uint32_t nScriptLength;
 
@@ -1365,6 +1371,8 @@ int32_t CScriptCompiler::CompileScriptChunk(const CExoString &sScriptChunk, BOOL
 
 int32_t CScriptCompiler::CompileScriptConditional(const CExoString &sScriptConditional)
 {
+	INSTR_SCOPE();
+    INSTR_SCOPE_TEXT(sScriptConditional.CStr(), sScriptConditional.GetLength());
 
 	char *pScript;
 	uint32_t nScriptLength;
@@ -1467,22 +1475,22 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 	{
 		if (nLineNumber > 0)
 		{
-			sFullErrorText.Format("%s(%d): %s", psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sErrorText.CStr());
+			sFullErrorText.Format("%s(%d): %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sErrorText.CStr());
 		}
 		else
 		{
-			sFullErrorText.Format("%s: %s", psFileName->Right(psFileName->GetLength()-1).CStr(),sErrorText.CStr());
+			sFullErrorText.Format("%s: %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),sErrorText.CStr());
 		}
 	}
 	else
 	{
 		if (nLineNumber > 0)
 		{
-			sFullErrorText.Format("%s.nss(%d): %s", psFileName->CStr(),nLineNumber,sErrorText.CStr());
+			sFullErrorText.Format("%s.nss(%d): %s\n",psFileName->CStr(),nLineNumber,sErrorText.CStr());
 		}
 		else
 		{
-			sFullErrorText.Format("%s.nss: %s", psFileName->CStr(),sErrorText.CStr());
+			sFullErrorText.Format("%s.nss: %s\n",psFileName->CStr(),sErrorText.CStr());
 		}
 	}
 

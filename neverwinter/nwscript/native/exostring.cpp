@@ -640,7 +640,7 @@ float CExoString::AsFLOAT() const
 //  Description:Retuns a null terminated character array
 ///////////////////////////////////////////////////////////////////////////////
 static char g_szEmptyString[1] = { 0 };
-char* CExoString::CStr() const
+const char* CExoString::CStr() const
 {
 	//EXOWARNINGSTR( m_sString != NULL, "CExoString::CStr(): Obtaining NULL pointer from CExoString." );
 
@@ -1278,7 +1278,7 @@ BOOL CExoString::CompareNoCase(const CExoString &string) const
 ///////////////////////////////////////////////////////////////////////////////
 BOOL CExoString::ComparePrefixNoCase(const CExoString &string, int32_t nSize) const
 {
-	char *pStringChar = string.CStr();
+	const char *pStringChar = string.CStr();
 	char *pThisStringChar = m_sString;
 
 	if (pStringChar == NULL && pThisStringChar == NULL)

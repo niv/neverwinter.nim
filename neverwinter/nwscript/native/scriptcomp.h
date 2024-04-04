@@ -349,7 +349,7 @@ private:
 	int32_t ParseCharacterAmpersand(int32_t chNext);
 	int32_t ParseCharacterVerticalBar(int32_t chNext);
 	int32_t ParseCharacterAlphabet(int32_t ch);
-	int32_t ParseStringCharacter(int32_t ch, int32_t chNext, char *pScript, int32_t nScriptLength);
+	int32_t ParseStringCharacter(int32_t ch, int32_t chNext, const char *pScript, int32_t nScriptLength);
 	int32_t ParseRawStringCharacter(int32_t ch, int32_t chNext);
 	int32_t ParseCharacterQuotationMark();
 	int32_t ParseCharacterHyphen(int32_t chNext);
@@ -375,10 +375,10 @@ private:
 
 	int32_t ParseCommentedOutCharacter(int32_t ch);
 
-	int32_t ParseNextCharacter(int32_t ch, int32_t chNext, char *pScript, int32_t nScriptLength);
+	int32_t ParseNextCharacter(int32_t ch, int32_t chNext, const char *pScript, int32_t nScriptLength);
 
 	int32_t PrintParseSourceError(int32_t nParseCharacterError);
-	int32_t ParseSource(char *pScript, int32_t nScriptLength);
+	int32_t ParseSource(const char *pScript, int32_t nScriptLength);
 
 	int32_t OutputError(int32_t nError, CExoString *psFileName, int32_t nLineNumber, const CExoString &sErrorText);
 	CScriptParseTreeNode *DuplicateScriptParseTree(CScriptParseTreeNode *pNode);

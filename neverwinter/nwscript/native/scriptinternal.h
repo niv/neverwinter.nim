@@ -475,71 +475,71 @@ class CScriptParseTreeNode
 {
 
 public:
-	int32_t   nOperation;
-	CExoString *m_psStringData;
-	int32_t   nIntegerData;
-	int32_t   nIntegerData2;
-	int32_t   nIntegerData3;
-	int32_t   nIntegerData4;
-	float fFloatData;
-	float fVectorData[3];
+    int32_t   nOperation;
+    CExoString *m_psStringData;
+    int32_t   nIntegerData;
+    int32_t   nIntegerData2;
+    int32_t   nIntegerData3;
+    int32_t   nIntegerData4;
+    float fFloatData;
+    float fVectorData[3];
     // json is reusing m_psStringData
-	int32_t   m_nFileReference;
-	int32_t   nLine;
-	int32_t   nChar;
-	CScriptParseTreeNode *pLeft;
-	CScriptParseTreeNode *pRight;
-	int32_t   nType;
-	CExoString *m_psTypeName;
-	/* int32_t   m_nNodeLocation; ???? */
-	int32_t   m_nStackPointer;
+    int32_t   m_nFileReference;
+    int32_t   nLine;
+    int32_t   nChar;
+    CScriptParseTreeNode *pLeft;
+    CScriptParseTreeNode *pRight;
+    int32_t   nType;
+    CExoString *m_psTypeName;
+    /* int32_t   m_nNodeLocation; ???? */
+    int32_t   m_nStackPointer;
 
-	CScriptParseTreeNode() { m_psStringData = NULL; m_psTypeName = NULL; Clean(); }
+    CScriptParseTreeNode() { m_psStringData = NULL; m_psTypeName = NULL; Clean(); }
 
-	void Clean()
-	{
-		if (m_psStringData != NULL)
-		{
-			delete m_psStringData;
-			m_psStringData = NULL;
-		}
-		if (m_psTypeName != NULL)
-		{
-			delete m_psTypeName;
-			m_psTypeName = NULL;
-		}
+    void Clean()
+    {
+        if (m_psStringData != NULL)
+        {
+            delete m_psStringData;
+            m_psStringData = NULL;
+        }
+        if (m_psTypeName != NULL)
+        {
+            delete m_psTypeName;
+            m_psTypeName = NULL;
+        }
 
-		nOperation = 0;
-		nIntegerData = 0;
-		nIntegerData2 = 0;
-		nIntegerData3 = 0;
-		nIntegerData4 = 0;
-		fFloatData = 0.0f;
-		pLeft = NULL ;
-		pRight = NULL;
-		fVectorData[0] = 0.0f;
-		fVectorData[1] = 0.0f;
-		fVectorData[2] = 0.0f;
-		m_nFileReference = -1;
-		nLine = 0;
-		nChar = 0;
-		nType = 0;
-		m_nStackPointer = 0;
-	}
+        nOperation = 0;
+        nIntegerData = 0;
+        nIntegerData2 = 0;
+        nIntegerData3 = 0;
+        nIntegerData4 = 0;
+        fFloatData = 0.0f;
+        pLeft = NULL ;
+        pRight = NULL;
+        fVectorData[0] = 0.0f;
+        fVectorData[1] = 0.0f;
+        fVectorData[2] = 0.0f;
+        m_nFileReference = -1;
+        nLine = 0;
+        nChar = 0;
+        nType = 0;
+        m_nStackPointer = 0;
+    }
 
-	~CScriptParseTreeNode()
-	{
-		if (m_psStringData != NULL)
-		{
-			delete m_psStringData;
-			m_psStringData = NULL;
-		}
-		if (m_psTypeName != NULL)
-		{
-			delete m_psTypeName;
-			m_psTypeName = NULL;
-		}
-	}
+    ~CScriptParseTreeNode()
+    {
+        if (m_psStringData != NULL)
+        {
+            delete m_psStringData;
+            m_psStringData = NULL;
+        }
+        if (m_psTypeName != NULL)
+        {
+            delete m_psTypeName;
+            m_psTypeName = NULL;
+        }
+    }
 
     void DebugDump(const char *prefix = "", FILE *out = NULL)
     {
@@ -560,66 +560,66 @@ public:
 class CScriptParseTreeNodeBlock
 {
 public:
-	CScriptParseTreeNode m_pNodes[CSCRIPTCOMPILER_PARSETREENODEBLOCK_SIZE];
-	CScriptParseTreeNodeBlock *m_pNextBlock;
+    CScriptParseTreeNode m_pNodes[CSCRIPTCOMPILER_PARSETREENODEBLOCK_SIZE];
+    CScriptParseTreeNodeBlock *m_pNextBlock;
 
-	CScriptParseTreeNodeBlock()
-	{
-		m_pNextBlock = NULL;
-		CleanBlockEntries();
-	}
+    CScriptParseTreeNodeBlock()
+    {
+        m_pNextBlock = NULL;
+        CleanBlockEntries();
+    }
 
-	void CleanBlockEntries()
-	{
-		uint32_t nCount;
-		for (nCount = 0; nCount < CSCRIPTCOMPILER_PARSETREENODEBLOCK_SIZE; ++nCount)
-		{
-			m_pNodes[nCount].Clean();
-		}
-	}
+    void CleanBlockEntries()
+    {
+        uint32_t nCount;
+        for (nCount = 0; nCount < CSCRIPTCOMPILER_PARSETREENODEBLOCK_SIZE; ++nCount)
+        {
+            m_pNodes[nCount].Clean();
+        }
+    }
 };
 
 class CScriptCompilerStackEntry
 {
 public:
-	int32_t nState;
-	int32_t nRule;
-	int32_t nTerm;
-	CScriptParseTreeNode *pCurrentTree;
-	CScriptParseTreeNode *pReturnTree;
+    int32_t nState;
+    int32_t nRule;
+    int32_t nTerm;
+    CScriptParseTreeNode *pCurrentTree;
+    CScriptParseTreeNode *pReturnTree;
 };
 
 class CScriptCompilerKeyWordEntry
 {
 public:
-	CScriptCompilerKeyWordEntry()
-	{
-		m_sAlphanumericName = "";
-		m_nHashValue = 0;
-		m_nNameLength = 0;
-		m_nTokenToTranslate = 0;
-	}
+    CScriptCompilerKeyWordEntry()
+    {
+        m_sAlphanumericName = "";
+        m_nHashValue = 0;
+        m_nNameLength = 0;
+        m_nTokenToTranslate = 0;
+    }
 
-	void Add(CExoString sName, int32_t nHashValue, int32_t nTokenToTranslate)
-	{
+    void Add(CExoString sName, int32_t nHashValue, int32_t nTokenToTranslate)
+    {
         EXOASSERT(m_nHashValue == 0);
-		m_sAlphanumericName = sName;
-		m_nHashValue = nHashValue;
-		m_nNameLength = sName.GetLength();
-		m_nTokenToTranslate = nTokenToTranslate;
-	}
+        m_sAlphanumericName = sName;
+        m_nHashValue = nHashValue;
+        m_nNameLength = sName.GetLength();
+        m_nTokenToTranslate = nTokenToTranslate;
+    }
 
-	inline CExoString *GetPointerToName() { return &m_sAlphanumericName; }
-	inline char *GetAlphanumericName() { return m_sAlphanumericName.CStr(); }
-	inline uint32_t GetHash() { return m_nHashValue; }
-	inline uint32_t GetLength() { return m_nNameLength; }
-	inline int32_t   GetTokenToTranslate() { return m_nTokenToTranslate; }
+    inline CExoString *GetPointerToName() { return &m_sAlphanumericName; }
+    inline const char *GetAlphanumericName() { return m_sAlphanumericName.CStr(); }
+    inline uint32_t GetHash() { return m_nHashValue; }
+    inline uint32_t GetLength() { return m_nNameLength; }
+    inline int32_t   GetTokenToTranslate() { return m_nTokenToTranslate; }
 
 private:
-	CExoString m_sAlphanumericName;
-	uint32_t      m_nHashValue;
-	uint32_t      m_nNameLength;
-	int32_t        m_nTokenToTranslate;
+    CExoString m_sAlphanumericName;
+    uint32_t      m_nHashValue;
+    uint32_t      m_nNameLength;
+    int32_t        m_nTokenToTranslate;
 };
 
 #define CSCRIPTCOMPILER_HASH_MANAGER_TYPE_UNKNOWN           0
@@ -630,113 +630,113 @@ private:
 class CScriptCompilerIdentifierHashTableEntry
 {
 public:
-	CScriptCompilerIdentifierHashTableEntry()
-	{
-		m_nHashValue = 0;
-		m_nIdentifierType = CSCRIPTCOMPILER_HASH_MANAGER_TYPE_UNKNOWN;
-		m_nIdentifierIndex = 0;
-	}
+    CScriptCompilerIdentifierHashTableEntry()
+    {
+        m_nHashValue = 0;
+        m_nIdentifierType = CSCRIPTCOMPILER_HASH_MANAGER_TYPE_UNKNOWN;
+        m_nIdentifierIndex = 0;
+    }
 
-	uint32_t  m_nHashValue;
-	uint32_t  m_nIdentifierType;
-	uint32_t  m_nIdentifierIndex;
+    uint32_t  m_nHashValue;
+    uint32_t  m_nIdentifierType;
+    uint32_t  m_nIdentifierIndex;
 };
 
 class CScriptCompilerIdListEntry
 {
 public:
-	CExoString m_psIdentifier;
-	uint32_t m_nIdentifierLength;
-	uint32_t m_nIdentifierHash;
-	int32_t   m_nIdentifierType;
-	int32_t   m_nReturnType;
-	int32_t   m_bImplementationInPlace;
-	CExoString m_psStructureReturnName;
-	//INT   m_nIdentifierOrder;
+    CExoString m_psIdentifier;
+    uint32_t m_nIdentifierLength;
+    uint32_t m_nIdentifierHash;
+    int32_t   m_nIdentifierType;
+    int32_t   m_nReturnType;
+    int32_t   m_bImplementationInPlace;
+    CExoString m_psStructureReturnName;
+    //INT   m_nIdentifierOrder;
 
-	// For constants ...
-	CExoString m_psStringData;
-	int32_t   m_nIntegerData;
-	float m_fFloatData;
-	float m_fVectorData[3];
+    // For constants ...
+    CExoString m_psStringData;
+    int32_t   m_nIntegerData;
+    float m_fFloatData;
+    float m_fVectorData[3];
 
-	// For identifiers ..
-	int32_t   m_nIdIdentifier;
-	int32_t   m_nParameters;
-	int32_t   m_nNonOptionalParameters;
+    // For identifiers ..
+    int32_t   m_nIdIdentifier;
+    int32_t   m_nParameters;
+    int32_t   m_nNonOptionalParameters;
 
-	int32_t   m_nParameterSpace;
+    int32_t   m_nParameterSpace;
 
-	// For each parameter ...
-	char       *m_pchParameters;
-	CExoString *m_psStructureParameterNames;
-	// For the optional part of each parameter ...
-	BOOL       *m_pbOptionalParameters;
-	int32_t        *m_pnOptionalParameterIntegerData;
-	float      *m_pfOptionalParameterFloatData;
-	CExoString *m_psOptionalParameterStringData;
-	OBJECT_ID  *m_poidOptionalParameterObjectData;
-	float      *m_pfOptionalParameterVectorData;
+    // For each parameter ...
+    char       *m_pchParameters;
+    CExoString *m_psStructureParameterNames;
+    // For the optional part of each parameter ...
+    BOOL       *m_pbOptionalParameters;
+    int32_t        *m_pnOptionalParameterIntegerData;
+    float      *m_pfOptionalParameterFloatData;
+    CExoString *m_psOptionalParameterStringData;
+    OBJECT_ID  *m_poidOptionalParameterObjectData;
+    float      *m_pfOptionalParameterVectorData;
     // json is reusing string data
 
-	// For user-defined identifiers
-	int32_t   m_nBinarySourceStart;
-	int32_t   m_nBinarySourceFinish;
-	int32_t   m_nBinaryDestinationStart;
-	int32_t   m_nBinaryDestinationFinish;
+    // For user-defined identifiers
+    int32_t   m_nBinarySourceStart;
+    int32_t   m_nBinarySourceFinish;
+    int32_t   m_nBinaryDestinationStart;
+    int32_t   m_nBinaryDestinationFinish;
 
-	CScriptCompilerIdListEntry();
-	~CScriptCompilerIdListEntry();
-	int32_t ExpandParameterSpace();
+    CScriptCompilerIdListEntry();
+    ~CScriptCompilerIdListEntry();
+    int32_t ExpandParameterSpace();
 };
 
 class CScriptCompilerVarStackEntry
 {
 public:
-	CExoString m_psVarName;
-	int32_t        m_nVarType;
-	int32_t        m_nVarLevel;
-	int32_t        m_nVarRunTimeLocation;
-	CExoString m_sVarStructureName;
+    CExoString m_psVarName;
+    int32_t        m_nVarType;
+    int32_t        m_nVarLevel;
+    int32_t        m_nVarRunTimeLocation;
+    CExoString m_sVarStructureName;
 
-	CScriptCompilerVarStackEntry()
-	{
-		m_nVarType = 0;
-		m_nVarLevel = 0;
-		m_nVarRunTimeLocation = 0;
-	}
+    CScriptCompilerVarStackEntry()
+    {
+        m_nVarType = 0;
+        m_nVarLevel = 0;
+        m_nVarRunTimeLocation = 0;
+    }
 
 };
 
 class CScriptCompilerStructureEntry
 {
 public:
-	CExoString m_psName;
-	int32_t        m_nFieldStart;
-	int32_t        m_nFieldEnd;
-	int32_t        m_nByteSize;
+    CExoString m_psName;
+    int32_t        m_nFieldStart;
+    int32_t        m_nFieldEnd;
+    int32_t        m_nByteSize;
 
-	CScriptCompilerStructureEntry()
-	{
-		m_nFieldStart = 0;
-		m_nFieldEnd = 0;
-		m_nByteSize = 0;
-	}
+    CScriptCompilerStructureEntry()
+    {
+        m_nFieldStart = 0;
+        m_nFieldEnd = 0;
+        m_nByteSize = 0;
+    }
 };
 
 class CScriptCompilerStructureFieldEntry
 {
 public:
-	uint8_t       m_pchType;
-	CExoString m_psStructureName;
-	CExoString m_psVarName;
-	int32_t        m_nLocation;
+    uint8_t       m_pchType;
+    CExoString m_psStructureName;
+    CExoString m_psVarName;
+    int32_t        m_nLocation;
 
-	CScriptCompilerStructureFieldEntry()
-	{
-		m_pchType = 0;
-		m_nLocation = 0;
-	}
+    CScriptCompilerStructureFieldEntry()
+    {
+        m_pchType = 0;
+        m_nLocation = 0;
+    }
 
 };
 
@@ -751,20 +751,20 @@ public:
 class CScriptCompilerSymbolTableEntry
 {
 public:
-	uint32_t      m_nSymbolType;
-	uint32_t      m_nSymbolSubType1;
-	uint32_t      m_nSymbolSubType2;
-	int32_t        m_nLocationPointer;
-	int32_t        m_nNextEntryPointer;
+    uint32_t      m_nSymbolType;
+    uint32_t      m_nSymbolSubType1;
+    uint32_t      m_nSymbolSubType2;
+    int32_t        m_nLocationPointer;
+    int32_t        m_nNextEntryPointer;
 
-	CScriptCompilerSymbolTableEntry()
-	{
-		m_nSymbolType = CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_UNKNOWN;
-		m_nSymbolSubType1 = 0;
-		m_nSymbolSubType2 = 0;
-		m_nLocationPointer = 0;
-		m_nNextEntryPointer = -1;
-	}
+    CScriptCompilerSymbolTableEntry()
+    {
+        m_nSymbolType = CSCRIPTCOMPILER_SYMBOL_TABLE_ENTRY_TYPE_UNKNOWN;
+        m_nSymbolSubType1 = 0;
+        m_nSymbolSubType2 = 0;
+        m_nLocationPointer = 0;
+        m_nNextEntryPointer = -1;
+    }
 };
 
 

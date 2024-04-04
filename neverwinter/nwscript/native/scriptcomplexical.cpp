@@ -14,7 +14,7 @@
 // remains available for everyone.
 //
 
- ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //                 BIOWARE CORP. CONFIDENTIAL INFORMATION.                   //
 //               COPYRIGHT BIOWARE CORP. ALL RIGHTS RESERVED                 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -548,7 +548,7 @@ int32_t CScriptCompiler::ParseCommentedOutCharacter(int32_t ch)
 //                stuff like \n into a single character (\n).  Wow.
 ///////////////////////////////////////////////////////////////////////////////
 
-int32_t CScriptCompiler::ParseStringCharacter(int32_t ch, int32_t chNext, char *pScript, int32_t nScriptLength)
+int32_t CScriptCompiler::ParseStringCharacter(int32_t ch, int32_t chNext, const char *pScript, int32_t nScriptLength)
 {
 	int32_t nReturnValue = 0;
 
@@ -1552,7 +1552,7 @@ int32_t CScriptCompiler::HandleIdentifierToken()
 //                character in chNext.
 ///////////////////////////////////////////////////////////////////////////////
 
-int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, char *pScript, int32_t nScriptLength)
+int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, const char *pScript, int32_t nScriptLength)
 {
 
 	if (ch == -1)

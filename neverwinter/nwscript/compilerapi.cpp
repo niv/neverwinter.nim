@@ -47,7 +47,7 @@ extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instanc
             ret.code = STRREF_CSCRIPTCOMPILER_ERROR_FATAL_COMPILER_ERROR;
     }
 
-    ret.str = ret.code ? instance->GetCapturedError()->CStr() : (char*)"";
+    ret.str = ret.code ? (char*)instance->GetCapturedError()->CStr() : (char*)"";
     return ret;
 }
 

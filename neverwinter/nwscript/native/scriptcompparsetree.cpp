@@ -535,7 +535,7 @@ int32_t CScriptCompiler::GenerateParseTree()
                 else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FILE)
                 {
                     CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
-                    pNewNode->m_psStringData = new CExoString(m_pcIncludeFileStack[m_nCompileFileLevel-1].m_sCompiledScriptName.CStr());
+                    pNewNode->m_psStringData = new CExoString((m_pcIncludeFileStack[m_nCompileFileLevel-1].m_sCompiledScriptName + ".nss").CStr());
                     pNewNode->m_bAllowAsDefaultValueInFunctionDecl = false;
                     ModifySRStackReturnTree(pNewNode);
                     return 0;

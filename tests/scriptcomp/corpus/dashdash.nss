@@ -1,6 +1,6 @@
 void inner(string inp)
 {
-    Assert(__FILE__ == "dashdash");
+    Assert(__FILE__ == "dashdash.nss");
     Assert(__FUNCTION__ == "inner");
     Assert(inp == "outer");
 }

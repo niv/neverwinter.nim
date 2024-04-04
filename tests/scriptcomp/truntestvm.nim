@@ -69,6 +69,8 @@ vm.defineCommand(PegMatch.int) do (script: VMScript):
 
 proc testFileSingle(file: string, debugSymbols: bool, optFlags: set[OptimizationFlag]) =
   let ff = splitFile(file).name
+  if ff.startsWith("inc_"):
+    return
 
   currentLines = splitLines(readFile(file))
   currentFile  = ff

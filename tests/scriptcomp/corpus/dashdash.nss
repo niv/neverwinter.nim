@@ -22,7 +22,6 @@ void main()
     outer(__FUNCTION__);
     Assert(PegMatch(__DATE__, "^\\d\\d\\d\\d'-'\\d\\d'-'\\d\\d$"), "Value: " + __DATE__);
     Assert(PegMatch(__TIME__, "^\\d\\d':'\\d\\d':'\\d\\d$"), "Value: " + __TIME__);
-    Assert(PegMatch(__SCRIPTCOMP_VERSION__, "^\\d+\\.\\d+\\.\\d+$"), "Value: " + __SCRIPTCOMP_VERSION__);
-    Assert(__LINE__ == 26);
+    Assert(__LINE__ == 25);
     dashdash_include();
 }

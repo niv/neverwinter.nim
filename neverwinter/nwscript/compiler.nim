@@ -1,7 +1,5 @@
-import private/version
-
 {.passL: "-lstdc++".}
-const cppFlags = "-std=c++14 -DSCRIPTCOMP_VERSION='\"" & PackageVersion & "\"'"
+const cppFlags = "-std=c++14"
 when defined(mingw):
   {.passL: "-static".}
 {.compile("native/exostring.cpp", cppFlags).}

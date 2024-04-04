@@ -599,7 +599,6 @@ void CScriptCompiler::Initialize( )
         m_pcKeyWords[44].Add("__LINE__"              ,HashString("__LINE__"),             CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE);
         m_pcKeyWords[45].Add("__DATE__"              ,HashString("__DATE__"),             CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE);
         m_pcKeyWords[46].Add("__TIME__"              ,HashString("__TIME__"),             CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME);
-        m_pcKeyWords[47].Add("__SCRIPTCOMP_VERSION__", HashString("__SCRIPTCOMP_VERSION__"), CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_SCRIPTCOMP_VERSION);
 
 		int32_t nCount;
 		for (nCount = 0; nCount < CSCRIPTCOMPILER_MAX_KEYWORDS; ++nCount)
@@ -1855,7 +1854,6 @@ const char *TokenKeywordToString(int nTokenKeyword)
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE:                     return "KEYWORD_DASHDASH_LINE";
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE:                     return "KEYWORD_DASHDASH_DATE";
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME:                     return "KEYWORD_DASHDASH_TIME";
-        case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_SCRIPTCOMP_VERSION:       return "KEYWORD_DASHDASH_SCRIPTCOMP_VERSION";
 	}
 	return "(unknown token keyword)";
 }

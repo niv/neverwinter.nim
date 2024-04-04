@@ -524,6 +524,52 @@ int32_t CScriptCompiler::GenerateParseTree()
 					ModifySRStackReturnTree(pNewNode);
 					return 0;
 				}
+                else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FUNCTION)
+                {
+                    CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
+                    pNewNode->m_psStringData = new CExoString(m_sCurrentFunction.CStr());
+                    pNewNode->m_bAllowAsDefaultValueInFunctionDecl = false;
+                    ModifySRStackReturnTree(pNewNode);
+                    return 0;
+                }
+                else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FILE)
+                {
+                    CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
+                    pNewNode->m_psStringData = new CExoString((m_pcIncludeFileStack[m_nCompileFileLevel-1].m_sCompiledScriptName + ".nss").CStr());
+                    pNewNode->m_bAllowAsDefaultValueInFunctionDecl = false;
+                    ModifySRStackReturnTree(pNewNode);
+                    return 0;
+                }
+                else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE)
+                {
+                    CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER,NULL,NULL);
+                    pNewNode->m_bAllowAsDefaultValueInFunctionDecl = false;
+                    pNewNode->nIntegerData = m_nLines;
+                    ModifySRStackReturnTree(pNewNode);
+                    return 0;
+                }
+                else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE)
+                {
+                    CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
+                    char buffer[32];
+                    time_t now = time(0);
+                    struct tm tstruct = *localtime(&now);
+                    strftime(buffer, sizeof(buffer), "%Y-%m-%d", &tstruct);
+                    pNewNode->m_psStringData = new CExoString(buffer);
+                    ModifySRStackReturnTree(pNewNode);
+                    return 0;
+                }
+                else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME)
+                {
+                    CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_STRING,NULL,NULL);
+                    char buffer[32];
+                    time_t now = time(0);
+                    struct tm tstruct = *localtime(&now);
+                    strftime(buffer, sizeof(buffer), "%H:%M:%S", &tstruct);
+                    pNewNode->m_psStringData = new CExoString(buffer);
+                    ModifySRStackReturnTree(pNewNode);
+                    return 0;
+                }
 				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT_INVALID)
 				{
 					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_OBJECT,NULL,NULL);
@@ -694,6 +740,11 @@ int32_t CScriptCompiler::GenerateParseTree()
 				        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT_SELF ||
 				        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT_INVALID ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_LOCATION_INVALID ||
+                        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FUNCTION ||
+                        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FILE ||
+                        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE ||
+                        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE ||
+                        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_NULL ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_FALSE ||
                         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_TRUE ||
@@ -3450,6 +3501,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_FUNCTION_IDENTIFIER,pTopStackReturnNode,NULL);
 					m_pchToken[m_nTokenCharacters] = 0;
 					pNewNode->m_psStringData = new CExoString(m_pchToken);
+                    m_sCurrentFunction = *pNewNode->m_psStringData;
 
 					CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_FUNCTION_DECLARATION,pNewNode,NULL);
 					CScriptParseTreeNode *pNewNode3 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_FUNCTION,pNewNode2,NULL);
@@ -4014,6 +4066,17 @@ int32_t CScriptCompiler::AddUserDefinedIdentifier(CScriptParseTreeNode *pFunctio
 				int nError = STRREF_CSCRIPTCOMPILER_ERROR_NON_OPTIONAL_PARAMETER_CANNOT_FOLLOW_OPTIONAL_PARAMETER;
 				return nError;
 			}
+
+            // This is a hackaround for __FUNCTION__, __FILE__, and __LINE;
+            // which are abusing constants to inject their real values.
+            // We don't allow them as default args to functions, since the parser
+            // (incorrectly?) inserts the value at parse time instead of the caller.
+            // Until someone goes and codifies/fixes it, we simply disallow
+            // using the macro as a default argument.
+            if (pNode->pRight->pRight && !pNode->pRight->pRight->m_bAllowAsDefaultValueInFunctionDecl)
+            {
+                return STRREF_CSCRIPTCOMPILER_ERROR_NON_CONSTANT_IN_FUNCTION_DECLARATION;
+            }
 
 			if (nNewParameterType == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT)
 			{

@@ -52,7 +52,7 @@
 #define CSCRIPTCOMPILER_MAX_DEBUG_OUTPUT_SIZE 2097152 // 2048K, 1048576 = 1024K.
 #define CSCRIPTCOMPILER_MAX_STRUCTURES       256
 #define CSCRIPTCOMPILER_MAX_STRUCTURE_FIELDS 4096
-#define CSCRIPTCOMPILER_MAX_KEYWORDS         42
+#define CSCRIPTCOMPILER_MAX_KEYWORDS         47
 
 #define CSCRIPTCOMPILER_BINARY_ADDRESS_LENGTH          13
 
@@ -174,6 +174,11 @@
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_STRING                     114
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_LOCATION_INVALID                115
 #define CSCRIPTCOMPILER_TOKEN_RAW_STRING                              116
+#define CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FUNCTION               117
+#define CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FILE                   118
+#define CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE                   119
+#define CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE                   120
+#define CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME                   121
 
 const char *TokenKeywordToString(int nTokenKeyword);
 
@@ -494,6 +499,10 @@ public:
     /* int32_t   m_nNodeLocation; ???? */
     int32_t   m_nStackPointer;
 
+    // Optionally disallow using as default value in function args:
+    // This is a hackaround to prevent __FUNCTION__ from being filled in.
+    bool m_bAllowAsDefaultValueInFunctionDecl;
+
     CScriptParseTreeNode() { m_psStringData = NULL; m_psTypeName = NULL; Clean(); }
 
     void Clean()
@@ -525,6 +534,7 @@ public:
         nChar = 0;
         nType = 0;
         m_nStackPointer = 0;
+        m_bAllowAsDefaultValueInFunctionDecl = true;
     }
 
     ~CScriptParseTreeNode()

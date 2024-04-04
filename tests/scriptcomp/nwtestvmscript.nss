@@ -19,3 +19,6 @@ int Random(int nMax);
 // These do nothing with the args.
 void TakeInt(int nInt);
 void TakeClosure(action aClosure);
+
+// https://nim-lang.org/docs/pegs.html
+int PegMatch(string sTest, string sPattern);

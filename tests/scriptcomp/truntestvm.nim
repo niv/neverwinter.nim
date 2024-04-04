@@ -1,4 +1,4 @@
-import std/[streams, strutils, random, os, logging, options, enumutils, sequtils, setutils]
+import std/[streams, strutils, random, os, logging, options, pegs]
 import neverwinter/nwscript/[nwtestvm, compiler, ndb]
 import neverwinter/[restype, resfile, resdir, resman]
 
@@ -29,6 +29,7 @@ type VMCommand = enum
   Random
   TakeInt
   TakeClosure
+  PegMatch
 
 vm.defineCommand(Assert.int) do (script: VMScript):
   let boo = script.popIntBool()
@@ -61,8 +62,15 @@ vm.defineCommand(TakeInt.int) do (script: VMScript):
 vm.defineCommand(TakeClosure.int) do (script: VMScript):
   discard
 
+vm.defineCommand(PegMatch.int) do (script: VMScript):
+  let test    = script.popString
+  let pattern = peg script.popString
+  script.pushInt if test.match(pattern): 1 else: 0
+
 proc testFileSingle(file: string, debugSymbols: bool, optFlags: set[OptimizationFlag]) =
   let ff = splitFile(file).name
+  if ff.startsWith("inc_"):
+    return
 
   currentLines = splitLines(readFile(file))
   currentFile  = ff
@@ -106,7 +114,7 @@ proc testFileSingle(file: string, debugSymbols: bool, optFlags: set[Optimization
 var scriptsRan = 0
 
 for optFlags in [OptimizationFlagsO0, OptimizationFlagsO2]:
-  for dbg in [false, true]:
+  for dbg in [true, false]:
     for file in walkFiles(SourcePath / "corpus" / "*.nss"):
       testFileSingle(file, dbg, optFlags)
       inc scriptsRan

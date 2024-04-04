@@ -1,3 +1,5 @@
+#include "inc_dashdash"
+
 void inner(string inp)
 {
     Assert(__FILE__ == "dashdash.nss");
@@ -10,7 +12,7 @@ void outer(string inp)
     Assert(inp == "main");
     inner(__FUNCTION__);
     Assert(__FUNCTION__ == "outer");
-    Assert(__LINE__ == 13);
+    Assert(__LINE__ == 15);
 }
 
 void main()
@@ -21,5 +23,6 @@ void main()
     Assert(PegMatch(__DATE__, "^\\d\\d\\d\\d'-'\\d\\d'-'\\d\\d$"), "Value: " + __DATE__);
     Assert(PegMatch(__TIME__, "^\\d\\d':'\\d\\d':'\\d\\d$"), "Value: " + __TIME__);
     Assert(PegMatch(__SCRIPTCOMP_VERSION__, "^\\d+\\.\\d+\\.\\d+$"), "Value: " + __SCRIPTCOMP_VERSION__);
-    Assert(__LINE__ == 24);
+    Assert(__LINE__ == 26);
+    dashdash_include();
 }

@@ -130,12 +130,7 @@ public:
 	//          of a CExoString.
 	///////////////////////////////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////////////////////////////
-	CExoString(int32_t value);
-	//-------------------------------------------------------------------------
-	// Desc:    Creates a CExoString representing the int value.
-	///////////////////////////////////////////////////////////////////////////
-
+    static CExoString ToString(int32_t value);
 
     // The most rudimentary of std::string interop.
     CExoString(const std::string& other);

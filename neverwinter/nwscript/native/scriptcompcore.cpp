@@ -1507,7 +1507,7 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
         sTraceIncludes = sTraceIncludes + " " + m_pcIncludeFileStack[i].m_sCompiledScriptName + ".nss";
 
         if (m_pcIncludeFileStack[i].m_nLine > 0)
-            sTraceIncludes = sTraceIncludes + "(" + m_pcIncludeFileStack[i].m_nLine + ")";
+            sTraceIncludes = sTraceIncludes + "(" + CExoString::ToString(m_pcIncludeFileStack[i].m_nLine) + ")";
     }
 
     if (!sTraceIncludes.IsEmpty())

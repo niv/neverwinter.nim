@@ -179,6 +179,7 @@
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE                   119
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE                   120
 #define CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME                   121
+#define CSCRIPTCOMPILER_TOKEN_HASHED_STRING                           122
 
 const char *TokenKeywordToString(int nTokenKeyword);
 

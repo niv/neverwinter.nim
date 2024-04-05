@@ -552,7 +552,8 @@ int32_t CScriptCompiler::ParseStringCharacter(int32_t ch, int32_t chNext, const 
 {
 	int32_t nReturnValue = 0;
 
-	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_STRING)
+	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_STRING ||
+		m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HASHED_STRING)
 	{
 		if (ch == '\n')
 		{
@@ -560,7 +561,18 @@ int32_t CScriptCompiler::ParseStringCharacter(int32_t ch, int32_t chNext, const 
 		}
 		else if (ch == '"')
 		{
-			return ParseCharacterQuotationMark();
+			if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_STRING)
+			{
+				return ParseCharacterQuotationMark();
+			}
+			else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HASHED_STRING)
+			{
+				// Pretend it was a hex int constant instead and let the parser handle the rest.
+				CExoString str(m_pchToken, m_nTokenCharacters);
+				m_nTokenCharacters = sprintf(m_pchToken, "0x%x", str.GetHash());
+				m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_HEX_INTEGER;
+				return HandleToken();
+			}
 		}
 		else if (ch == '\\')
 		{
@@ -1576,7 +1588,8 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, const ch
 		return ParseCommentedOutCharacter(ch);
 	}
 
-	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_STRING)
+	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_STRING ||
+		m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HASHED_STRING)
 	{
 		return ParseStringCharacter(ch,chNext, pScript, nScriptLength);
 	}
@@ -1591,6 +1604,13 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, const ch
 		m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_RAW_STRING;
 		m_nTokenCharacters = 0;
 		return 1; // consume r"
+	}
+
+	if ((ch == 'h' || ch == 'H') && chNext == '"')
+	{
+		m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_HASHED_STRING;
+		m_nTokenCharacters = 0;
+		return 1; // consume h"
 	}
 
 	// Handle the tokens associated with integer and real numbers.

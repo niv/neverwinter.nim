@@ -46,6 +46,8 @@ Usage:
   --restype-src TYPE          ResType to use for source lookup [default: nss]
   --restype-bin TYPE          ResType to use for binary output [default: ncs]
   --restype-dbg TYPE          ResType to use for debug output [default: ndb]
+
+  --graphviz DIR              Dump the parse tree as graphviz DOT to DIR.
 $OPTRESMAN
 """
 
@@ -61,6 +63,7 @@ type
     outDirectory: string
     maxIncludeDepth: 1..200
     followSymlinks: bool
+    graphvizOut: string
 
   GlobalState = object
     successes, errors, skips: Atomic[uint]
@@ -103,6 +106,7 @@ globalState.params = Params(
   outDirectory: if globalState.args["-d"]: ($globalState.args["-d"]) else: "",
   maxIncludeDepth: parseInt($globalState.args["--max-include-depth"]),
   followSymlinks: globalState.args["--follow-symlinks"],
+  graphvizOut: if globalState.args["--graphviz"]: ($globalState.args["--graphviz"]) else: "",
 )
 
 if globalState.params.outDirectory != "" and not dirExists(globalState.params.outDirectory):
@@ -192,7 +196,7 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     #       will depend on logging and related to be set up.
     discard DOC(ArgsHelp, false)
     state.chDemandResRefResponse.open(maxItems=1)
-    state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile, params.maxIncludeDepth)
+    state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile, params.maxIncludeDepth, params.graphvizOut)
     state.cNSS.setOptimizations(params.optFlags)
   state
 

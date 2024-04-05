@@ -306,6 +306,10 @@ public:
 	int32_t WriteFinalCodeToFile(const CExoString &sFileName);
 	int32_t WriteDebuggerOutputToFile(CExoString sFileName);
 
+	// This bypasses resman and the callback and writes to the file directly
+	// Only used by the external compiler if a debug option is passed in.
+	void SetGraphvizOutputPath(const CExoString& sPath) { m_sGraphvizPath = sPath; }
+
 	// *************************************************************************
 private:
 	// *************************************************************************
@@ -456,6 +460,7 @@ private:
 	BOOL m_bCompileConditionalOrMain;
 	CExoString m_sLanguageSource;
 	CExoString m_sOutputAlias;
+	CExoString m_sGraphvizPath;
 
 	int32_t m_nLines;
 	int32_t m_nCharacterOnLine;

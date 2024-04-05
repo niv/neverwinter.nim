@@ -169,7 +169,8 @@ proc scriptCompApiNewCompiler(
   resolver: ResManLoadScriptSourceFile,
   tlk: TlkResolve = resolveTlk,
   writeDebug: bool,
-  maxIncludeDepth: cint
+  maxIncludeDepth: cint,
+  graphvizOut: cstring
 ): CScriptCompiler {.importc.}
 
 proc scriptCompApiCompileFile(instance: CScriptCompiler, fn: cstring): tuple[code: int32, str: cstring] {.importc.}
@@ -228,7 +229,8 @@ proc newCompiler*(
     lang: LangSpec,
     writeDebug: bool,
     resolver: Resolver,
-    maxIncludeDepth: int = 16
+    maxIncludeDepth: int = 16,
+    graphvizOut: string = ""
 ): ScriptCompiler =
   ## Instance a new compiler, which will read data by calling resolver.
   ## Any compilation results are returned by the respective functions.
@@ -246,14 +248,16 @@ proc newCompiler*(
     resolveFileInMem,
     resolveTlk,
     writeDebug,
-    maxIncludeDepth.cint
+    maxIncludeDepth.cint,
+    graphvizOut.cstring
   )
 
 proc newCompiler*(
     lang: LangSpec,
     writeDebug: bool,
     resman: ResMan,
-    maxIncludeDepth: int = 16
+    maxIncludeDepth: int = 16,
+    graphvizOut: string = ""
 ): ScriptCompiler =
   ## Instance a new compiler, which will read data from the ResMan you give it.
   ## Any compilation results are returned by the respective functions.
@@ -271,7 +275,8 @@ proc newCompiler*(
     resolveFileResMan,
     resolveTlk,
     writeDebug,
-    maxIncludeDepth.cint
+    maxIncludeDepth.cint,
+    graphvizOut.cstring
   )
 
 proc compileFile*(instance: ScriptCompiler, fn: string): CompileResult =

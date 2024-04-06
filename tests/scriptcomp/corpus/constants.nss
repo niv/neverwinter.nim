@@ -90,6 +90,14 @@ BBB
 CCC";
 const string RAW_STRING_QUOTE = r"_""_";
 
+// Hashed strings
+const int HASHED_STRING_HELLO_LOWERCASE = h"hello";
+const int HASHED_STRING_HELLO_UPPERCASE = H"hello";
+const int HASHED_STRING_ZERO = h"";
+const int HASHED_STRING_CONSTANT_FOLD = h"AAA" + H"BBB";
+const int HASHED_STRING_SPECIAL_CHARACTERS = h"\"\n\\\xFF\x80";
+
+
 void main() 
 {
     // Test float literals
@@ -133,6 +141,13 @@ void main()
     Assert(RAW_STRING_SIMPLE_LOWERCASE != "Neverwinter\nNights");
     Assert(RAW_STRING_MULTILINE == "AAA\nBBB\nCCC");
     Assert(RAW_STRING_QUOTE == "_\"_");
+
+    Assert(HASHED_STRING_ZERO == 0);
+    Assert(HASHED_STRING_HELLO_LOWERCASE == HASHED_STRING_HELLO_UPPERCASE);
+    Assert(HASHED_STRING_CONSTANT_FOLD != 0);
+    Assert(HASHED_STRING_HELLO_LOWERCASE == -104060164); // HashString("hello") ingame
+    Assert(HASHED_STRING_SPECIAL_CHARACTERS != 0);
+
 
     // non-const strings can be larger than 32k
     string S64k = S16K + S16K + S16K + S16K;

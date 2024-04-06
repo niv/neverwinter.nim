@@ -1849,11 +1849,13 @@ const char *TokenKeywordToString(int nTokenKeyword)
 		case CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_ARRAY:                        return "KEYWORD_JSON_ARRAY";
 		case CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_STRING:                       return "KEYWORD_JSON_STRING";
 		case CSCRIPTCOMPILER_TOKEN_KEYWORD_LOCATION_INVALID:                  return "KEYWORD_LOCATION_INVALID";
+		case CSCRIPTCOMPILER_TOKEN_RAW_STRING:                                return "RAW_STRING";
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FUNCTION:                 return "KEYWORD_DASHDASH_FUNCTION";
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_FILE:                     return "KEYWORD_DASHDASH_FILE";
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_LINE:                     return "KEYWORD_DASHDASH_LINE";
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE:                     return "KEYWORD_DASHDASH_DATE";
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME:                     return "KEYWORD_DASHDASH_TIME";
+        case CSCRIPTCOMPILER_TOKEN_HASHED_STRING:                             return "HASHED_STRING";
 	}
 	return "(unknown token keyword)";
 }

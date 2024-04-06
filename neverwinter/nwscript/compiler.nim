@@ -46,6 +46,7 @@ type
     RemoveDeadCode       = 0x1
     FoldConstants        = 0x2
     MeldInstructions     = 0x4
+    RemoveDeadBranches   = 0x8
 
 const
   OptimizationFlagsO0* = {}

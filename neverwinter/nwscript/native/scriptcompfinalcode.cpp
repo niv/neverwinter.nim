@@ -6320,6 +6320,7 @@ int32_t CScriptCompiler::WalkParseTree(CScriptParseTreeNode *pNode)
 
 		if (nReturnCode == 0)
 		{
+			pNode->pLeft = TrimParseTree(pNode->pLeft);
 			nReturnCode = WalkParseTree(pNode->pLeft);
 		}
 
@@ -6331,6 +6332,7 @@ int32_t CScriptCompiler::WalkParseTree(CScriptParseTreeNode *pNode)
 
 		if (nReturnCode == 0)
 		{
+			pNode->pRight = TrimParseTree(pNode->pRight);
 			nReturnCode = WalkParseTree(pNode->pRight);
 		}
 
@@ -7167,4 +7169,68 @@ void CScriptCompiler::EmitModifyStackPointer(int32_t nModifyBy)
 
 	char *buf = EmitInstruction(CVIRTUALMACHINE_OPCODE_MODIFY_STACK_POINTER, 0, 4);
 	WriteByteSwap32(buf, nModifyBy);
+}
+
+// This routine implements the various optimizations on the parse tree itself.
+// It can destructively transform the subtree pointed to by pNode, and return
+// a new node to replace it.
+CScriptParseTreeNode *CScriptCompiler::TrimParseTree(CScriptParseTreeNode *pNode)
+{
+	if (!pNode)
+		return NULL;
+
+	if (m_nOptimizationFlags & CSCRIPTCOMPILER_OPTIMIZE_DEAD_BRANCHES)
+	{
+		if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_IF_BLOCK)
+		{
+			// The standard if block parse tree looks like:
+			/*            IF_BLOCK
+			            /          \
+			    IF_CONDITION      IF_CHOICE
+			    /                 /       \
+			INT_EXPRESSION    THEN_STMT  ELSE_STMT
+			  /
+			NON_VOID_EXPR
+			 /
+			CONST or STMT
+			*/
+			// Verify that the tree looks like this and bail out if not
+			CScriptParseTreeNode *pCond = pNode->pLeft;
+			if (!pCond || pCond->nOperation != CSCRIPTCOMPILER_OPERATION_IF_CONDITION)
+				return pNode;
+			CScriptParseTreeNode *pIntExpr = pCond->pLeft;
+			if (!pIntExpr || pIntExpr->nOperation != CSCRIPTCOMPILER_OPERATION_INTEGER_EXPRESSION)
+				return pNode;
+			CScriptParseTreeNode *pNonVoidExpr = pIntExpr->pLeft;
+			if (!pNonVoidExpr || pNonVoidExpr->nOperation != CSCRIPTCOMPILER_OPERATION_NON_VOID_EXPRESSION)
+				return pNode;
+			CScriptParseTreeNode *pIfChoice = pNode->pRight;
+			if (!pIfChoice || pIfChoice->nOperation != CSCRIPTCOMPILER_OPERATION_IF_CHOICE)
+				return pNode;
+
+			// We can only eliminate dead branches if the condition is constant
+			CScriptParseTreeNode *pMaybeConst = pNonVoidExpr->pLeft;
+			ConstantFoldNode(pMaybeConst);
+			if (pMaybeConst->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
+				return pNode;
+
+			// YAY, we can nuke part of the tree!
+			// Unhook the live branch from the tree so that the delete doesn't eat it.
+			CScriptParseTreeNode *pLiveBranch;
+			if (pMaybeConst->nIntegerData != 0)
+			{
+				pLiveBranch = pIfChoice->pLeft;
+				pIfChoice->pLeft = NULL;
+			}
+			else
+			{
+			 	pLiveBranch = pIfChoice->pRight;
+				pIfChoice->pRight = NULL;
+			}
+			DeleteParseTree(FALSE, pNode);
+			return pLiveBranch;
+		}
+	}
+
+	return pNode;
 }

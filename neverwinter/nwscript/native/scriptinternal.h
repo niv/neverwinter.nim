@@ -563,6 +563,51 @@ public:
         fprintf(out, "  TypeName:          \"%s\"\n", m_psTypeName ? m_psTypeName->CStr() : "");
         fprintf(out, "  File/Line/Char/SP: %d %d %d %d\n", m_nFileReference, nLine, nChar, m_nStackPointer);
     }
+    void GraphvizDump(FILE *fp)
+    {
+        // Try to keep the noise to a minimum since the graph can have millions of nodes
+        fprintf(fp, "node%p [label=\"%s\\n", this, OperationToString(nOperation));
+        if (nType != CSCRIPTCOMPILER_TOKEN_UNKNOWN)
+            fprintf(fp, "%s\\n", TokenKeywordToString(nType));
+
+        if (m_psStringData && !m_psStringData->IsEmpty())
+        {
+            CExoString sanitized = m_psStringData->RemoveAll("\"\n\\<>|");
+            if (sanitized.IsEmpty())
+                sanitized = "?";
+            fprintf(fp, "STR: '%s'\\n", sanitized.CStr());
+        }
+
+        if (m_psTypeName && !m_psTypeName->IsEmpty())
+            fprintf(fp, "TYP: '%s'\\n", m_psTypeName->CStr());
+
+        if (nIntegerData2 || nIntegerData3 || nIntegerData4)
+        {
+            fprintf(fp, "INT: %d %d %d %d\\n", nIntegerData, nIntegerData2, nIntegerData3, nIntegerData4);
+        }
+        else if (nIntegerData)
+        {
+            fprintf(fp, "INT: %d\\n", nIntegerData);
+        }
+
+        if (fVectorData[0] || fVectorData[1] || fVectorData[2])
+        {
+            fprintf(fp, "FLT: %f %f %f %f\\n", fFloatData, fVectorData[0], fVectorData[1], fVectorData[2]);
+        }
+        else if (fFloatData)
+        {
+            fprintf(fp, "FLT: %f\\n", fFloatData);
+        }
+
+        if (m_nStackPointer)
+            fprintf(fp, "SP: %d\\n", m_nStackPointer);
+
+        fprintf(fp, "Loc: %d:%d:%d\\n", m_nFileReference, nLine, nChar);
+        fprintf(fp, "\"];\n"); // end nodeXXX [labe="..."];
+
+        if (pLeft)  fprintf(fp, "node%p -> node%p [color=green];\n", this, pLeft);
+        if (pRight) fprintf(fp, "node%p -> node%p [color=red];\n", this, pRight);
+    }
 };
 
 #define CSCRIPTCOMPILER_PARSETREENODEBLOCK_SIZE 4096

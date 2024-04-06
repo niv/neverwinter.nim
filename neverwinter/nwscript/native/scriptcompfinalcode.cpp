@@ -93,6 +93,42 @@ int32_t CScriptCompiler::GenerateFinalCodeFromParseTree(CExoString sFileName)
 		OutputWalkTreeError(nReturnValue, NULL);
 	}
 
+	if (!m_sGraphvizPath.IsEmpty())
+	{
+		CExoString sDotFile = m_sGraphvizPath + "/" + sFileName + ".dot";
+		FILE *f = fopen(sDotFile.CStr(), "w");
+		if (f)
+		{
+			fprintf(f, "digraph parsetree_%s {\n", sFileName.CStr());
+			fprintf(f, "graph [\n"
+						"    label=\"ParseTree for %s.nss\\n\\n\"\n"
+						"    labelloc=t\n"
+						"    layout=dot\n"
+						"    fontsize=40\n"
+						"];\n", sFileName.CStr());
+			fprintf(f, "node [shape=record];\n");
+
+			std::vector<CScriptParseTreeNode*> nodes;
+			CScriptParseTreeNode *pNode = pNewReturnTree;
+			while (pNode)
+			{
+				pNode->GraphvizDump(f);
+				fflush(f);
+				if (pNode->pLeft)
+					nodes.push_back(pNode->pLeft);
+				if (pNode->pRight)
+					nodes.push_back(pNode->pRight);
+
+				if (nodes.empty())
+					break;
+				pNode = nodes.back();
+				nodes.pop_back();
+			}
+			fprintf(f, "}\n");
+			fclose(f);
+		}
+	}
+
 	if (nReturnValue < 0)
 	{
 		return CleanUpAfterCompile(nReturnValue,pNewReturnTree);

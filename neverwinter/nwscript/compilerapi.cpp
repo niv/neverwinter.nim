@@ -7,7 +7,8 @@ extern "C" CScriptCompiler* scriptCompApiNewCompiler(
     const char* (*ResManLoadScriptSourceFile)(const char* fn, RESTYPE rt),
     const char* (*TlkResolve)(STRREF strRef),
     bool writeDebug,
-    int maxIncludeDepth
+    int maxIncludeDepth,
+    const char *graphvizOut
 )
 {
     CScriptCompilerAPI api;
@@ -22,6 +23,7 @@ extern "C" CScriptCompiler* scriptCompApiNewCompiler(
     instance->SetIdentifierSpecification(lang);
     instance->SetOutputAlias("scriptout");
     instance->SetMaxIncludeDepth(maxIncludeDepth);
+    instance->SetGraphvizOutputPath(graphvizOut);
     return instance;
 }
 

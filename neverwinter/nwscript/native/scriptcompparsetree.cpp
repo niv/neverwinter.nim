@@ -396,6 +396,14 @@ BOOL CScriptCompiler::CheckForBadLValue(CScriptParseTreeNode *pNode)
 //                as mud.
 ///////////////////////////////////////////////////////////////////////////////
 
+#define PARSER_ERROR(err)                                                     \
+    do {                                                                      \
+        m_sParserErrorExtraInfo.Format(" [%s:%d:%d:%s]",                      \
+            GrammarToString(nTopStackState), nTopStackRule, nTopStackTerm,    \
+                TokenKeywordToString(m_nTokenStatus));                        \
+        return err;                                                           \
+    } while(0)
+
 int32_t CScriptCompiler::GenerateParseTree()
 {
 	int32_t nTopStackState;
@@ -413,8 +421,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 		               &nTopStackTerm, &pTopStackCurrentNode,
 		               &pTopStackReturnNode) == FALSE)
 		{
-			int nError = STRREF_CSCRIPTCOMPILER_ERROR_FATAL_COMPILER_ERROR;
-			return nError;
+			PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_FATAL_COMPILER_ERROR);
 		}
 
 
@@ -616,8 +623,7 @@ int32_t CScriptCompiler::GenerateParseTree()
                 }
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);
 				}
 			}
 			if (nTopStackRule == 6 && nTopStackTerm == 2)
@@ -635,8 +641,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR);
 				}
 			}
 			if (nTopStackRule == 6 && nTopStackTerm == 3)
@@ -653,8 +658,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR);
 				}
 			}
 			if (nTopStackRule == 6 && nTopStackTerm == 4)
@@ -667,8 +671,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR);
 				}
 			}
 			if (nTopStackRule == 6 && nTopStackTerm == 5)
@@ -685,8 +688,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR);
 				}
 			}
 			if (nTopStackRule == 6 && nTopStackTerm == 6)
@@ -699,8 +701,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR);
 				}
 			}
 			if (nTopStackRule == 6 && nTopStackTerm == 7)
@@ -712,8 +713,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_CONSTANT_VECTOR);
 				}
 			}
 
@@ -800,8 +800,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);
 				}
 			}
 			if (nTopStackRule == 1 && nTopStackTerm == 2)
@@ -814,8 +813,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_ARG_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_ARG_LIST);
 				}
 			}
 			if (nTopStackRule == 1 && nTopStackTerm == 3)
@@ -828,8 +826,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_ARG_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_ARG_LIST);
 				}
 			}
 			if (nTopStackRule == 5 && nTopStackTerm == 2)
@@ -842,8 +839,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_ARG_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_ARG_LIST);
 				}
 			}
 			if (nTopStackRule == 5 && nTopStackTerm == 3)
@@ -856,8 +852,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_ARG_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_ARG_LIST);
 				}
 			}
 			if (nTopStackRule == 2 && nTopStackTerm == 1)
@@ -873,8 +868,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);
 				}
 			}
 			break;
@@ -1666,8 +1660,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 			{
 				if (m_nTokenStatus != CSCRIPTCOMPILER_TOKEN_COLON)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_CONDITIONAL_REQUIRES_SECOND_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_CONDITIONAL_REQUIRES_SECOND_EXPRESSION);
 				}
 				pTopStackCurrentNode->pRight->pLeft = pTopStackReturnNode;
 				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_CONDITIONAL_EXPRESSION,2,5,pTopStackCurrentNode);
@@ -1746,8 +1739,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				{
 					if (CheckForBadLValue(pTopStackReturnNode) == TRUE)
 					{
-						int nError = STRREF_CSCRIPTCOMPILER_ERROR_BAD_LVALUE;
-						return nError;
+						PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_BAD_LVALUE);
 					}
 
 					if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_ASSIGNMENT_EQUAL)
@@ -1839,8 +1831,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 						if (pTopStackReturnNode->nOperation == CSCRIPTCOMPILER_OPERATION_VARIABLE)
 						{
 							m_sUndefinedIdentifier = *(pTopStackReturnNode->m_psStringData);
-							int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER;
-							return nError;
+							PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER);
 						}
 					}
 				}
@@ -1952,23 +1943,20 @@ int32_t CScriptCompiler::GenerateParseTree()
 							if (m_pSRStack[m_nSRStackStates].pCurrentTree->pRight->nOperation == CSCRIPTCOMPILER_OPERATION_VARIABLE)
 							{
 								m_sUndefinedIdentifier = *(m_pSRStack[m_nSRStackStates].pCurrentTree->pRight->m_psStringData);
-								int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER;
-								return nError;
+								PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER);
 							}
 							if (m_pSRStack[m_nSRStackStates].pCurrentTree->pRight->pLeft != NULL)
 							{
 								if (m_pSRStack[m_nSRStackStates].pCurrentTree->pRight->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_VARIABLE)
 								{
 									m_sUndefinedIdentifier = *(m_pSRStack[m_nSRStackStates].pCurrentTree->pRight->pLeft->m_psStringData);
-									int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER;
-									return nError;
+									PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER);
 								}
 
 							}
 						}
 					}
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);
 				}
 			}
 			if (nTopStackRule == 2 && nTopStackTerm == 2)
@@ -1999,8 +1987,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACE)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);
 				}
 				else if (m_nTokenStatus != CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
 				{
@@ -2078,14 +2065,12 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST);
 				}
 			}
 			else
 			{
-				int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST;
-				return nError;
+				PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST);
 			}
 			break;
 
@@ -2119,8 +2104,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST);
 				}
 			}
 			else if (nTopStackRule == 1 && nTopStackTerm == 2)
@@ -2187,8 +2171,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				        m_nTokenStatus != CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT &&
 				        m_nTokenStatus != CSCRIPTCOMPILER_TOKEN_KEYWORD_STRING)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_INVALID_TYPE_FOR_CONST_KEYWORD;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_INVALID_TYPE_FOR_CONST_KEYWORD);
 				}
 
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_VECTOR)
@@ -2252,8 +2235,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_INVALID_DECLARATION_TYPE;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_INVALID_DECLARATION_TYPE);
 				}
 			}
 			if (nTopStackRule == 5 && nTopStackTerm == 1)
@@ -2267,8 +2249,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_INVALID_DECLARATION_TYPE;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_INVALID_DECLARATION_TYPE);
 				}
 			}
 
@@ -2462,8 +2443,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_ARG_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_ARG_LIST);
 				}
 			}
 			if (nTopStackRule == 2 && nTopStackTerm == 3)
@@ -2476,8 +2456,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_ARG_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_ARG_LIST);
 				}
 			}
 			if (nTopStackRule == 2 && nTopStackTerm == 4)
@@ -2489,8 +2468,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 3 && nTopStackTerm == 2)
@@ -2506,8 +2484,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 3 && nTopStackTerm == 3)
@@ -2521,8 +2498,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 3 && nTopStackTerm == 5)
@@ -2530,8 +2506,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				// Link up the "if expression true" statement.
 				if (pTopStackReturnNode == NULL)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_IF_CONDITION_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_IF_CONDITION_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT);
 				}
 
 				// MGB - For Script Debugger.
@@ -2576,8 +2551,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 			{
 				if (pTopStackReturnNode == NULL)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_ELSE_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_ELSE_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT);
 				}
 
 				// Link up the "if expression false" statement.
@@ -2613,8 +2587,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 5 && nTopStackTerm == 4)
@@ -2633,16 +2606,14 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 5 && nTopStackTerm == 5)
 			{
 				if (pTopStackReturnNode == NULL)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_SWITCH_CONDITION_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_SWITCH_CONDITION_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT);
 				}
 
 				pTopStackCurrentNode->pRight->pLeft = pTopStackReturnNode;
@@ -2672,8 +2643,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_RETURN_STATEMENT;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_RETURN_STATEMENT);
 				}
 			}
 
@@ -2688,8 +2658,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 7 && nTopStackTerm == 3)
@@ -2715,14 +2684,12 @@ int32_t CScriptCompiler::GenerateParseTree()
 								if (pTopStackReturnNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_VARIABLE)
 								{
 									m_sUndefinedIdentifier = *(pTopStackReturnNode->pLeft->m_psStringData);
-									int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER;
-									return nError;
+									PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER);
 								}
 							}
 						}
 					}
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 7 && nTopStackTerm == 5)
@@ -2733,8 +2700,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 
 				if (pTopStackReturnNode == NULL)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_WHILE_CONDITION_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_WHILE_CONDITION_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT);
 				}
 
 				// MGB - For Script Debugger.
@@ -2787,8 +2753,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_WHILE_AFTER_DO_KEYWORD;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_WHILE_AFTER_DO_KEYWORD);
 				}
 			}
 			if (nTopStackRule == 8 && nTopStackTerm == 3)
@@ -2801,8 +2766,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 8 && nTopStackTerm == 5)
@@ -2815,8 +2779,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 8 && nTopStackTerm == 6)
@@ -2828,8 +2791,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 9 && nTopStackTerm == 2)
@@ -2853,8 +2815,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 9 && nTopStackTerm == 3)
@@ -2881,8 +2842,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 9 && nTopStackTerm == 5)
@@ -2916,8 +2876,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 9 && nTopStackTerm == 7)
@@ -2943,8 +2902,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 9 && nTopStackTerm == 9)
@@ -2956,8 +2914,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 			{
 				if (pTopStackReturnNode == NULL)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_FOR_STATEMENT_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_FOR_STATEMENT_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT);
 				}
 
 				pTopStackCurrentNode->pLeft->pRight->pLeft->pRight->pLeft->pLeft = pTopStackReturnNode;
@@ -2997,8 +2954,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 11 && nTopStackTerm == 2)
@@ -3017,13 +2973,11 @@ int32_t CScriptCompiler::GenerateParseTree()
 							if (pTopStackReturnNode->nOperation == CSCRIPTCOMPILER_OPERATION_VARIABLE)
 							{
 								m_sUndefinedIdentifier = *(pTopStackReturnNode->m_psStringData);
-								int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER;
-								return nError;
+								PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER);
 							}
 						}
 					}
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 12 && nTopStackTerm == 2)
@@ -3035,8 +2989,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_COLON_AFTER_DEFAULT_LABEL;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_COLON_AFTER_DEFAULT_LABEL);
 				}
 			}
 			if (nTopStackRule == 13 && nTopStackTerm == 3)
@@ -3049,8 +3002,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_COLON_AFTER_CASE_LABEL;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_COLON_AFTER_CASE_LABEL);
 				}
 			}
 			if ((nTopStackRule == 14 && nTopStackTerm == 2) ||
@@ -3063,8 +3015,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_STATEMENT;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_STATEMENT);
 				}
 			}
 
@@ -3177,14 +3128,12 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST);
 				}
 			}
 			else
 			{
-				int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST;
-				return nError;
+				PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST);
 			}
 			break;
 
@@ -3218,8 +3167,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST);
 				}
 			}
 			else if (nTopStackRule == 1 && nTopStackTerm == 2)
@@ -3230,8 +3178,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST);
 				}
 			}
 			break;
@@ -3270,8 +3217,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_BAD_TYPE_SPECIFIER;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_BAD_TYPE_SPECIFIER);
 				}
 			}
 			if (nTopStackRule == 2 && nTopStackTerm == 2)
@@ -3294,8 +3240,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
 			if (nTopStackRule == 2 && nTopStackTerm == 4)
@@ -3331,8 +3276,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);
 				}
 			}
 			break;
@@ -3371,8 +3315,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_BAD_VARIABLE_NAME;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_BAD_VARIABLE_NAME);
 				}
 			}
 			else if (nTopStackRule == 1 && nTopStackTerm == 3)
@@ -3447,8 +3390,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_AFTER_COMPOUND_STATEMENT_AT_END;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_AFTER_COMPOUND_STATEMENT_AT_END);
 				}
 			}
 
@@ -3512,8 +3454,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_FUNCTION_DEFINITION_MISSING_NAME;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_FUNCTION_DEFINITION_MISSING_NAME);
 				}
 			}
 			if (nTopStackRule == 0 && nTopStackTerm == 3)
@@ -3534,8 +3475,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_FUNCTION_DEFINITION_MISSING_PARAMETER_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_FUNCTION_DEFINITION_MISSING_PARAMETER_LIST);
 				}
 
 			}
@@ -3550,8 +3490,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_MALFORMED_PARAMETER_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_MALFORMED_PARAMETER_LIST);
 				}
 
 			}
@@ -3585,8 +3524,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);
 				}
 			}
 
@@ -3606,8 +3544,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_BAD_TYPE_SPECIFIER;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_BAD_TYPE_SPECIFIER);
 				}
 
 			}
@@ -3622,8 +3559,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_STRUCTURE;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_STRUCTURE);
 				}
 			}
 
@@ -3670,8 +3606,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				// Do not allow a void parameter.
 				if (pNewNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_KEYWORD_VOID)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_INVALID_DECLARATION_TYPE;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_INVALID_DECLARATION_TYPE);
 				}
 
 				int32_t nStartOfDeclarationLine = pNewNode->pLeft->nLine;
@@ -3702,8 +3637,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 
 				if (m_nTokenStatus != CSCRIPTCOMPILER_TOKEN_VARIABLE)
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_PARSING_VARIABLE_LIST);
 				}
 
 				CScriptParseTreeNode *pNewNode5 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_VARIABLE, NULL, NULL);
@@ -3750,8 +3684,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					int nError = STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION;
-					return nError;
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
 
@@ -3900,8 +3833,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 			}
 			break;
 		default:
-			int nError = STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER;
-			return nError;
+			PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);
 		} // case
 	}
 
@@ -4488,11 +4420,11 @@ int32_t CScriptCompiler::PrintParseSourceError(int32_t nParsingError)
 
 	if (nParsingError != STRREF_CSCRIPTCOMPILER_ERROR_UNDEFINED_IDENTIFIER)
 	{
-		sErrorText.Format("%s",strRes.CStr());
+		sErrorText.Format("%s%s",strRes.CStr(), m_sParserErrorExtraInfo.CStr());
 	}
 	else
 	{
-		sErrorText.Format("%s (%s)",strRes.CStr(),m_sUndefinedIdentifier.CStr());
+		sErrorText.Format("%s (%s)%s",strRes.CStr(),m_sUndefinedIdentifier.CStr(), m_sParserErrorExtraInfo.CStr());
 	}
 
 	OutputError(nParsingError,psFileName,m_nLines,sErrorText);

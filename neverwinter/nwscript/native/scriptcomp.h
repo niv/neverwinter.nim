@@ -546,6 +546,7 @@ private:
 	int32_t m_nSwitchStackDepth;
 
 	CExoString m_sUndefinedIdentifier;
+	CExoString m_sParserErrorExtraInfo;
 
 	BOOL m_bSwitchLabelDefault;
 	int32_t  m_nSwitchLabelNumber;

@@ -149,12 +149,6 @@ const
     NO_OPERATION:              "NOP",
   }.toOrderedTable
 
-  CanonicalToOpcode = block:
-    var result = initOrderedTable[string, Opcode]()
-    for k,v in OpcodeToCanonical:
-      result[v] = k
-    result
-
   AuxcodeToCanonical = {
     TYPE_INTEGER:              "I",
     TYPE_FLOAT:                "F",
@@ -191,12 +185,6 @@ const
     TYPETYPE_VECTOR_FLOAT:     "VF",
     TYPETYPE_FLOAT_VECTOR:     "FV",
   }.toOrderedTable
-
-  CanonicalToAuxcode = block:
-    var result = initOrderedTable[string, Auxcode]()
-    for k,v in AuxcodeToCanonical:
-      result[v] = k
-    result
 
 static:
   # This makes sure that adding new op/auxcodes also introduces them on the name LUTs

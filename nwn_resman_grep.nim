@@ -36,7 +36,7 @@ let invert       = args["--invert-match"]
 let patternMatch = if args["--pattern"]: $args["--pattern"] else: ""
 let binaryMatch  = if args["--binary"]: $args["--binary"] else: ""
 
-for res in filterByMatch(rm, patternMatch, binaryMatch, invert):
+for res in filterByMatch(rm, args["--all"], patternMatch, binaryMatch, invert):
   let str = $res.resRef
   stdout.write(str)
 

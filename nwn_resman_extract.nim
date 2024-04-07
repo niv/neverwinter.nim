@@ -40,10 +40,11 @@ elif args["--all"]:
     writeFile(destination / $resolved.resRef, resolved.readAll())
 
 else:
+  let all          = args["--all"]
   let invert       = args["--invert-match"]
   let patternMatch = if args["--pattern"]: $args["--pattern"] else: ""
   let binaryMatch  = if args["--binary"]: $args["--binary"] else: ""
 
-  for resolved in filterByMatch(rm, patternMatch, binaryMatch, invert):
+  for resolved in filterByMatch(rm, all, patternMatch, binaryMatch, invert):
     if args["--verbose"]: echo $resolved.resRef
     writeFile(destination / $resolved.resRef, resolved.readAll())

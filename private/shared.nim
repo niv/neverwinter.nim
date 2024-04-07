@@ -148,12 +148,14 @@ proc ensureValidFormat*(format, filename: string,
   if not supportedFormats.hasKey(result):
     quit("Not a supported file format: " & result)
 
-iterator filterByMatch*(rm: ResMan, patternMatch: string, binaryMatch: string, invert: bool): Res =
+iterator filterByMatch*(rm: ResMan, matchAll: bool,
+    patternMatch: string, binaryMatch: string, invert: bool): Res =
   for o in rm.contents:
     let str = $o
     let res = rm[o].get()
 
-    let match = (patternMatch != "" and str.find(patternMatch) != -1) or
+    let match = matchAll or
+                (patternMatch != "" and str.find(patternMatch) != -1) or
                 (binaryMatch != "" and res.readAll().find(binaryMatch) != -1)
 
     if (match and not invert) or (not match and invert):

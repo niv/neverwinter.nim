@@ -42,7 +42,8 @@ proc decompress*(buf: string|Stream, expectMagic: uint32): string =
   expect(headerVersion == Version, "invalid header version: " & $headerVersion)
   let algorithm = instream.readUint32().Algorithm
   let uncompressedSize = instream.readUint32()
-  expect(uncompressedSize > 0u, "payload size is zero")
+  if uncompressedSize == 0:
+    return ""
 
   case algorithm
   of Algorithm.None: instream.readStrOrErr(int uncompressedSize)

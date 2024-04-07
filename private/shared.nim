@@ -119,6 +119,7 @@ proc newBasicResMan*(
   let keys = ($Args["--keys"]).strip().split(",").mapIt(it.strip).filterIt(it.len > 0)
   let erfs = ($Args["--erfs"]).strip().split(",").mapIt(it.strip).filterIt(it.len > 0).mapIt(it.expandTilde)
   let dirs = ($Args["--dirs"]).strip().split(",").mapIt(it.strip).filterIt(it.len > 0).mapIt(it.expandTilde)
+  let manifests = ($Args["--manifests"]).strip().split(",").mapIt(it.strip).filterIt(it.len > 0).mapIt(it.parseSecureHash)
 
   try:
     newDefaultResMan(root, user, language, cacheSize,
@@ -126,7 +127,8 @@ proc newBasicResMan*(
       loadOvr  = not Args["--no-ovr"],
       keys = keys,
       additionalErfs = erfs,
-      additionalDirs = dirs)
+      additionalDirs = dirs,
+      additionalManifests = manifests)
   except:
     quit(getCurrentExceptionMsg())
 

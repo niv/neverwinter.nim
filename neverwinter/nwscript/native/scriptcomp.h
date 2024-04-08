@@ -56,6 +56,8 @@ class CScriptCompilerIdentifierHashTableEntry;
 #define CSCRIPTCOMPILER_OPTIMIZE_FOLD_CONSTANTS                       0x00000002
 // Post processes generated instructions to merge sequences into shorter equivalents
 #define CSCRIPTCOMPILER_OPTIMIZE_MELD_INSTRUCTIONS                    0x00000004
+// Removes the jump and the dead branches in if (CONST) constructs
+#define CSCRIPTCOMPILER_OPTIMIZE_DEAD_BRANCHES                        0x00000008
 
 #define CSCRIPTCOMPILER_OPTIMIZE_NOTHING                              0x00000000
 #define CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING                           0xFFFFFFFF
@@ -535,6 +537,8 @@ private:
 	int32_t AddToGlobalVariableList(CScriptParseTreeNode *pGlobalVariableNode);
 
 	BOOL ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce=FALSE);
+
+	CScriptParseTreeNode *TrimParseTree(CScriptParseTreeNode *pNode);
 
 	BOOL m_bConstantVariableDefinition;
 

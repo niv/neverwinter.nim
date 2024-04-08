@@ -398,7 +398,7 @@ BOOL CScriptCompiler::CheckForBadLValue(CScriptParseTreeNode *pNode)
 
 #define PARSER_ERROR(err)                                                     \
     do {                                                                      \
-        m_sParserErrorExtraInfo.Format(" [%s:%d:%d:%s]",                      \
+        m_sParserErrorExtraInfo.Format(" [%s(%d,%d):%s]",                      \
             GrammarToString(nTopStackState), nTopStackRule, nTopStackTerm,    \
                 TokenKeywordToString(m_nTokenStatus));                        \
         return err;                                                           \

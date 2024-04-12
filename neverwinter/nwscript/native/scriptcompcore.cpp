@@ -1596,9 +1596,22 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 		return FALSE;
 	}
 
-	// Only fold operations on same type. Expressions like "3.0f + 1" are not folded
+	// Only fold operations on same type. Expressions like "3.0f + 1" are not folded.
+    // With the exception of logical short circuit operations, that can be resolved
+    // from the left operand alone.
 	if (pNode->pRight && (pNode->pLeft->nOperation != pNode->pRight->nOperation))
-		return FALSE;
+    {
+        if (pNode->pLeft->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
+            return FALSE;
+
+        if (pNode->nOperation != CSCRIPTCOMPILER_OPERATION_LOGICAL_OR &&
+            pNode->nOperation != CSCRIPTCOMPILER_OPERATION_LOGICAL_AND)
+            return FALSE;
+
+        if ((pNode->nOperation == CSCRIPTCOMPILER_OPERATION_LOGICAL_OR && !(pNode->pLeft->nIntegerData != 0)) ||
+            (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_LOGICAL_AND && (pNode->pLeft->nIntegerData != 0)))
+		    return FALSE;
+    }
 
 	if (pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
 	{

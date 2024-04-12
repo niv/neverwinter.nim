@@ -1604,6 +1604,10 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
         if (pNode->pLeft->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER)
             return FALSE;
 
+        if (pNode->pRight->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER &&
+            pNode->pRight->nOperation != CSCRIPTCOMPILER_OPERATION_INTEGER_EXPRESSION)
+            return FALSE;
+
         if (pNode->nOperation != CSCRIPTCOMPILER_OPERATION_LOGICAL_OR &&
             pNode->nOperation != CSCRIPTCOMPILER_OPERATION_LOGICAL_AND)
             return FALSE;

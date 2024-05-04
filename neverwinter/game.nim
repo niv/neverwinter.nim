@@ -8,6 +8,10 @@ const GffExtensions* = @[
   "jrl", "gff", "gui"
 ]
 
+const DefaultKeyfiles* = @[
+  "nwn_base", "nwn_base_loc", "nwn_retail", "nwn_retail_loc"
+]
+
 proc findUserRoot*(override: string = ""): string =
   if override.len > 0:
     result = override
@@ -109,7 +113,7 @@ proc newDefaultResMan*(
 
   let actualKeys =
     if keys.len > 0 and keys != @["autodetect"]: keys.join(",")
-    else: "nwn_base,nwn_base_loc"
+    else: DefaultKeyfiles.join(",")
 
   let keys = actualKeys.split(",").mapIt(it.strip).filterIt(it.len > 0)
   let erfs = additionalErfs
@@ -132,7 +136,7 @@ proc newDefaultResMan*(
 
     if not fileExists(fn):
       # Don't warn about loc missing, it's optional for some languages
-      if key != "nwn_base_loc":
+      if not key.endsWith("_loc"):
         warn("  key not found, skipping: ", fn)
       return
     let ktfn = openFileStream(fn)

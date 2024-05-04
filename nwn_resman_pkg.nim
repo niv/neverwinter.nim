@@ -33,7 +33,7 @@ Usage:
 
 Options:
   -d DIRECTORY                Save files to DIRECTORY [default: .]
-  -k KEYNAME                  Key filename [default: nwn_base]
+  -k KEYNAME                  Key filename [default: """ & DefaultKeyfiles.join(",") & """]
   -b BIFPREFIX                Bif prefix inside key table [default: data\]
   -B BIFDIR                   Put bifs into subdirectory [default: ]
   --year YEAR                 Override embedded build year [default: """ & $getTime().utc.year & """]

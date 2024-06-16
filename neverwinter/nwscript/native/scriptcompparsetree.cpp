@@ -798,6 +798,10 @@ int32_t CScriptCompiler::GenerateParseTree()
 					}
 					return 0;
 				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_BOOLEAN_NOT)
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_UNARY_EXPRESSION,0,0,NULL);
+				}
 				else
 				{
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);

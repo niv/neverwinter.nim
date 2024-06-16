@@ -39,6 +39,7 @@ const int CONSTINT_MULTIPLY            = A *  B;
 const int CONSTINT_DIVIDE              = A /  B;
 const int CONSTINT_MODULUS             = A %  B;
 const int CONSTINT_BOOLEAN_NOT         = !A;
+const int CONSTINT_BOOLEAN_NOT_NOT     = !!A;
 const int CONSTINT_ONES_COMPLEMENT     = ~A;
 const int CONSTINT_NEGATION            = -A;
 
@@ -127,6 +128,7 @@ void main()
     Assert(CONSTINT_DIVIDE == 0);
     Assert(CONSTINT_MODULUS == 10);
     Assert(CONSTINT_BOOLEAN_NOT == 0);
+    Assert(CONSTINT_BOOLEAN_NOT_NOT == 1)
     Assert(CONSTINT_ONES_COMPLEMENT == -11);
     Assert(CONSTINT_NEGATION == -10);
 

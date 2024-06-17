@@ -1035,6 +1035,12 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_POST_EXPRESSION,0,0,NULL);
 					return 0;
 				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_PLUS)
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_UNARY_EXPRESSION,6,1,NULL);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_POST_EXPRESSION,0,0,NULL);
+					return 0;
+				}
 				else
 				{
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_UNARY_EXPRESSION,6,1,NULL);

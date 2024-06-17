@@ -41,6 +41,7 @@ const int CONSTINT_MODULUS             = A %  B;
 const int CONSTINT_BOOLEAN_NOT         = !A;
 const int CONSTINT_ONES_COMPLEMENT     = ~A;
 const int CONSTINT_NEGATION            = -A;
+const int CONSTINT_AFFIRMATION         = +A;
 
 const int CONSTINT_COMPLEX_EXPRESSION  = A * (B/A) + !A + !B;
 
@@ -129,6 +130,7 @@ void main()
     Assert(CONSTINT_BOOLEAN_NOT == 0);
     Assert(CONSTINT_ONES_COMPLEMENT == -11);
     Assert(CONSTINT_NEGATION == -10);
+    Assert(CONSTINT_AFFIRMATION == 10);
 
     Assert(CONSTINT_COMPLEX_EXPRESSION == 20);
 

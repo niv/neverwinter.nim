@@ -128,7 +128,7 @@ void main()
     Assert(CONSTINT_DIVIDE == 0);
     Assert(CONSTINT_MODULUS == 10);
     Assert(CONSTINT_BOOLEAN_NOT == 0);
-    Assert(CONSTINT_BOOLEAN_NOT_NOT == 1)
+    Assert(CONSTINT_BOOLEAN_NOT_NOT == 1);
     Assert(CONSTINT_ONES_COMPLEMENT == -11);
     Assert(CONSTINT_NEGATION == -10);
 

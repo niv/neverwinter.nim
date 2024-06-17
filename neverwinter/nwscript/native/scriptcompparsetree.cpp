@@ -993,7 +993,8 @@ int32_t CScriptCompiler::GenerateParseTree()
 			// (3) ! post-expression
 			// (4) ++ post-expression
 			// (5) -- post_expression
-			// (6) post-expression
+			// (6) + post_expression
+			// (7) post-expression
 			////////////////////////////////////
 
 		case CSCRIPTCOMPILER_GRAMMAR_UNARY_EXPRESSION:
@@ -1052,7 +1053,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				pTopStackCurrentNode->pLeft = pTopStackReturnNode;
 				ModifySRStackReturnTree(pTopStackCurrentNode);
 			}
-			if (nTopStackRule == 6 && nTopStackTerm == 1)
+			if (nTopStackRule >= 6 && nTopStackTerm == 1)
 			{
 				ModifySRStackReturnTree(pTopStackReturnNode);
 			}

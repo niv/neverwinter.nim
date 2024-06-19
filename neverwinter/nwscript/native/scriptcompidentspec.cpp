@@ -676,7 +676,7 @@ int32_t CScriptCompiler::GenerateIdentifierList()
         else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_STRING)
             m_pcIdentifierList[nLoc].m_psOptionalParameterStringData[nLoc2] = "\"\"";
         else
-            EXOASSERTNCSTR("missing impl");
+            assert(!"missing impl");
 
 		return 0;
     }

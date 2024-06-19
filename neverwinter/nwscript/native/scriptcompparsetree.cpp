@@ -616,7 +616,7 @@ int32_t CScriptCompiler::GenerateParseTree()
                     else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_JSON_STRING)
                         pNewNode->m_psStringData = new CExoString("\"\"");
                     else
-                        EXOASSERTNCSTR("missing impl");
+                        assert(!"missing impl");
 
 					ModifySRStackReturnTree(pNewNode);
 					return 0;

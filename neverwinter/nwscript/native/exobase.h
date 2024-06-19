@@ -57,8 +57,6 @@
 
 #include "exotypes.h"
 
-#define EXOASSERTNC() assert(false)
-#define EXOASSERTNCSTR(string) assert(!string)
 #define EXOASSERT(cond) assert(cond)
 #define EXOASSERTSTR(cond, string) assert(cond && string)
 

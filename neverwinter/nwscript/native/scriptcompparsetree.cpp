@@ -323,6 +323,8 @@ CScriptParseTreeNode *CScriptCompiler::DuplicateScriptParseTree(CScriptParseTree
 	pNewNode->nOperation     = pNode->nOperation;
 	pNewNode->nIntegerData   = pNode->nIntegerData;
 	pNewNode->nIntegerData2  = pNode->nIntegerData2;
+	pNewNode->nIntegerData3  = pNode->nIntegerData3;
+	pNewNode->nIntegerData4  = pNode->nIntegerData4;
 	pNewNode->fFloatData     = pNode->fFloatData;
 	pNewNode->fVectorData[0] = pNode->fVectorData[0];
 	pNewNode->fVectorData[1] = pNode->fVectorData[1];
@@ -424,7 +426,6 @@ int32_t CScriptCompiler::GenerateParseTree()
 			PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_FATAL_COMPILER_ERROR);
 		}
 
-
 		// Now, the giant case statement.  Based on the State, Rule, Term and Token,
 		// we either create some new nodes, link the existing nodes to the new nodes,
 		// push some states on to the stack, install a "return" tree on to the stack
@@ -432,6 +433,130 @@ int32_t CScriptCompiler::GenerateParseTree()
 
 		switch (nTopStackState)
 		{
+
+			///////////////////////////////////////////////////////////////////////////////
+			// case 36:
+			// statement-group:
+			// (1) statement-group 
+			// (2) within-a-statement , statement-group(opt) ; boolean-expression(opt) )
+			// (3) within-a-statement , statement-group(opt) )
+			///////////////////////////////////////////////////////////////////////////////
+
+		case CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP:
+			if (nTopStackRule == 0 && nTopStackTerm == 1)
+			{
+				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,1,1,NULL);
+				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,2,2,NULL);
+			}
+			if (nTopStackRule == 0 && nTopStackTerm == 2)
+			{
+				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,1,2,NULL);
+				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,3,2,NULL);
+			}
+			if (nTopStackRule == 1 && nTopStackTerm <= 2)
+			{
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET && nTopStackTerm == 1)
+				{
+					ModifySRStackReturnTree(pTopStackReturnNode);
+				}
+				else
+				{
+					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT_LIST,pTopStackReturnNode,NULL);
+					ModifySRStackReturnTree(pNewNode);
+				}
+			}
+			
+			if (nTopStackRule == 2 && nTopStackTerm == 2)
+			{
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
+				{
+					ModifySRStackReturnTree(pTopStackReturnNode);
+				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,0,1,pTopStackCurrentNode);
+				}
+				else
+				{
+					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT,NULL,NULL);
+					if (pTopStackCurrentNode != NULL)
+					{
+						pTopStackCurrentNode->pRight = pNewNode;
+					}
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,2,3,pNewNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,4,2,NULL);
+				}
+			}
+			if (nTopStackRule == 2 && nTopStackTerm == 3)
+			{
+				pTopStackCurrentNode->pLeft = pTopStackReturnNode;
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,4,5,pTopStackCurrentNode);
+				}
+				else
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,4,4,pTopStackCurrentNode);
+				}
+
+				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,2,2,pTopStackCurrentNode);
+			}
+			if (nTopStackRule == 3 && nTopStackTerm == 2)
+			{
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
+				{
+					ModifySRStackReturnTree(pTopStackReturnNode);
+				}
+				else
+				{
+					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT,NULL,NULL);
+					if (pTopStackCurrentNode != NULL)
+					{
+						pTopStackCurrentNode->pRight = pNewNode;
+					}
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,3,4,pNewNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,4,2,NULL);
+				}
+			}
+			if (nTopStackRule == 3 && nTopStackTerm == 4)
+			{
+				pTopStackCurrentNode->pLeft = pTopStackReturnNode;
+				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,4,4,pTopStackCurrentNode);
+				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,3,2,pTopStackCurrentNode);	
+			}
+			if (nTopStackRule == 4 && nTopStackTerm == 2)
+			{ 
+				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,4,3,NULL);
+				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,0,1,NULL);
+			}
+			if (nTopStackRule == 4 && nTopStackTerm == 3)
+			{
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_COMMA)
+				{
+					ModifySRStackReturnTree(pTopStackReturnNode);
+					return 0;
+				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
+				{
+					ModifySRStackReturnTree(pTopStackReturnNode);
+				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
+				{
+					ModifySRStackReturnTree(pTopStackReturnNode);
+				}
+			}
+			if (nTopStackRule == 4 && (nTopStackTerm >= 4 && nTopStackTerm <= 5))
+			{
+				if (nTopStackTerm == 4)
+				{
+					ModifySRStackReturnTree(pTopStackCurrentNode);
+				}
+				else if (nTopStackTerm == 5)
+				{
+					ModifySRStackReturnTree(pTopStackReturnNode);
+				}
+			}
+			break;
 
 			///////////////////////////////////////////////////////////////////////////////
 			// case 35:
@@ -780,8 +905,6 @@ int32_t CScriptCompiler::GenerateParseTree()
 				         (m_nTokenStatus >= CSCRIPTCOMPILER_TOKEN_ENGINE_STRUCTURE0_IDENTIFIER &&
 				          m_nTokenStatus <= CSCRIPTCOMPILER_TOKEN_ENGINE_STRUCTURE9_IDENTIFIER))
 				{
-					// Do somethin' with the identifier.
-
 					CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_ACTION_ID,NULL,NULL);
 					m_pchToken[m_nTokenCharacters] = 0;
 					pNewNode2->m_psStringData = new CExoString(m_pchToken);
@@ -1895,6 +2018,12 @@ int32_t CScriptCompiler::GenerateParseTree()
 				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_NON_VOID_EXPRESSION,1,1,NULL);
 				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_EXPRESSION,0,0,NULL);
 			}
+			// Term 1: Process boolean statement for optional initialization statement group
+			if (nTopStackRule == 0 && nTopStackTerm == 1)
+			{
+				CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_NON_VOID_EXPRESSION,pTopStackCurrentNode->pLeft,NULL);
+				ModifySRStackReturnTree(pNewNode);
+			}
 			if (nTopStackRule == 1 && nTopStackTerm == 1)
 			{
 				// MGB - October 29, 2002
@@ -1902,6 +2031,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_NON_VOID_EXPRESSION,pTopStackReturnNode,NULL);
 				ModifySRStackReturnTree(pNewNode);
 			}
+
 			break;
 
 			/////////////////////////////////////////////////////////////////////////////
@@ -1917,11 +2047,25 @@ int32_t CScriptCompiler::GenerateParseTree()
 				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,1,1,NULL);
 				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_NON_VOID_EXPRESSION,0,0,NULL);
 			}
+			// Term 1: Process boolean statements for optional initialization statement groups
+			else if (nTopStackRule == 0 && nTopStackTerm == 1)
+			{
+				if (pTopStackCurrentNode)
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,1,1,pTopStackReturnNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_NON_VOID_EXPRESSION,0,1,pTopStackCurrentNode);
+				}
+				else
+				{
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_UNKNOWN_STATE_IN_COMPILER);
+				}
+			}
 			if (nTopStackRule == 1 && nTopStackTerm == 1)
 			{
 				CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_INTEGER_EXPRESSION,pTopStackReturnNode,NULL);
 				ModifySRStackReturnTree(pNewNode);
 			}
+
 			break;
 
 			/////////////////////////////////////////////////////////////////
@@ -2293,14 +2437,14 @@ int32_t CScriptCompiler::GenerateParseTree()
 			// case 10:
 			// Within-a-statement:
 			// (1) { within-a-compound-statement }
-			// (2) void-returning-identifier(argument-expression-list);
-			// (3) if (boolean-expression) statement
-			// (4) if (boolean-expression) statement else statement
-			// (5) switch ( boolean-expression ) statement
+			// (2) void-returning-identifier(argument-expression-list) ;
+			// (3) if ( statement-group(opt) ; boolean-expression ) statement
+			// (4) if ( statement-group(opt) ; boolean-expression ) statement else statement
+			// (5) switch ( statement-group(opt) ; boolean-expression ) statement
 			// (6) return non-void-expression(opt) ;
-			// (7) while (boolean-expression) statement
-			// (8) do statement while (boolean-expression);
-			// (9) for (expression_opt; expression_opt; expression_opt) statement
+			// (7) while ( statement-group(opt) ; boolean-expression ) statement
+			// (8) do statement while (boolean-expression) ;
+			// (9) for ( statement-group(opt) ; boolean-expression ; statement-group(opt) ) statement
 			// (10) non-void-type-specifier declaration-list ;
 			// (11) expression(opt) ;
 			// (12) default :
@@ -2311,7 +2455,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 
 		case CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT:
 
-			if (nTopStackRule == 0 && nTopStackTerm == 0)
+			if (nTopStackRule == 0 && nTopStackTerm >= 0 && nTopStackTerm <= 1)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_LEFT_BRACE)
 				{
@@ -2358,14 +2502,12 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_VOID_IDENTIFIER)
 				{
-					// Do somethin' with the identifier.
-
 					CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_ACTION_ID,NULL,NULL);
 					m_pchToken[m_nTokenCharacters] = 0;
 					pNewNode2->m_psStringData = new CExoString(m_pchToken);
 
 					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_ACTION,NULL,pNewNode2);
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,2,2,pNewNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,2,2+nTopStackTerm,pNewNode);
 					return 0;
 				}
 				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_IF)
@@ -2404,7 +2546,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 				         (m_nTokenStatus >= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 &&
 				          m_nTokenStatus <= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE9))
 				{
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,10,2,NULL);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,10,2,pTopStackCurrentNode);
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_NON_VOID_TYPE_SPECIFIER,0,0,NULL);
 				}
 				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
@@ -2414,7 +2556,15 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				else
 				{
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,11,2,NULL);
+					if (nTopStackTerm == 0)
+					{
+						PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,11,2,NULL);
+					}
+					// Term 1: Allow statements to be separated with a comma
+					else if (nTopStackTerm == 1)
+					{
+						PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,11,3,NULL);
+					}
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_EXPRESSION,0,0,NULL);
 				}
 			}
@@ -2444,11 +2594,14 @@ int32_t CScriptCompiler::GenerateParseTree()
 					return nError;
 				}
 			}
-			if (nTopStackRule == 2 && nTopStackTerm == 2)
+
+			// Rule 2: void-returning-identifier(argument-expression-list);
+			if (nTopStackRule == 2 && (nTopStackTerm == 2 || nTopStackTerm == 3))
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_LEFT_BRACKET)
 				{
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,2,3,pTopStackCurrentNode);
+					//PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,2,3,pTopStackCurrentNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,2,nTopStackTerm+2,pTopStackCurrentNode);
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_ARGUMENT_EXPRESSION_LIST,0,0,NULL);
 					return 0;
 				}
@@ -2457,12 +2610,13 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_ARG_LIST);
 				}
 			}
-			if (nTopStackRule == 2 && nTopStackTerm == 3)
+			if (nTopStackRule == 2 && (nTopStackTerm == 4 || nTopStackTerm == 5))
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
 				{
 					pTopStackCurrentNode->pLeft = pTopStackReturnNode;
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,2,4,pTopStackCurrentNode);
+					//PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,2,4,pTopStackCurrentNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,2,nTopStackTerm+2,pTopStackCurrentNode);
 					return 0;
 				}
 				else
@@ -2470,18 +2624,28 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_RIGHT_BRACKET_ON_ARG_LIST);
 				}
 			}
-			if (nTopStackRule == 2 && nTopStackTerm == 4)
+			if (nTopStackRule == 2 && (nTopStackTerm == 6 || nTopStackTerm == 7))
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
 				{
 					ModifySRStackReturnTree(pTopStackCurrentNode);
-					return 0;
+					if (nTopStackTerm == 6)
+					{
+						return 0;
+					}
+				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_COMMA)
+				{
+					ModifySRStackReturnTree(pTopStackCurrentNode);
 				}
 				else
 				{
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
+			
+			// Rule 3: if (boolean-expression) statement
+			// Term 2: IF_BLOCK node collection creation
 			if (nTopStackRule == 3 && nTopStackTerm == 2)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_LEFT_BRACKET)
@@ -2588,12 +2752,18 @@ int32_t CScriptCompiler::GenerateParseTree()
 				pTopStackCurrentNode->pRight->pRight = pNewNode2;
 				ModifySRStackReturnTree(pTopStackCurrentNode);
 			}
+
+			// Rule 5: switch ( boolean-expression ) statement
 			if (nTopStackRule == 5 && nTopStackTerm == 2)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_LEFT_BRACKET)
 				{
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,5,4,pTopStackCurrentNode);
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,0,0,NULL);
+					CScriptParseTreeNode *pNewNode0 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT_NO_DEBUG,pTopStackCurrentNode,NULL);
+					CScriptParseTreeNode *pNewNode4 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT_LIST,NULL,NULL);
+					CScriptParseTreeNode *pNewNode3 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT,pNewNode4,pNewNode0);
+					CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT_LIST,pNewNode3,NULL);
+					CScriptParseTreeNode *pNewNode1 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_COMPOUND_STATEMENT,pNewNode2,NULL);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,5,3,pNewNode1);
 					return 0;
 				}
 				else
@@ -2601,16 +2771,53 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION);
 				}
 			}
+
+			if (nTopStackRule == 5 && nTopStackTerm == 3)
+			{
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_INT    ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT  ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRING ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_VECTOR ||
+				        (m_nTokenStatus >= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 &&
+				         m_nTokenStatus <= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE9))
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,5,4,pTopStackCurrentNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,0,0,pTopStackCurrentNode);
+				}
+				else
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,5,4,pTopStackCurrentNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,0,1,NULL);
+				}
+			}
+
 			if (nTopStackRule == 5 && nTopStackTerm == 4)
 			{
-				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
+				{
+					if (pTopStackReturnNode->nOperation == CSCRIPTCOMPILER_OPERATION_STATEMENT_LIST)
+					{
+						pTopStackCurrentNode->pLeft->pLeft->pLeft = pTopStackReturnNode;
+					}
+					else
+					{
+						pTopStackCurrentNode->pLeft->pLeft->pLeft->pLeft = pTopStackReturnNode;
+					}
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,5,4,pTopStackCurrentNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,0,0,NULL);
+					return 0;
+				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
 				{
 					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_SWITCH_CONDITION,pTopStackReturnNode,NULL);
-					pTopStackCurrentNode->pLeft = pNewNode;
+					pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->pLeft = pNewNode;
+
 					// MGB - February 5, 2003 - Removed pTopStackReturnNode from left branch of this
 					// tree node, since it didn't really make a lot of sense.
 					CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT_NO_DEBUG,NULL,NULL);
-					pTopStackCurrentNode->pRight = pNewNode2;
+					pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->pRight = pNewNode2;
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,5,5,pTopStackCurrentNode);
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,0,0,NULL);
 					return 0;
@@ -2626,10 +2833,11 @@ int32_t CScriptCompiler::GenerateParseTree()
 				{
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_SWITCH_CONDITION_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT);
 				}
-
-				pTopStackCurrentNode->pRight->pLeft = pTopStackReturnNode;
+				pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->pRight->pLeft = pTopStackReturnNode;
 				ModifySRStackReturnTree(pTopStackCurrentNode);
 			}
+
+			// Rule 6: return non-void-expression(opt) ;
 			if (nTopStackRule == 6 && nTopStackTerm == 2)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
@@ -2658,13 +2866,15 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 			}
 
+			// Rule 7: while ( statement-group(opt) ; boolean-expression) statement
 			if (nTopStackRule == 7 && nTopStackTerm == 2)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_LEFT_BRACKET)
 				{
 					CScriptParseTreeNode *pNewNode1 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_WHILE_BLOCK,NULL,NULL);
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,7,3,pNewNode1);
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,0,0,NULL);
+					CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT_NO_DEBUG,NULL,pNewNode1);
+					CScriptParseTreeNode *pNewNode3 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_COMPOUND_STATEMENT,pNewNode2,NULL);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,7,3,pNewNode3);
 					return 0;
 				}
 				else
@@ -2674,12 +2884,40 @@ int32_t CScriptCompiler::GenerateParseTree()
 			}
 			if (nTopStackRule == 7 && nTopStackTerm == 3)
 			{
-				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_INT    ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT  ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRING ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_VECTOR ||
+				        (m_nTokenStatus >= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 &&
+				         m_nTokenStatus <= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE9))
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,7,4,pTopStackCurrentNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,0,0,pTopStackCurrentNode);
+				}
+				else
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,7,4,pTopStackCurrentNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,0,1,NULL);
+				}
+			}
+
+			if (nTopStackRule == 7 && nTopStackTerm == 4)
+			{
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
+				{
+					pTopStackCurrentNode->pLeft->pLeft = pTopStackReturnNode;
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,7,4,pTopStackCurrentNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,0,0,NULL);
+					return 0;
+				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
 				{
 					CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_WHILE_CONDITION,pTopStackReturnNode,NULL);
 					CScriptParseTreeNode *pNewNode3 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_WHILE_CHOICE,NULL,NULL);
-					pTopStackCurrentNode->pLeft = pNewNode2;
-					pTopStackCurrentNode->pRight = pNewNode3;
+					pTopStackCurrentNode->pLeft->pRight->pLeft = pNewNode2;
+					pTopStackCurrentNode->pLeft->pRight->pRight = pNewNode3;
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,7,5,pTopStackCurrentNode);
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,0,0,NULL);
 					return 0;
@@ -2705,7 +2943,6 @@ int32_t CScriptCompiler::GenerateParseTree()
 			}
 			if (nTopStackRule == 7 && nTopStackTerm == 5)
 			{
-				// Link up the "if expression true" statement.
 				CScriptParseTreeNode *pNewNode4 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_WHILE_CONTINUE,NULL,NULL);
 				CScriptParseTreeNode *pNewNode3 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT_NO_DEBUG,pNewNode4,NULL);
 
@@ -2733,14 +2970,15 @@ int32_t CScriptCompiler::GenerateParseTree()
 				}
 				// MGB - !For Script Debugger
 
-				pTopStackCurrentNode->pRight->pLeft = pNewNode2;
+				pTopStackCurrentNode->pLeft->pRight->pRight->pLeft = pNewNode2;
 				ModifySRStackReturnTree(pTopStackCurrentNode);
 			}
+
+			// Rule 8: do statement while (boolean-expression) ;
 			if (nTopStackRule == 8 && nTopStackTerm == 2)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_WHILE)
 				{
-					//CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT,pTopStackReturnNode,NULL);
 					CScriptParseTreeNode *pNewNode2;
 
 					if (pTopStackReturnNode->nOperation == CSCRIPTCOMPILER_OPERATION_COMPOUND_STATEMENT ||
@@ -2805,6 +3043,8 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
+
+			// Rule 9: for (expression_opt; expression_opt; expression_opt) statement
 			if (nTopStackRule == 9 && nTopStackTerm == 2)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_LEFT_BRACKET)
@@ -2818,10 +3058,10 @@ int32_t CScriptCompiler::GenerateParseTree()
 					CScriptParseTreeNode *pNewNode5 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_WHILE_BLOCK,pNewNode4,pNewNode3);
 					CScriptParseTreeNode *pNewNode6 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT_NO_DEBUG,pNewNode5,NULL);
 					CScriptParseTreeNode *pNewNode7 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT,NULL,pNewNode6);
-
 					CScriptParseTreeNode *pNewNode10 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_FOR_BLOCK,pNewNode7,NULL);
+					CScriptParseTreeNode *pNewNode11 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_COMPOUND_STATEMENT,pNewNode10,NULL);
 
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,3,pNewNode10);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,3,pNewNode11);
 					return 0;
 				}
 				else
@@ -2829,6 +3069,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_LEFT_BRACKET_ON_EXPRESSION);
 				}
 			}
+			// Term 3: Determine whether an initialization expression exists
 			if (nTopStackRule == 9 && nTopStackTerm == 3)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
@@ -2836,18 +3077,30 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,5,pTopStackCurrentNode);
 					return 0;
 				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_INT    ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_FLOAT  ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRING ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_STRUCT ||
+				         m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_VECTOR ||
+				        (m_nTokenStatus >= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE0 &&
+				         m_nTokenStatus <= CSCRIPTCOMPILER_TOKEN_KEYWORD_ENGINE_STRUCTURE9))
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,4,pTopStackCurrentNode);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,0,0,pTopStackCurrentNode);
+				}
 				else
 				{
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,4,pTopStackCurrentNode);
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_EXPRESSION,0,0,NULL);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,0,1,NULL);
 				}
 			}
+			// Term 4: Determine whether the initialization expression is complete
 			if (nTopStackRule == 9 && nTopStackTerm == 4)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
 				{
-					// Create a node and stick the expression on to it.
-					pTopStackCurrentNode->pLeft->pLeft = pTopStackReturnNode;
+					pTopStackCurrentNode->pLeft->pLeft->pLeft = pTopStackReturnNode;
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,5,pTopStackCurrentNode);
 					return 0;
 				}
@@ -2856,6 +3109,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
+			// Term 5: Determine whether a condition expression exists
 			if (nTopStackRule == 9 && nTopStackTerm == 5)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
@@ -2865,7 +3119,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 					CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_NON_VOID_EXPRESSION,pNewNode,NULL);
 					CScriptParseTreeNode *pNewNode3 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_INTEGER_EXPRESSION,pNewNode2,NULL);
 
-					pTopStackCurrentNode->pLeft->pRight->pLeft->pLeft->pLeft = pNewNode3;
+					pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->pLeft->pLeft = pNewNode3;
 
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,7,pTopStackCurrentNode);
 					return 0;
@@ -2876,12 +3130,12 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_BOOLEAN_EXPRESSION,0,0,NULL);
 				}
 			}
+			// Term 6: Handle condition expression termination
 			if (nTopStackRule == 9 && nTopStackTerm == 6)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
 				{
-					// Create a node and stick the expression on to it.
-					pTopStackCurrentNode->pLeft->pRight->pLeft->pLeft->pLeft = pTopStackReturnNode;
+					pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->pLeft->pLeft = pTopStackReturnNode;
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,7,pTopStackCurrentNode);
 					return 0;
 				}
@@ -2890,6 +3144,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
+			// Term 7: Determine if an increment expression exists
 			if (nTopStackRule == 9 && nTopStackTerm == 7)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
@@ -2900,14 +3155,15 @@ int32_t CScriptCompiler::GenerateParseTree()
 				else
 				{
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,8,pTopStackCurrentNode);
-					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_EXPRESSION,0,0,NULL);
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP,0,2,NULL);
 				}
 			}
+			// Term 8: Determine whether the increment expression is complete
 			if (nTopStackRule == 9 && nTopStackTerm == 8)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_RIGHT_BRACKET)
 				{
-					pTopStackCurrentNode->pLeft->pRight->pLeft->pRight->pRight->pRight->pLeft = pTopStackReturnNode;
+					pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->pRight->pRight->pRight->pLeft = pTopStackReturnNode;
 					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,9,pTopStackCurrentNode);
 					return 0;
 				}
@@ -2916,11 +3172,13 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
+			// Term 9: Handle increment expression termination
 			if (nTopStackRule == 9 && nTopStackTerm == 9)
 			{
 				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,9,10,pTopStackCurrentNode);
 				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,0,0,NULL);
 			}
+			// Term 10: Complete the parse tree
 			if (nTopStackRule == 9 && nTopStackTerm == 10)
 			{
 				if (pTopStackReturnNode == NULL)
@@ -2928,7 +3186,7 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_FOR_STATEMENT_CANNOT_BE_FOLLOWED_BY_A_NULL_STATEMENT);
 				}
 
-				pTopStackCurrentNode->pLeft->pRight->pLeft->pRight->pLeft->pLeft = pTopStackReturnNode;
+				pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->pRight->pLeft->pLeft = pTopStackReturnNode;
 
 				if (pTopStackReturnNode->nOperation == CSCRIPTCOMPILER_OPERATION_COMPOUND_STATEMENT ||
 				        pTopStackReturnNode->nOperation == CSCRIPTCOMPILER_OPERATION_IF_BLOCK ||
@@ -2937,23 +3195,39 @@ int32_t CScriptCompiler::GenerateParseTree()
 				        pTopStackReturnNode->nOperation == CSCRIPTCOMPILER_OPERATION_SWITCH_BLOCK ||
 				        pTopStackReturnNode->nOperation == CSCRIPTCOMPILER_OPERATION_FOR_BLOCK)
 				{
-					pTopStackCurrentNode->pLeft->pRight->pLeft->pRight->pLeft->nOperation = CSCRIPTCOMPILER_OPERATION_STATEMENT_NO_DEBUG;
+					pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->pRight->pLeft->nOperation = CSCRIPTCOMPILER_OPERATION_STATEMENT_NO_DEBUG;
 				}
 				else
 				{
 					// It's already a STATEMENT, so set the line correctly.
-					pTopStackCurrentNode->pLeft->pRight->pLeft->pRight->pLeft->nLine = pTopStackReturnNode->nLine;
+					pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->pRight->pLeft->nLine = pTopStackReturnNode->nLine;
 				}
 
 				ModifySRStackReturnTree(pTopStackCurrentNode);
 			}
+
+			// Rule 10: non-void-type-specifier declaration-list ;
 			if (nTopStackRule == 10 && nTopStackTerm == 2)
 			{
-				// Create a node.
 				CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_KEYWORD_DECLARATION,pTopStackReturnNode,NULL);
 				CScriptParseTreeNode *pNewNode2 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT,pNewNode,NULL);
 				CScriptParseTreeNode *pNewNode3 = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_STATEMENT_LIST,pNewNode2,NULL);
-				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,10,3,pNewNode3);
+
+				if (pTopStackCurrentNode && pTopStackCurrentNode->pLeft && 
+					((pTopStackCurrentNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_FOR_BLOCK) ||
+					(pTopStackCurrentNode->pLeft->pRight && 
+					(pTopStackCurrentNode->pLeft->pRight->nOperation == CSCRIPTCOMPILER_OPERATION_WHILE_BLOCK)) ||
+					(pTopStackCurrentNode->pLeft->pLeft && pTopStackCurrentNode->pLeft->pLeft->pRight && 
+					(pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft && 
+					 pTopStackCurrentNode->pLeft->pLeft->pRight->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_SWITCH_BLOCK))))
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,10,4,pNewNode3);
+				}
+				else
+				{
+					PushSRStack(CSCRIPTCOMPILER_GRAMMAR_WITHIN_A_STATEMENT,10,3,pNewNode3);
+				}
+
 				PushSRStack(CSCRIPTCOMPILER_GRAMMAR_DECL_VARLIST,0,0,pNewNode2);
 			}
 			if (nTopStackRule == 10 && nTopStackTerm == 3)
@@ -2968,6 +3242,19 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
+			if (nTopStackRule == 10 && nTopStackTerm == 4)
+			{
+				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
+				{
+					ModifySRStackReturnTree(pTopStackCurrentNode);
+				}
+				else
+				{
+					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
+				}
+			}
+
+			// Rule 11: expression(opt) ;
 			if (nTopStackRule == 11 && nTopStackTerm == 2)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_SEMICOLON)
@@ -2991,6 +3278,12 @@ int32_t CScriptCompiler::GenerateParseTree()
 					PARSER_ERROR(STRREF_CSCRIPTCOMPILER_ERROR_NO_SEMICOLON_AFTER_EXPRESSION);
 				}
 			}
+
+			if (nTopStackRule == 11 && nTopStackTerm == 3)
+			{
+				ModifySRStackReturnTree(pTopStackReturnNode);
+			}
+
 			if (nTopStackRule == 12 && nTopStackTerm == 2)
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_COLON)

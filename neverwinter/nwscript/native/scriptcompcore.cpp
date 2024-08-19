@@ -1873,6 +1873,8 @@ const char *TokenKeywordToString(int nTokenKeyword)
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_DATE:                     return "KEYWORD_DASHDASH_DATE";
         case CSCRIPTCOMPILER_TOKEN_KEYWORD_DASHDASH_TIME:                     return "KEYWORD_DASHDASH_TIME";
         case CSCRIPTCOMPILER_TOKEN_HASHED_STRING:                             return "HASHED_STRING";
+		case CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER:                            return "BINARY_INTEGER";
+		case CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER:							  return "OCTAL_INTEGER";
 	}
 	return "(unknown token keyword)";
 }

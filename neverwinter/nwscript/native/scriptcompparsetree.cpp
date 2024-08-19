@@ -508,6 +508,32 @@ int32_t CScriptCompiler::GenerateParseTree()
 					ModifySRStackReturnTree(pNewNode);
 					return 0;
 				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER)
+				{
+					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER,NULL,NULL);
+					m_pchToken[m_nTokenCharacters] = 0;
+					pNewNode->nIntegerData = 0;
+					for (nCount = 2; nCount < m_nTokenCharacters; nCount++)
+					{
+						pNewNode->nIntegerData *= 2;
+						pNewNode->nIntegerData += (m_pchToken[nCount] - '0');
+					}
+					ModifySRStackReturnTree(pNewNode);
+					return 0;
+				}
+				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER)
+				{
+					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER,NULL,NULL);
+					m_pchToken[m_nTokenCharacters] = 0;
+					pNewNode->nIntegerData = 0;
+					for (nCount = 2; nCount < m_nTokenCharacters; nCount++)
+					{
+						pNewNode->nIntegerData *= 8;
+						pNewNode->nIntegerData += (m_pchToken[nCount] - '0');
+					}
+					ModifySRStackReturnTree(pNewNode);
+					return 0;					
+				}
 				else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_FLOAT)
 				{
 					CScriptParseTreeNode *pNewNode = CreateScriptParseTreeNode(CSCRIPTCOMPILER_OPERATION_CONSTANT_FLOAT,NULL,NULL);
@@ -736,6 +762,8 @@ int32_t CScriptCompiler::GenerateParseTree()
 			{
 				if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_INTEGER ||
 				        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HEX_INTEGER ||
+						m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER ||
+						m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER ||
 				        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_FLOAT ||
 				        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_STRING ||
 				        m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_KEYWORD_OBJECT_SELF ||

@@ -1726,23 +1726,9 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, const ch
 			return nReturnValue;
 		}
 	}
-	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HEX_INTEGER)
-	{
-		int nReturnValue = HandleToken();
-		if (nReturnValue < 0)
-		{
-			return nReturnValue;
-		}
-	}
-	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER)
-	{
-		int nReturnValue = HandleToken();
-		if (nReturnValue < 0)
-		{
-			return nReturnValue;
-		}
-	}
-	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER)
+	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HEX_INTEGER ||
+		m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER ||
+		m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER)
 	{
 		int nReturnValue = HandleToken();
 		if (nReturnValue < 0)

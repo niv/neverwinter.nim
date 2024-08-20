@@ -149,8 +149,7 @@ int32_t CScriptCompiler::ParseCharacterNumeric(int32_t ch)
 	{
 		m_pchToken[m_nTokenCharacters] = (char) ch;
 		++m_nTokenCharacters;
-		if (m_nTokenCharacters > CSCRIPTCOMPILER_MAX_TOKEN_LENGTH ||
-			m_nTokenCharacters > 33)
+		if (m_nTokenCharacters > CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
 		{
 			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
 		}
@@ -160,8 +159,7 @@ int32_t CScriptCompiler::ParseCharacterNumeric(int32_t ch)
 	{
 		m_pchToken[m_nTokenCharacters] = (char) ch;
 		++m_nTokenCharacters;
-		if (m_nTokenCharacters > CSCRIPTCOMPILER_MAX_TOKEN_LENGTH ||
-			m_nTokenCharacters > 13)
+		if (m_nTokenCharacters > CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
 		{
 			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
 		}
@@ -299,8 +297,7 @@ int32_t CScriptCompiler::ParseCharacterAlphabet(int32_t ch)
 			m_pchToken[m_nTokenCharacters] = (char) ch;
 		}
 		++m_nTokenCharacters;
-		if (m_nTokenCharacters >= CSCRIPTCOMPILER_MAX_TOKEN_LENGTH ||
-			m_nTokenCharacters > 10)
+		if (m_nTokenCharacters >= CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
 		{
 			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
 		}

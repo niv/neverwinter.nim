@@ -139,7 +139,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Download Linux artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: neverwinter.linux.amd64
           path: bin-linux
@@ -152,7 +152,7 @@ jobs:
           zip neverwinter.linux.amd64.zip *
 
       - name: Download Windows i386 artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: neverwinter.windows.i386
           path: bin-windows-i386
@@ -162,7 +162,7 @@ jobs:
         run: zip neverwinter.windows.i386.zip *
 
       - name: Download Windows amd64 artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: neverwinter.windows.amd64
           path: bin-windows-amd64
@@ -172,7 +172,7 @@ jobs:
         run: zip neverwinter.windows.amd64.zip *
 
       - name: Download macOS artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4.1.7
         with:
           name: neverwinter.macos.amd64
           path: bin-macos

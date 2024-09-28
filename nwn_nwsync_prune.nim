@@ -82,8 +82,8 @@ proc pruneUnreferencedFiles*(rootDirectory: string) =
 
     manifestsInRepository[mfh] = mf
     info "Manifest ", mfh,
-      " containing ", formatSize(int mf.totalSize()),
-      " (deduplicated to ", formatSize(int mf.deduplicatedSize()),
+      " containing ", formatSize(mf.totalSize()),
+      " (deduplicated to ", formatSize(mf.deduplicatedSize()),
       ") in ",
       mf.entries.len, " files"
 

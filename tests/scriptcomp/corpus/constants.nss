@@ -1,5 +1,7 @@
 const int INT_LITERAL = 42;
-const int INT_HEX_LITERAL = 0x42;
+const int INT_HEX_LITERAL = 0x2A;
+const int INT_BINARY_LITERAL = 0b101010;
+const int INT_OCTAL_LITERAL = 0o052;
 const int INT_NEGATIVE_LITERAL = -42;
 
 const float FLOAT_LITERAL_FULL = 42.42f;

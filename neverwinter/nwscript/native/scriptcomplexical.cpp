@@ -143,7 +143,26 @@ int32_t CScriptCompiler::ParseCharacterNumeric(int32_t ch)
 		{
 			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
 		}
-
+	}
+	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER &&
+		(ch == '0' || ch == '1'))
+	{
+		m_pchToken[m_nTokenCharacters] = (char) ch;
+		++m_nTokenCharacters;
+		if (m_nTokenCharacters > CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
+		{
+			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
+		}
+	}
+	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER &&
+		(ch >= '0' && ch <= '7'))
+	{
+		m_pchToken[m_nTokenCharacters] = (char) ch;
+		++m_nTokenCharacters;
+		if (m_nTokenCharacters > CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
+		{
+			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
+		}
 	}
 	else
 	{
@@ -233,7 +252,7 @@ int32_t CScriptCompiler::ParseCharacterAlphabet(int32_t ch)
 	}
 
 	if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_INTEGER && (ch == 'x' || ch == 'X') &&
-	        m_nTokenCharacters == 1 && m_pchToken[0] == '0')
+	    m_nTokenCharacters == 1 && m_pchToken[0] == '0')
 	{
 		m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_HEX_INTEGER;
 		m_pchToken[m_nTokenCharacters] = (char) ch;
@@ -242,7 +261,28 @@ int32_t CScriptCompiler::ParseCharacterAlphabet(int32_t ch)
 		{
 			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
 		}
-
+	}
+	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_INTEGER && (ch == 'b' || ch == 'B') &&
+		m_nTokenCharacters == 1 && m_pchToken[0] == '0')
+	{
+		m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER;
+		m_pchToken[m_nTokenCharacters] = (char) ch;
+		++m_nTokenCharacters;
+		if (m_nTokenCharacters >= CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
+		{
+			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
+		}
+	}
+	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_INTEGER && (ch == 'o' || ch == 'O') &&
+		m_nTokenCharacters == 1 && m_pchToken[0] == '0')
+	{
+		m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER;
+		m_pchToken[m_nTokenCharacters] = (char) ch;
+		++m_nTokenCharacters;
+		if (m_nTokenCharacters >= CSCRIPTCOMPILER_MAX_TOKEN_LENGTH)
+		{
+			return STRREF_CSCRIPTCOMPILER_ERROR_TOKEN_TOO_LONG;
+		}
 	}
 	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HEX_INTEGER &&
 	         ((ch >= 'a' && ch <='f') ||
@@ -1632,6 +1672,18 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, const ch
 	{
 		return ParseCharacterAlphabet(ch);
 	}
+	else if ((ch == 'b' || ch == 'B') &&
+	         m_nTokenCharacters == 1 &&
+	         m_pchToken[0] == '0')
+	{
+		return ParseCharacterAlphabet(ch);
+	}
+	else if ((ch == 'o' || ch == 'O') &&
+	         m_nTokenCharacters == 1 &&
+	         m_pchToken[0] == '0')
+	{
+		return ParseCharacterAlphabet(ch);
+	}
 	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_INTEGER || m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_FLOAT)
 	{
 		int32_t nCompiledCharacters = 0;
@@ -1671,7 +1723,9 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, const ch
 			return nReturnValue;
 		}
 	}
-	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HEX_INTEGER)
+	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HEX_INTEGER ||
+		m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER ||
+		m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER)
 	{
 		int nReturnValue = HandleToken();
 		if (nReturnValue < 0)

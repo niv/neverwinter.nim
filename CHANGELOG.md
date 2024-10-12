@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2024-10-12
+
+This release now requires nim 2.0 or newer.
+
+### Added
+
+- Add support for nim 2.0.x and 2.2.x.
+- lib: Now correctly reads retail.key for game version 37+.
+- scriptcomp: Added support for `__FUNCTION__`, `__FILE__`, `__LINE__`, `__DATE__` and `__TIME__` keywords.
+- scriptcomp: Added dead branch code optimisations for constant ifs.
+- scriptcomp: Added support for unary plus (e.g. constants like `+7` now compile).
+- scriptcomp: Added support for double bang (e.g. `!!x` not compiles).
+- scriptcomp: Added support for hashed string literals (e.g. `h"foo"` -> int).
+- scriptcomp: Can now output graphviz parse trees to help compiler engineers.
+- scriptcomp: Added better error reporting on parser errors.
+
+### Fixed
+
+- lib: Fixed --manifests not working.
+- lib: Compressedbuf can now correctly handle zero-byte payloads.
+- nwn_resman_\*: Fixed --all not working.
+- nwn_nwsync_prune: Incorrect size reporting on reference pruning.
+- scriptcomp: Fixed potential stack overflow issue when compiling particularly complex switch statements.
+- scriptcomp: Fixed Unidentified Identifier errors not displaying the identifier label.
+
 ## [1.8.0] - 2024-03-26
 
 ### Added

@@ -7,7 +7,7 @@ license       = "MIT"
 
 requires "nim >= 2.0.0"
 
-requires "checksums >= 0.1.0"
+requires "checksums >= 0.2.1"
 requires "https://github.com/docopt/docopt.nim#head"
 requires "db_connector >= 0.1.0"
 

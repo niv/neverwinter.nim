@@ -145,9 +145,9 @@ proc `[]=`*[K,V](self: WeightedLRU[K,V], key: K, weight: Weight, value: V) =
     assert(self.currentWeight >= 0)
 
 proc keys*[K,V](self: WeightedLRU[K,V]): seq[K] =
-  ## Returns a seq of keys stored in this cache. Ordering is not guaranteed.
+  ## Returns a seq of keys stored in this cache. Ordered by LRU.
   result = newSeq[K]()
-  for k in tables.keys(self.cachemap): result.add(k)
+  for kk in lists.items(self.cachelist): result.add(kk.key)
 
 proc uses*[K,V](self: WeightedLRU[K,V], key: K): int =
   ## Returns how often the key in question was queried. Returns 0 for keys

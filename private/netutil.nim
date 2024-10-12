@@ -11,7 +11,7 @@ proc ask*(socket: AsyncSocket, host: string, port: Port,
 
   let tstart = epochTime() * 1000
   try:
-    socket.sendTo(host, port, data)
+    await socket.sendTo(host, port, data)
   except:
     raise newException(IOError, "Send failed: " & getCurrentExceptionMsg())
 

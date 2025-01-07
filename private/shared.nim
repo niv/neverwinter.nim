@@ -138,7 +138,7 @@ proc ensureValidFormat*(format, filename: string,
   if result == "autodetect" and filename != "-":
     let ext = splitFile(filename).ext.strip(true, false, {'.'})
     for fmt, exts in supportedFormats:
-      if exts.contains(ext):
+      if exts.contains(ext.toLower):
         result = fmt
         break
 

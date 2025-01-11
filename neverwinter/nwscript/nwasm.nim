@@ -258,6 +258,9 @@ proc extraStr*(i: Instr, maxStringLength: Natural = 15): string =
   of ASSIGNMENT, ASSIGNMENT_BASE: $str.readInt32().swapEndian() & ", " & $str.readUint16().swapEndian()
   of INCREMENT, DECREMENT, INCREMENT_BASE, DECREMENT_BASE: $str.readInt32().swapEndian()
   of DE_STRUCT: $str.readUint16().swapEndian() & ", " & $str.readUint16().swapEndian() & ", " & $str.readUint16().swapEndian()
+  of EQUAL, NOT_EQUAL:
+    if i.aux == Auxcode.TYPETYPE_STRUCT_STRUCT: $str.readUint16().swapEndian()
+    else: ""
   else:
     if i.extra.len > 0:
       raise newException(Defect, "not implemented: " & i.extra.escape() & " for " & $i.op)

@@ -189,6 +189,11 @@ int32_t CScriptCompiler::ParseCharacterPeriod(int32_t chNext)
 	}
 	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_INTEGER)
 	{
+		if (chNext == '_')
+		{
+			return STRREF_CSCRIPTCOMPILER_ERROR_UNEXPECTED_CHARACTER;
+		}
+
 		m_nTokenStatus = CSCRIPTCOMPILER_TOKEN_FLOAT;
 		m_pchToken[m_nTokenCharacters] = '.';
 		++m_nTokenCharacters;
@@ -1686,6 +1691,18 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, const ch
 	}
 	else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_INTEGER || m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_FLOAT)
 	{
+		if (ch == '_')
+		{
+			if (chNext >= '0' && chNext <= '9')
+			{
+				return 0;
+			}
+			else
+			{
+				return STRREF_CSCRIPTCOMPILER_ERROR_UNEXPECTED_CHARACTER;
+			}
+		}
+
 		int32_t nCompiledCharacters = 0;
 		// Compile all suffixes that make sense.
 		if (ch == 'f')
@@ -1706,6 +1723,29 @@ int32_t CScriptCompiler::ParseNextCharacter(int32_t ch, int32_t chNext, const ch
 		{
 			return nCompiledCharacters - 1;
 		}
+	}
+	else if ((m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HEX_INTEGER ||
+		m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER ||
+		m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER) && ch == '_')
+	{
+		int nReturnValue = 0;
+
+		if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_HEX_INTEGER)
+		{
+			nReturnValue = ((chNext >= '0' && chNext <= '9') || 
+				(chNext >= 'a' && chNext <= 'f') || 
+				(chNext >= 'A' && chNext <= 'F'));
+		}
+		else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_BINARY_INTEGER)
+		{
+			nReturnValue = (chNext == '0' || chNext == '1');
+		}
+		else if (m_nTokenStatus == CSCRIPTCOMPILER_TOKEN_OCTAL_INTEGER)
+		{
+			nReturnValue = (chNext >= '0' && chNext <= '7');
+		}
+
+		return nReturnValue ? 0 : STRREF_CSCRIPTCOMPILER_ERROR_UNEXPECTED_CHARACTER;
 	}
 
 	// For similar reasons, we deal with alphabetic characters and then

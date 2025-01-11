@@ -655,6 +655,8 @@ private:
 	int32_t         DetermineLocationOfCode();
 	int32_t         ResolveLabels();
 	int32_t         WriteResolvedOutput();
+	//int32_t		    CloseVariableScope(int32_t nStackPointer);
+	void		    CloseVariableScope();
 
 	int32_t         m_nFinalBinarySize;
 

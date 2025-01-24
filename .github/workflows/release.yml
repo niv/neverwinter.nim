@@ -126,7 +126,7 @@ jobs:
         run: nimble install --depsOnly -y
 
       - name: Compile for macOS
-        run: nimble build -d:release
+        run: nimble build -d:release -d:macos_amd64_hotfix
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4

@@ -1,6 +1,15 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [2.0.2] - 2025-01-25
+
+### Added
+
+- scriptcomp: Added support for binary (0b101010) and octal (0o52) integers.
+
+### Fixed
+
+- The MacOS binary build via GHA is now amd64, not arm64. A proper universal build can come later.
+- asm: Can now correctly disasm struct equality checks.
 
 ## [2.0.1] - 2024-10-12
 

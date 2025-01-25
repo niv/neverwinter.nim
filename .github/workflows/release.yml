@@ -125,13 +125,13 @@ jobs:
       - name: Install nimble packages
         run: nimble install --depsOnly -y
 
-      - name: Compile for macOS
-        run: nimble build -d:release -d:macos_amd64_hotfix
+      - name: Compile for macOS (universal)
+        run: nimble build_macos_universal_binaries
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: neverwinter.macos.amd64
+          name: neverwinter.macos.universal
           path: bin/*
 
   release:
@@ -174,14 +174,14 @@ jobs:
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
-          name: neverwinter.macos.amd64
+          name: neverwinter.macos.universal
           path: bin-macos
 
       - name: Pack macOS artifact
         working-directory: bin-macos
         run: |
           chmod +x *
-          zip neverwinter.macosx.amd64.zip *
+          zip neverwinter.macos.universal.zip *
 
       - name: Create release
         id: create_release
@@ -230,6 +230,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: bin-macos/neverwinter.macosx.amd64.zip
-          asset_name: neverwinter.macosx.amd64.zip
+          asset_path: bin-macos/neverwinter.macos.universal.zip
+          asset_name: neverwinter.macos.universal.zip
           asset_content_type: application/zip

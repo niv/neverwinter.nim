@@ -33,3 +33,27 @@ task test, "Run all tests":
   # Megatest disabled for now: it appears to show all tests as skipped in html, and
   # i'm not sure it'll work well with threaded tests
   exec "testament --megatest:off all"
+
+task build_macos_universal_binaries, "Build macOS universal binaries":
+  doAssert(defined(macosx), "This task is only for macOS")
+  doAssert(defined(arm64), "This task was only tested on macOS aarch64")
+  echo "Building amd64 binaries for macOS"
+  exec("nimble build -f -d:macos_amd64_hotfix")
+
+  mkDir("bin/amd64")
+  for b in bin:
+    mvFile("bin/" & b, "bin/amd64/" & b)
+
+  echo "Building aarch64 binaries for macOS"
+  exec("nimble build -f --cpu:arm64")
+
+  mkDir("bin/aarch64")
+  for b in bin:
+    mvFile("bin/" & b, "bin/aarch64/" & b)
+
+  echo "Building universal binaries for macOS"
+  for b in bin:
+    exec("lipo -create -output bin/" & b & " bin/amd64/" & b & " bin/aarch64/" & b)
+
+  rmDir("bin/amd64")
+  rmDir("bin/aarch64")

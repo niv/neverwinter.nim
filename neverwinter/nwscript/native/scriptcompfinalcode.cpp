@@ -7112,6 +7112,8 @@ void CScriptCompiler::EmitModifyStackPointer(int32_t nModifyBy)
 				return;
 			}
 		}
+		// Disabled for now, appears to cause infinite loops in some cases
+#if 0		
 		// The common loop pattern of `for (i = 0; i < 1000; ++i)` gets compiled into
 		//    10  CONSTANT, TYPE_INTEGER, 0               
 		//    16  RUNSTACK_COPY, TYPE_VOID, -4, 4         
@@ -7164,6 +7166,7 @@ void CScriptCompiler::EmitModifyStackPointer(int32_t nModifyBy)
 				}
 			}
 		}
+#endif
 
 	}
 

@@ -2357,8 +2357,6 @@ int32_t CScriptCompiler::InVisitGenerateCode(CScriptParseTreeNode *pNode)
 			}
 
 		}
-
-
 	}
 
 	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_COND_CHOICE)
@@ -3485,6 +3483,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 	{
 		// Handled in the InVisit call, so we don't need to do anything
 		// here to handle this case.
+
 		return 0;
 	}
 
@@ -3497,11 +3496,17 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 
 	if (pNode->nOperation == CSCRIPTCOMPILER_OPERATION_COMPOUND_STATEMENT)
 	{
-
 		// We keep track of all of the variables added at this recursion level, and
 		// peel them off one by one.  This is actually done within the script itself
 		// as well, since we need to keep track of what's happening.  However, we
 		// don't need to worry about the address of a variable.
+		
+		// Experiement - gatekeeping at a point other than this node.
+		if (pNode->nIntegerData4 == -1)
+		{
+			return 0;
+		}
+
 
 		int32_t nStackAtStart = m_nStackCurrentDepth;
 

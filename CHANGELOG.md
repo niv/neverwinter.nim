@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.3] - 2025-03-14
+
+### Changed
+
+- scriptcomp: disabled a for loop optimization where the compiler would sometimes generate code that caused an infinite loop.
+
 ## [2.0.2] - 2025-01-25
 
 ### Added

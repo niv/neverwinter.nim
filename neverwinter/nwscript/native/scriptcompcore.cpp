@@ -1919,6 +1919,7 @@ const char *GrammarToString(int nGrammar)
 		case CSCRIPTCOMPILER_GRAMMAR_POST_EXPRESSION:                   return "POST_EXPRESSION";
 		case CSCRIPTCOMPILER_GRAMMAR_PRIMARY_EXPRESSION:                return "PRIMARY_EXPRESSION";
 		case CSCRIPTCOMPILER_GRAMMAR_CONSTANT:                          return "CONSTANT";
+		case CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP:            return "WITHIN_STATEMENT_GROUP";
 	}
 	return "(unknown grammar)";
 }

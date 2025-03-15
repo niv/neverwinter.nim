@@ -221,6 +221,7 @@ const char *TokenKeywordToString(int nTokenKeyword);
 #define CSCRIPTCOMPILER_GRAMMAR_POST_EXPRESSION                   33
 #define CSCRIPTCOMPILER_GRAMMAR_PRIMARY_EXPRESSION                34
 #define CSCRIPTCOMPILER_GRAMMAR_CONSTANT                          35
+#define CSCRIPTCOMPILER_GRAMMAR_WITHIN_STATEMENT_GROUP            36    
 
 const char *GrammarToString(int nGrammar);
 

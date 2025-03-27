@@ -220,13 +220,9 @@ proc resolve(self: GffField): GffField
 proc getValue*[T: GffFieldType](self: GffField, t: typedesc[T]): T =
   discard self.resolve()
 
-  when T is GffByte: cast[uint8](self.dataOrOffset)
-  elif T is GffChar: cast[int8](self.dataOrOffset)
-  elif T is GffWord: cast[uint16](self.dataOrOffset)
-  elif T is GffShort: cast[int16](self.dataOrOffset)
-  elif T is GffDword: cast[uint32](self.dataOrOffset)
-  elif T is GffInt: cast[int32](self.dataOrOffset)
-  elif T is GffFloat: cast[float32](self.dataOrOffset)
+  when T is GffByte or T is GffChar or T is GffWord or T is GffShort or
+       T is GffDword or T is GffInt or T is GffFloat:
+      copyMem(addr(result), addr(self.dataOrOffset), sizeof(T))
 
   elif T is GffDword64: self.gffDword64
   elif T is GffInt64: self.gffInt64

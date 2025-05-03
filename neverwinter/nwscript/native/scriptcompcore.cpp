@@ -46,6 +46,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unordered_map>
 
 // external header files
 #include "exobase.h"

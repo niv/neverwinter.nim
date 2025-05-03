@@ -31,7 +31,7 @@ type
     src, bin, dbg: ResType
 
   ResManWriteToFile = proc (fn: cstring, resType: uint16, pData: ptr uint8, size: csize_t, bin: bool): int32 {.cdecl.}
-  ResManLoadScriptSourceFile = proc (fn: cstring, resType: uint16): cstring {.cdecl.}
+  ResManLoadScriptSourceFile = proc (fn: cstring, resType: uint16): bool {.cdecl.}
 
   CompileResult* = tuple
     code: int32
@@ -52,15 +52,23 @@ const
   OptimizationFlagsO2* = fullSet(OptimizationFlag)
 
 proc scriptCompApiNewCompiler(
-  lang: cstring, src, bin, dbt: cint,
+  src, bin, dbt: cint,
   writer: ResManWriteToFile,
-  resolver: ResManLoadScriptSourceFile,
-  writeDebug: bool,
-  maxIncludeDepth: cint,
-  graphvizOut: cstring
+  resolver: ResManLoadScriptSourceFile
 ): CScriptCompiler {.importc.}
 
+proc scriptCompApiInitCompiler(
+  instance: CScriptCompiler,
+  lang: cstring,
+  writeDebug: bool,
+  maxIncludeDepth: cint,
+  graphvizOut: cstring,
+  outputAlias: cstring
+) {.importc.}
+
 proc scriptCompApiCompileFile(instance: CScriptCompiler, fn: cstring): tuple[code: int32, str: cstring] {.importc.}
+
+proc scriptCompApiDeliverFile(instance: CScriptCompiler, data: cstring, size: csize_t) {.importc.}
 
 # Since the C level API calls back for each invocation, we need to cache the
 # currently-calling compiler instance here. This makes all procs threadsafe, as long
@@ -82,9 +90,7 @@ proc writeFileInMem(fn: cstring, resType: uint16, pData: ptr uint8, size: csize_
     return 1
   return 0
 
-var resolveFileBuf {.threadvar.}: string
-
-proc resolveFileResMan(fn: cstring, ty: uint16): cstring {.cdecl.} =
+proc resolveFileResMan(fn: cstring, ty: uint16): bool {.cdecl.} =
   # Builtin callback that will invoke the provided resman instance in a thread and exception safe manner.
   # Not meant to be exposed to user code.
   assert not isNil currentCompilerInstance
@@ -92,25 +98,29 @@ proc resolveFileResMan(fn: cstring, ty: uint16): cstring {.cdecl.} =
     let r = newResRef($fn, ResType ty)
     let d = currentCompilerInstance.resman.demand(r)
     doAssert not isNil d, $r & " failed to resolve"
-    resolveFileBuf = d.readAll
-    if resolveFileBuf == "": return nil
-    return resolveFileBuf.cstring
+    let resolveFileBuf = d.readAll
+    if resolveFileBuf == "": return false
+    scriptCompApiDeliverFile(currentCompilerInstance.compiler,
+      resolveFileBuf.cstring, resolveFileBuf.len.csize_t)
+    return true
   except:
     # Must not throw back to C
     error "Failed to resolve ", $fn, ".", $ty, ":", getCurrentExceptionMsg()
-    return nil
+    return false
 
-proc resolveFileInMem(fn: cstring, ty: uint16): cstring {.cdecl.} =
+proc resolveFileInMem(fn: cstring, ty: uint16): bool {.cdecl.} =
   # Builtin callback that will invoke the provided resolver cb in a thread and exception safe manner.
   # Not meant to be exposed to user code.
   assert not isNil currentCompilerInstance
   try:
-    resolveFileBuf = currentCompilerInstance.resolver($fn, ResType ty)
-    return resolveFileBuf.cstring
+    let resolveFileBuf = currentCompilerInstance.resolver($fn, ResType ty)
+    scriptCompApiDeliverFile(currentCompilerInstance.compiler,
+      resolveFileBuf.cstring, resolveFileBuf.len.csize_t)
+    return true
   except:
     # Must not throw back to C
     error "Failed to resolve ", $fn, ".", $ty, ":", getCurrentExceptionMsg()
-    return nil
+    return false
 
 proc newCompiler*(
     lang: LangSpec,
@@ -130,12 +140,18 @@ proc newCompiler*(
   defer: currentCompilerInstance = nil
 
   result.compiler = scriptCompApiNewCompiler(
-    lang.lang.cstring, lang.src.cint, lang.bin.cint, lang.dbg.cint,
+    lang.src.cint, lang.bin.cint, lang.dbg.cint,
     writeFileInMem,
     resolveFileInMem,
+  )
+
+  scriptCompApiInitCompiler(
+    result.compiler,
+    lang.lang.cstring,
     writeDebug,
     maxIncludeDepth.cint,
-    graphvizOut.cstring
+    graphvizOut.cstring,
+    "scriptout"
   )
 
 proc newCompiler*(
@@ -156,12 +172,18 @@ proc newCompiler*(
   defer: currentCompilerInstance = nil
 
   result.compiler = scriptCompApiNewCompiler(
-    lang.lang.cstring, lang.src.cint, lang.bin.cint, lang.dbg.cint,
+    lang.src.cint, lang.bin.cint, lang.dbg.cint,
     writeFileInMem,
-    resolveFileResMan,
+    resolveFileResMan
+  )
+
+  scriptCompApiInitCompiler(
+    result.compiler,
+    lang.lang.cstring,
     writeDebug,
     maxIncludeDepth.cint,
-    graphvizOut.cstring
+    graphvizOut.cstring,
+    "scriptout"
   )
 
 proc compileFile*(instance: ScriptCompiler, fn: string): CompileResult =

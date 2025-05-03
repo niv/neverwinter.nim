@@ -357,6 +357,10 @@ CScriptCompiler::CScriptCompiler(RESTYPE nSource, RESTYPE nCompiled, RESTYPE nDe
     m_nResTypeCompiled = nCompiled;
     m_nResTypeDebug = nDebug;
 
+    m_pDeliveredFileData = NULL;
+    m_nDeliveredFileDataSize = 0;
+    m_nDeliveredFileSize = 0;
+
 	Initialize();
 
 }
@@ -397,6 +401,8 @@ CScriptCompiler::~CScriptCompiler()
 			delete pCurrentPtr;
 		}
 	}
+
+	free(m_pDeliveredFileData);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1235,8 +1241,10 @@ int32_t CScriptCompiler::CompileFile(const CExoString &sFileName)
 
 	m_pcIncludeFileStack[m_nCompileFileLevel].m_sCompiledScriptName = sFileName;
 
-    const char* sTest = m_cAPI.ResManLoadScriptSourceFile(sFileName.CStr(), m_nResTypeSource);
-	if (!sTest)
+    m_nDeliveredFileSize = 0;
+
+    if (!m_cAPI.ResManLoadScriptSourceFile(sFileName.CStr(), m_nResTypeSource)
+        || m_nDeliveredFileSize == 0)
 	{
 		if (m_nCompileFileLevel > 0)
 		{
@@ -1245,7 +1253,12 @@ int32_t CScriptCompiler::CompileFile(const CExoString &sFileName)
 
 		return STRREF_CSCRIPTCOMPILER_ERROR_FILE_NOT_FOUND;
 	}
-    m_pcIncludeFileStack[m_nCompileFileLevel].m_sSourceScript = sTest;
+
+    // This immediately copies to out memory. The incoming buffer might go away
+    // in between calls (eg. a managed language might GC it if we request another script).
+    const CExoString sCopy(m_pDeliveredFileData, m_nDeliveredFileSize);
+
+    m_pcIncludeFileStack[m_nCompileFileLevel].m_sSourceScript = sCopy;
     pScript = m_pcIncludeFileStack[m_nCompileFileLevel].m_sSourceScript.CStr();
     nScriptLength = m_pcIncludeFileStack[m_nCompileFileLevel].m_sSourceScript.GetLength();
 

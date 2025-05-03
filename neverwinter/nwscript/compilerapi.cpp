@@ -2,27 +2,34 @@
 #include "native/scriptcomp.h"
 
 extern "C" CScriptCompiler* scriptCompApiNewCompiler(
-    char* lang, int src, int bin, int dbg,
+    int src, int bin, int dbg,
     int32_t (*ResManWriteToFile)(const char* sFileName, RESTYPE nResType, const uint8_t* pData, size_t nSize, bool bBinary),
-    const char* (*ResManLoadScriptSourceFile)(const char* fn, RESTYPE rt),
-    bool writeDebug,
-    int maxIncludeDepth,
-    const char *graphvizOut
+    bool (*ResManLoadScriptSourceFile)(const char* fn, RESTYPE rt)
 )
 {
     CScriptCompilerAPI api;
     api.ResManUpdateResourceDirectory = +[](const char* sAlias) -> BOOL { return FALSE; };
     api.ResManWriteToFile = ResManWriteToFile;
     api.ResManLoadScriptSourceFile = ResManLoadScriptSourceFile;
-    CScriptCompiler* instance = new CScriptCompiler(src, bin, dbg, api);
+    return new CScriptCompiler(src, bin, dbg, api);
+}
+
+extern "C" void scriptCompApiInitCompiler(
+    CScriptCompiler* instance,
+    const char* lang,
+    bool writeDebug,
+    int maxIncludeDepth,
+    const char *graphvizOut,
+    const char* outputAlias
+)
+{
     instance->SetGenerateDebuggerOutput(writeDebug);
     instance->SetOptimizationFlags(writeDebug ? CSCRIPTCOMPILER_OPTIMIZE_NOTHING : CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING);
     instance->SetCompileConditionalOrMain(1);
     instance->SetIdentifierSpecification(lang);
-    instance->SetOutputAlias("scriptout");
+    instance->SetOutputAlias(outputAlias);
     instance->SetMaxIncludeDepth(maxIncludeDepth);
     instance->SetGraphvizOutputPath(graphvizOut);
-    return instance;
 }
 
 struct NativeCompileResult
@@ -51,6 +58,11 @@ extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instanc
     return ret;
 }
 
+extern "C" void scriptCompApiDeliverFile(CScriptCompiler* instance, const char* data, size_t size)
+{
+    instance->DeliverRequestedFile(data, size);
+}
+
 extern "C" uint32_t scriptCompApiGetOptimizationFlags(CScriptCompiler* instance)
 {
     return instance->GetOptimizationFlags();
@@ -64,4 +76,9 @@ extern "C" void scriptCompApiSetOptimizationFlags(CScriptCompiler* instance, uin
 extern "C" void scriptCompApiSetGenerateDebuggerOutput(CScriptCompiler* instance, uint32_t state)
 {
     instance->SetGenerateDebuggerOutput(state);
+}
+
+extern "C" void scriptCompApiDestroyCompiler(CScriptCompiler* instance)
+{
+    delete instance;
 }

@@ -822,13 +822,17 @@ int32_t CScriptCompiler::ParseIdentifierFile()
 
 	m_nPredefinedIdentifierOrder = 0;
 
-    const char* sTest = m_cAPI.ResManLoadScriptSourceFile(m_sLanguageSource.CStr(), m_nResTypeSource);
-	if (!sTest)
+	m_nDeliveredFileSize = 0;
+
+    if (!m_cAPI.ResManLoadScriptSourceFile(m_sLanguageSource.CStr(), m_nResTypeSource)
+	    || m_nDeliveredFileSize == 0)
 	{
 		return PrintParseIdentifierFileError(STRREF_CSCRIPTCOMPILER_ERROR_FILE_NOT_FOUND);
 	}
 
-    m_pcIncludeFileStack[0].m_sSourceScript = sTest;
+    const CExoString sCopy(m_pDeliveredFileData, m_nDeliveredFileSize);
+
+    m_pcIncludeFileStack[0].m_sSourceScript = sCopy;
     pScript = m_pcIncludeFileStack[0].m_sSourceScript.CStr();
     nScriptLength = m_pcIncludeFileStack[0].m_sSourceScript.GetLength();
 

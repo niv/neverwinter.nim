@@ -791,7 +791,7 @@ int32_t CScriptCompiler::GenerateIdentifierList()
 
 int32_t CScriptCompiler::PrintParseIdentifierFileError(int32_t nParsingError)
 {
-	CExoString strRes = m_cAPI.TlkResolve(-nParsingError);
+    const CExoString strRes = TlkToString(-nParsingError);
 
 	CExoString *psFileName = &(m_pcIncludeFileStack[0].m_sCompiledScriptName);
 	OutputError(nParsingError,psFileName,m_nLines,strRes);

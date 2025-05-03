@@ -1,5 +1,12 @@
-#include "native/exobase.h"
+#include "compilerapi.h"
+
 #include "native/scriptcomp.h"
+
+extern "C" int32_t scriptCompApiGetABIVersion()
+{
+    // Increment this whenever you make ABI-incompatible changes.
+    return 1;
+}
 
 extern "C" CScriptCompiler* scriptCompApiNewCompiler(
     int src, int bin, int dbg,
@@ -32,13 +39,7 @@ extern "C" void scriptCompApiInitCompiler(
     instance->SetGraphvizOutputPath(graphvizOut);
 }
 
-struct NativeCompileResult
-{
-    int32_t code;
-    char* str; // static buffer
-};
-
-extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instance, char* filename)
+extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instance, const char* filename)
 {
     NativeCompileResult ret;
 
@@ -49,12 +50,11 @@ extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instanc
     if (ret.code == 1 || ret.code == -1)
     {
         ret.code = instance->GetCapturedErrorStrRef();
-        assert(ret.code != 0);
         if (ret.code == 0)
             ret.code = STRREF_CSCRIPTCOMPILER_ERROR_FATAL_COMPILER_ERROR;
     }
 
-    ret.str = ret.code ? (char*)instance->GetCapturedError()->CStr() : (char*)"";
+    ret.str = ret.code ? instance->GetCapturedError()->CStr() : "";
     return ret;
 }
 
@@ -73,7 +73,7 @@ extern "C" void scriptCompApiSetOptimizationFlags(CScriptCompiler* instance, uin
     instance->SetOptimizationFlags(flags);
 }
 
-extern "C" void scriptCompApiSetGenerateDebuggerOutput(CScriptCompiler* instance, uint32_t state)
+extern "C" void scriptCompApiSetGenerateDebuggerOutput(CScriptCompiler* instance, bool state)
 {
     instance->SetGenerateDebuggerOutput(state);
 }

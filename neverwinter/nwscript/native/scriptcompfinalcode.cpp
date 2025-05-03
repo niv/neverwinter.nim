@@ -407,7 +407,7 @@ int32_t CScriptCompiler::CleanUpAfterCompile(int32_t nReturnValue,CScriptParseTr
 
 int32_t CScriptCompiler::OutputWalkTreeError(int32_t nError, CScriptParseTreeNode *pNode)
 {
-	CExoString strRes = m_cAPI.TlkResolve(-nError);
+	CExoString strRes = TlkToString(-nError);
 
 	CExoString *psFileName;
 	if (pNode != NULL && pNode->m_nFileReference != -1)
@@ -770,7 +770,7 @@ int32_t CScriptCompiler::ValidateLocationOfIdentifier(const CExoString &sFunctio
 ///////////////////////////////////////////////////////////////////////////////
 int32_t CScriptCompiler::OutputIdentifierError(const CExoString &sFunctionName, int32_t nError, int32_t nFileStackDrop)
 {
-	CExoString strRes = m_cAPI.TlkResolve(-nError);
+	CExoString strRes = TlkToString(-nError);
 
 	//g_pTlkTable->Fetch(-nError, strRes);
 	int32_t nFileStackEntry = m_nCompileFileLevel - nFileStackDrop;

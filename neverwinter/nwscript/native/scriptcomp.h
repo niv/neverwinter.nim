@@ -97,11 +97,6 @@ struct CScriptCompilerAPI
     // Repeated calls to this function will replace the buffer.
     // Please see the default impl in scriptcompapi.cpp for load semantics (e.g. it will serve up .nss files for .css files when not found).
     const char* (*ResManLoadScriptSourceFile)(const char* sFileName, RESTYPE nResType);
-
-    // Returns zero-terminated string, or "" if lookup failed.
-    // The returned string is a global static buffer and must not be freed by you.
-    // Repeated calls to this function will replace the buffer.
-    const char* (*TlkResolve)(STRREF strRef);
 };
 
 
@@ -121,6 +116,9 @@ public:
         // This is a concession to not changing all callsites.
         CScriptCompilerAPI api = MakeDefaultAPI());
 	~CScriptCompiler();
+
+    // Return a human-readable string for the given STRREF.
+    CExoString TlkToString(STRREF nStrRef) const;
 
 	///////////////////////////////////////////////////////////////////////
 	void SetIdentifierSpecification(const CExoString &sLanguageSource);

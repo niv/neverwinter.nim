@@ -4,10 +4,12 @@ when withDir(thisDir(), system.fileExists("nimble.paths")):
   include "nimble.paths"
 # end Nimble config
 
-# WAR for building amd64 binaries on GH releases, because GH switched
-# to aarch64 runners for macos actions.
-# Should refactor at some point to lipo together universial binaries.
-when defined(macos_amd64_hotfix):
+when defined(macosx) and defined(macos_amd64):
     --cpu:amd64
     --passC:"-target x86_64-apple-macos10.12"
     --passL:"-target x86_64-apple-macos10.12"
+
+when defined(macosx) and defined(macos_arm64):
+    --cpu:arm64
+    --passC:"-target arm64-apple-macos10.12"
+    --passL:"-target arm64-apple-macos10.12"

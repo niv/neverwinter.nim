@@ -91,12 +91,12 @@ struct CScriptCompilerAPI
     // Return 0 if OK, or error STRREF on failure (scripterrors.h)
     int32_t (*ResManWriteToFile)(const char* sFileName, RESTYPE nResType, const uint8_t* pData, size_t nSize, bool bBinary);
 
-    // Read the given filename+restype from resman, and return a zero-terminated string containing
-    // the content (up to the first null terminator). Returns nullptr if the file cannot be read/loaded.
-    // The returned string is a global static buffer and must not be freed by you.
-    // Repeated calls to this function will replace the buffer.
-    // Please see the default impl in scriptcompapi.cpp for load semantics (e.g. it will serve up .nss files for .css files when not found).
-    const char* (*ResManLoadScriptSourceFile)(const char* sFileName, RESTYPE nResType);
+    // Demand the given filename+restype from resman.
+    // During the callback, you are expected to invoke DeliverFile.
+    // Return true if you did this, false if the file does not exist.
+    // Please see the default impl in scriptcompapi.cpp for load semantics
+    // (e.g. it will serve up .nss files for .css files when not found).
+    bool (*ResManLoadScriptSourceFile)(const char* sFileName, RESTYPE nResType);
 
     // Returns zero-terminated string, or "" if lookup failed.
     // The returned string is a global static buffer and must not be freed by you.
@@ -316,9 +316,27 @@ public:
 	// Only used by the external compiler if a debug option is passed in.
 	void SetGraphvizOutputPath(const CExoString& sPath) { m_sGraphvizPath = sPath; }
 
+	// Ingest the sources for a requested file.
+	// Copies memory, so the pointer does not need to be valid after the call.
+	void DeliverRequestedFile(const char* pData, size_t nSize)
+	{
+		if (nSize > m_nDeliveredFileDataSize)
+		{
+			m_pDeliveredFileData = (char*) realloc(m_pDeliveredFileData, nSize);
+			m_nDeliveredFileDataSize = nSize;
+		}
+
+		memcpy(m_pDeliveredFileData, pData, nSize);
+		m_nDeliveredFileSize = nSize;
+	}
+
 	// *************************************************************************
 private:
 	// *************************************************************************
+
+	char* m_pDeliveredFileData;
+	size_t m_nDeliveredFileDataSize;
+	size_t m_nDeliveredFileSize;
 
     RESTYPE m_nResTypeSource;
     RESTYPE m_nResTypeCompiled;

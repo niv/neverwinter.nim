@@ -35,6 +35,9 @@ jobs:
       if: matrix.name == 'macos'
       run: ./scripts/build_release_macos.sh
 
+    - name: Compile libnwnscriptcomp (all platforms)
+      run: nimble build_libnwnscriptcomp
+
     - name: Create zip archive (Linux and macOS)
       if: matrix.name != 'windows'
       shell: bash

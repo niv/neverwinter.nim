@@ -48,3 +48,6 @@ jobs:
 
     - name: Build
       run: nimble build -d:release
+
+    - name: Build libscriptcomp
+      run: nimble build_libnwnscriptcomp

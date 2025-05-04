@@ -1,5 +1,6 @@
 nimcache
 bin/nwn_*
+bin/lib*.*
 nwn_*
 !nwn_*.nim
 !nwn_*.nim.cfg

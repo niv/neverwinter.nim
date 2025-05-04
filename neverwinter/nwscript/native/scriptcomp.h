@@ -101,7 +101,8 @@ struct CScriptCompilerAPI
     // Returns zero-terminated string, or "" if lookup failed.
     // The returned string is a global static buffer and must not be freed by you.
     // Repeated calls to this function will replace the buffer.
-    const char* (*TlkResolve)(STRREF strRef);
+    // Implementing this is optional: When omitted, hardcoded english strings are used.
+    const char* (*TlkResolve)(STRREF strRef) = nullptr;
 };
 
 
@@ -121,6 +122,9 @@ public:
         // This is a concession to not changing all callsites.
         CScriptCompilerAPI api = MakeDefaultAPI());
 	~CScriptCompiler();
+
+    // Return a human-readable string for the given STRREF.
+    CExoString TlkToString(STRREF nStrRef) const;
 
 	///////////////////////////////////////////////////////////////////////
 	void SetIdentifierSpecification(const CExoString &sLanguageSource);

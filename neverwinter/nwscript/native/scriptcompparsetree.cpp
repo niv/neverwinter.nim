@@ -4452,7 +4452,7 @@ int32_t CScriptCompiler::AddToGlobalVariableList(CScriptParseTreeNode *pGlobalVa
 
 int32_t CScriptCompiler::PrintParseSourceError(int32_t nParsingError)
 {
-	CExoString strRes = m_cAPI.TlkResolve(-nParsingError);
+	CExoString strRes = m_cAPI.TlkResolve ? m_cAPI.TlkResolve(-nParsingError) : TlkToString(-nParsingError);
 
 	CExoString *psFileName = &(m_pcIncludeFileStack[m_nCompileFileLevel-1].m_sCompiledScriptName);
 	CExoString sErrorText;

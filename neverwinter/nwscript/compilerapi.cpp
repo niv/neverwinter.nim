@@ -1,39 +1,40 @@
-#include "native/exobase.h"
+#include "compilerapi.h"
+
 #include "native/scriptcomp.h"
 
-extern "C" CScriptCompiler* scriptCompApiNewCompiler(
-    char* lang, int src, int bin, int dbg,
-    int32_t (*ResManWriteToFile)(const char* sFileName, RESTYPE nResType, const uint8_t* pData, size_t nSize, bool bBinary),
-    const char* (*ResManLoadScriptSourceFile)(const char* fn, RESTYPE rt),
-    const char* (*TlkResolve)(STRREF strRef),
-    bool writeDebug,
-    int maxIncludeDepth,
-    const char *graphvizOut
-)
+extern "C" int32_t scriptCompApiGetABIVersion()
+{
+    // Increment this whenever you make ABI-incompatible changes.
+    return 1;
+}
+
+extern "C" CScriptCompiler* scriptCompApiNewCompiler(int src, int bin, int dbg,
+    int32_t (*ResManWriteToFile)(const char* sFileName, RESTYPE nResType, const uint8_t* pData,
+        size_t nSize, bool bBinary),
+    bool (*ResManLoadScriptSourceFile)(const char* fn, RESTYPE rt))
 {
     CScriptCompilerAPI api;
     api.ResManUpdateResourceDirectory = +[](const char* sAlias) -> BOOL { return FALSE; };
     api.ResManWriteToFile = ResManWriteToFile;
     api.ResManLoadScriptSourceFile = ResManLoadScriptSourceFile;
-    api.TlkResolve = TlkResolve;
-    CScriptCompiler* instance = new CScriptCompiler(src, bin, dbg, api);
-    instance->SetGenerateDebuggerOutput(writeDebug);
-    instance->SetOptimizationFlags(writeDebug ? CSCRIPTCOMPILER_OPTIMIZE_NOTHING : CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING);
-    instance->SetCompileConditionalOrMain(1);
-    instance->SetIdentifierSpecification(lang);
-    instance->SetOutputAlias("scriptout");
-    instance->SetMaxIncludeDepth(maxIncludeDepth);
-    instance->SetGraphvizOutputPath(graphvizOut);
-    return instance;
+    return new CScriptCompiler(src, bin, dbg, api);
 }
 
-struct NativeCompileResult
+extern "C" void scriptCompApiInitCompiler(CScriptCompiler* instance, const char* lang,
+    bool writeDebug, int maxIncludeDepth, const char* graphvizOut, const char* outputAlias)
 {
-    int32_t code;
-    char* str; // static buffer
-};
+    instance->SetGenerateDebuggerOutput(writeDebug);
+    instance->SetOptimizationFlags(
+        writeDebug ? CSCRIPTCOMPILER_OPTIMIZE_NOTHING : CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING);
+    instance->SetCompileConditionalOrMain(1);
+    instance->SetIdentifierSpecification(lang);
+    instance->SetOutputAlias(outputAlias);
+    instance->SetMaxIncludeDepth(maxIncludeDepth);
+    instance->SetGraphvizOutputPath(graphvizOut);
+}
 
-extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instance, char* filename)
+extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instance,
+    const char* filename)
 {
     NativeCompileResult ret;
 
@@ -44,13 +45,17 @@ extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instanc
     if (ret.code == 1 || ret.code == -1)
     {
         ret.code = instance->GetCapturedErrorStrRef();
-        assert(ret.code != 0);
         if (ret.code == 0)
             ret.code = STRREF_CSCRIPTCOMPILER_ERROR_FATAL_COMPILER_ERROR;
     }
 
-    ret.str = ret.code ? (char*)instance->GetCapturedError()->CStr() : (char*)"";
+    ret.str = ret.code ? instance->GetCapturedError()->CStr() : "";
     return ret;
+}
+
+extern "C" void scriptCompApiDeliverFile(CScriptCompiler* instance, const char* data, size_t size)
+{
+    instance->DeliverRequestedFile(data, size);
 }
 
 extern "C" uint32_t scriptCompApiGetOptimizationFlags(CScriptCompiler* instance)
@@ -63,7 +68,12 @@ extern "C" void scriptCompApiSetOptimizationFlags(CScriptCompiler* instance, uin
     instance->SetOptimizationFlags(flags);
 }
 
-extern "C" void scriptCompApiSetGenerateDebuggerOutput(CScriptCompiler* instance, uint32_t state)
+extern "C" void scriptCompApiSetGenerateDebuggerOutput(CScriptCompiler* instance, bool state)
 {
     instance->SetGenerateDebuggerOutput(state);
+}
+
+extern "C" void scriptCompApiDestroyCompiler(CScriptCompiler* instance)
+{
+    delete instance;
 }

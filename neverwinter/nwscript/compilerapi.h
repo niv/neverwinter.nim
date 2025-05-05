@@ -12,6 +12,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef _WIN32
+  #define EXPORT_SYMBOL __declspec(dllexport) extern "C"
+#else
+  #define EXPORT_SYMBOL extern "C"
+#endif
+
 typedef uint16_t RESTYPE;
 typedef uint32_t STRREF;
 
@@ -68,7 +74,7 @@ struct NativeCompileResult
 // Clients using this ABI must check the version before using it, and abort
 // if it is a mismatch.
 //
-extern "C" int32_t scriptCompApiGetABIVersion();
+EXPORT_SYMBOL int32_t scriptCompApiGetABIVersion();
 
 //
 // Create a new compiler instance.
@@ -76,7 +82,7 @@ extern "C" int32_t scriptCompApiGetABIVersion();
 // The compiler will use the given language specifier to load the identifier spec file
 // as the first request; if you fail to service it, you will likely crash.
 //
-extern "C" CScriptCompiler* scriptCompApiNewCompiler(int src, // 2009 = nss
+EXPORT_SYMBOL CScriptCompiler* scriptCompApiNewCompiler(int src, // 2009 = nss
     int bin,                                                  // 2010 = ncs
     int dbg,                                                  // 2064 = ndb
     ResManWriteToFile resManWriteToFile, ResManLoadScriptSourceFile resManLoadScriptSourceFile);
@@ -86,7 +92,7 @@ extern "C" CScriptCompiler* scriptCompApiNewCompiler(int src, // 2009 = nss
 // You MUST call this after NewCompiler. This is a separate step to allow
 // setting up callbacks and returning a instance.
 //
-extern "C" void scriptCompApiInitCompiler(CScriptCompiler* instance,
+EXPORT_SYMBOL void scriptCompApiInitCompiler(CScriptCompiler* instance,
     const char* lang,       // usually "nwscript"
     bool writeDebug = true, // Also emit NDB files
     int maxIncludeDepth = 16,
@@ -100,32 +106,36 @@ extern "C" void scriptCompApiInitCompiler(CScriptCompiler* instance,
 // If the script is not compilable, the callback will never be invoked; instead, you will
 // get a STRREF error code in the result.
 //
-extern "C" NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instance,
+EXPORT_SYMBOL NativeCompileResult scriptCompApiCompileFile(CScriptCompiler* instance,
     const char* filename);
 
 //
 // Deliver a requested file to the compiler. Behavior is undefined
 // outside of the ResManLoadScriptSourceFile callback.
 //
-extern "C" void scriptCompApiDeliverFile(CScriptCompiler* instance, const char* data, size_t size);
+EXPORT_SYMBOL void scriptCompApiDeliverFile(CScriptCompiler* instance, const char* data, size_t size);
 
 //
 // Get the current optimization flags.
 // This is a bitmask of CSCRIPTCOMPILER_OPTIMIZE_* values.
 // The default is CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING.
 //
-extern "C" uint32_t scriptCompApiGetOptimizationFlags(CScriptCompiler* instance);
+EXPORT_SYMBOL uint32_t scriptCompApiGetOptimizationFlags(CScriptCompiler* instance);
 
 //
 // Set the optimization flags.
 // This allows you to toggle optimizations without re-creating the compiler.
 //
-extern "C" void scriptCompApiSetOptimizationFlags(CScriptCompiler* instance, uint32_t flags);
+EXPORT_SYMBOL void scriptCompApiSetOptimizationFlags(CScriptCompiler* instance, uint32_t flags);
 
 //
 // Set the compiler to generate debugger output.
 // This allows you to toggle the generation of NDB files without re-creating the compiler.
 //
-extern "C" void scriptCompApiSetGenerateDebuggerOutput(CScriptCompiler* instance, bool state);
+EXPORT_SYMBOL void scriptCompApiSetGenerateDebuggerOutput(CScriptCompiler* instance, bool state);
 
-extern "C" void scriptCompApiDestroyCompiler(CScriptCompiler* instance);
+//
+// Destroy the compiler instance. You should call this when you're done
+// using it to free allocated memory.
+//
+EXPORT_SYMBOL void scriptCompApiDestroyCompiler(CScriptCompiler* instance);

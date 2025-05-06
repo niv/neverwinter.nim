@@ -24,12 +24,10 @@ proc execEcho(cmd: string): void =
   echo "[exec] ", cmd
   exec cmd
 
-task clean, "Remove compiled binaries and temporary data":
-  for b in bin:
-    rmFile(binDir / b)
-    rmFile(binDir / b & ".exe")
-    rmFile(b)
-    rmFile(b & ".exe")
+task tidy, "Remove compiled binaries and temporary data":
+  for f in listFiles(binDir):
+    if not f.endsWith(".gitkeep"):
+      rmFile(f)
   rmdir(nimcacheDir())
   rmFile("testresults.html")
   rmdir("testresults")

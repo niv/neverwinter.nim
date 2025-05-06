@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0] - 2025-05-06
+
+This release is built with a entirely revamped compiler/release toolchain.
+
+It _should_ fix the issues seen with previous MingW-built releases on Windows ("fseek issue").
+
+This release now also ships the script compiler as a dynamic library on all platforms.
+
+### Added
+
+- scriptcomp: dynamic library (libnwscriptcomp.*).
+
 ## [2.0.3] - 2025-03-14
 
 ### Changed

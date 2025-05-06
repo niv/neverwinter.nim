@@ -1,6 +1,5 @@
 nimcache
-bin/nwn_*
-bin/lib*.*
+bin/*
 nwn_*
 !nwn_*.nim
 !nwn_*.nim.cfg
@@ -24,3 +23,6 @@ tests/*/*.exe
 *.ndb
 nimble.develop
 nimble.paths
+
+dist/*.zip
+scripts/zig-*-*

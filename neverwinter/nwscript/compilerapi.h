@@ -1,13 +1,5 @@
 #pragma once
 
-//
-// To build the shared library on MacOS:
-//   g++ -O2 -fPIC -shared -std=c++14 \
-//     -o libnwnscriptcomp.dylib \
-//     neverwinter/nwscript/compilerapi.cpp \
-//     neverwinter/nwscript/native/*.{cpp,c}
-//
-
 #include <cstdint>
 #include <stddef.h>
 #include <stdint.h>

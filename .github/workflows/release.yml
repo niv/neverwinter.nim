@@ -6,56 +6,46 @@ on:
       - '*'
 
 env:
-  NIMVER: "2.0.x"
+    NIMVER:  "2.2.4"
+    ZIGVER:  "0.14.0"
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: linux
-          - os: windows-latest
-            name: windows
-          - os: macOS-latest
-            name: macos
+    # On paper, we can cross-compile with zig from all platforms to all platforms.
+    # But the Mac build requires the Mac SDK, so we just build everything on Mac.
+    runs-on: macos-latest
+
     steps:
-    - uses: actions/checkout@v4
-    - uses: jiro4989/setup-nim-action@3a60cf06f20c1cf3a9becf76b30288c0361d5f1e  # v2
-      with:
-        nim-version: ${{ env.NIMVER }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: System Info
+        run: |
+          echo "System: $(uname -a)"
 
-    - name: Compile (Linux and Windows)
-      run: nimble build -d:release
-      if: matrix.name != 'macos'
+      - uses: actions/checkout@v4
 
-    - name: Compile (macOS)
-      if: matrix.name == 'macos'
-      run: ./scripts/build_release_macos.sh
+      - name: Setup Nimble cache
+        id: nimble-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.nimble
+          key: ${{ runner.os }}-nimble-${{ env.NIMVER }}
 
-    - name: Compile libnwnscriptcomp (all platforms)
-      run: nimble build_libnwnscriptcomp
+      - uses: mlugg/setup-zig@a67e68dc5c8281d9608136d3d7ca1b282213e4ac  # v1.2.1
+        with:
+          version: ${{ env.ZIGVER }}
 
-    - name: Create zip archive (Linux and macOS)
-      if: matrix.name != 'windows'
-      shell: bash
-      run: |
-        cd bin
-        zip -r ../neverwinter-${{ matrix.name }}.zip *
-        cd ..
+      - uses: jiro4989/setup-nim-action@3a60cf06f20c1cf3a9becf76b30288c0361d5f1e  # v2.2.2
+        with:
+          nim-version: ${{ env.NIMVER }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Create zip archive (Windows)
-      if: matrix.name == 'windows'
-      shell: pwsh
-      run: |
-        Compress-Archive -Path "bin\*" -DestinationPath "neverwinter-${{ matrix.name }}.zip"
+      - name: Build all targets
+        run: |
+          bash ./scripts/build-all.sh -d:release
 
-    - uses: actions/upload-artifact@v4
-      with:
-        name: neverwinter-${{ matrix.name }}.zip
-        path: neverwinter-${{ matrix.name }}.zip
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: dist/*.zip
 
   release:
     needs: build
@@ -66,11 +56,14 @@ jobs:
         with:
           path: .
           merge-multiple: true
-      - run: ls -R
+
+      - name: List artifacts
+        run: ls -laR
+
       - name: Create Release
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
         with:
           files: |
-            *.zip
+            *
           draft: true
           name: ${{ github.ref_name }}

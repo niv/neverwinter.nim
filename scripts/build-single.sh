@@ -5,40 +5,29 @@ test -e neverwinter.nimble || {
     exit 1
 }
 
-valid_os=("windows" "linux" "macos")
-valid_cpu=("x86_64" "aarch64")
-
-cpu=$1; shift
-os=$1; shift
+target=$1; shift
 
 set -e
 
-if [ -z "$os" ]; then
-    echo "Usage: $0 <cpu> <os> [nimble args...]"
-    echo "Example: $0 x86_64 linux"
-    exit 1
-fi
-
-if [[ ! " ${valid_os[*]} " =~ " ${os} " ]]; then
-    echo "Error: Invalid OS. Must be one of: ${valid_os[*]}"
-    exit 1
-fi
-
-if [[ ! " ${valid_cpu[*]} " =~ " ${cpu} " ]]; then
-    echo "Error: Invalid CPU architecture. Must be one of: ${valid_cpu[*]}"
+if [ -z "$target" ]; then
+    echo "Usage: $0 <target> [nimble args...]"
+    echo "Example: $0 x86_64-linux-gnu -d:release"
     exit 1
 fi
 
 script_dir=$(dirname "$(realpath "$0")")
 
 for tool in cc c++ ar; do
-    test -e "${script_dir}/zig-${tool}-${cpu}-${os}" || \
-        ln -v -s "${script_dir}/zig-redirector.sh" "${script_dir}/zig-${tool}-${cpu}-${os}"
+    test -e "${script_dir}/zig-${tool}-${target}" || \
+        ln -v -s "${script_dir}/zig-redirector.sh" "${script_dir}/zig-${tool}-${target}"
 done
 
-export CC="${script_dir}/zig-cc-${cpu}-${os}"
-export CXX="${script_dir}/zig-c++-${cpu}-${os}"
-export AR="${script_dir}/zig-ar-${cpu}-${os}"
+export CC="${script_dir}/zig-cc-${target}"
+export CXX="${script_dir}/zig-c++-${target}"
+export AR="${script_dir}/zig-ar-${target}"
+
+cpu=$(echo $target | cut -d'-' -f1)
+os=$(echo $target | cut -d'-' -f2)
 
 nim_cpu_remap=$(echo "$cpu" | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 nim_os_remap=$(echo "$os" | sed -e 's/macos/macosx/')
@@ -53,7 +42,7 @@ fi
 
 mkdir -p dist
 
-dist_file="dist/neverwinter-${cpu}-${os}.zip"
+dist_file="dist/neverwinter-${target}.zip"
 
 set -x
 
@@ -61,10 +50,10 @@ nimble tidy
 
 nimble build --os:${nim_os_remap} --cpu:${nim_cpu_remap} \
     --backend:cpp \
-    --gcc.exe:"$script_dir/zig-cc-${cpu}-${os}" \
-    --gcc.cpp.exe:"$script_dir/zig-c++-${cpu}-${os}" \
-    --gcc.linkerexe:"$script_dir/zig-cc-${cpu}-${os}" \
-    --gcc.cpp.linkerexe:"$script_dir/zig-c++-${cpu}-${os}" \
+    --gcc.exe:"$script_dir/zig-cc-${target}" \
+    --gcc.cpp.exe:"$script_dir/zig-c++-${target}" \
+    --gcc.linkerexe:"$script_dir/zig-cc-${target}" \
+    --gcc.cpp.linkerexe:"$script_dir/zig-c++-${target}" \
     "$@"
 
 ${CXX} -fPIC -shared -O2 \
@@ -89,8 +78,8 @@ if [ "${os}" == "windows" ]; then
 fi
 
 addn=""
-if [ -d "dist/pkg-${cpu}-${os}" ]; then
-    addn="dist/pkg-${cpu}-${os}"
+if [ -d "dist/pkg-${target}" ]; then
+    addn="dist/pkg-${target}"
 fi
 
 rm -v "${dist_file}" || true

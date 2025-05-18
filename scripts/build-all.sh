@@ -2,6 +2,15 @@
 
 set -e
 
+TARGETS=(
+  "x86_64-linux-musl"
+  "x86_64-macos"
+  "x86_64-windows"
+  "aarch64-linux-musl"
+  "aarch64-macos"
+  "aarch64-windows"
+)
+
 test -e neverwinter.nimble || {
     echo "Please run this script from the root of the project."
     exit 1
@@ -9,8 +18,8 @@ test -e neverwinter.nimble || {
 
 script_dir=$(dirname "$(realpath "$0")")
 
-for os in linux macos windows; do
-    for cpu in x86_64 aarch64; do
-        ./scripts/build-single.sh "$cpu" "$os" "$@"
-    done
+set -x
+
+for target in "${TARGETS[@]}"; do
+    ./scripts/build-single.sh "${target}" "$@"
 done

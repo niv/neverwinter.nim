@@ -7,7 +7,7 @@ on:
 
 env:
     NIMVER:  "2.2.4"
-    ZIGVER:  "0.14.0"
+    ZIGVER:  "0.14.1"
 
 jobs:
   build:

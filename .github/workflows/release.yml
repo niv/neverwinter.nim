@@ -29,7 +29,7 @@ jobs:
           path: ~/.nimble
           key: ${{ runner.os }}-nimble-${{ env.NIMVER }}
 
-      - uses: mlugg/setup-zig@a67e68dc5c8281d9608136d3d7ca1b282213e4ac  # v1.2.1
+      - uses: mlugg/setup-zig@7dccf5e6d09267c55f815f2db29495f30ba2ebca # v2.0.1
         with:
           version: ${{ env.ZIGVER }}
 

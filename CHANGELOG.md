@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.1] - 2025-05-29
+
+### Fixed
+
+- Linux binaries now link against gnu ABI, not musl. This should fix the start errors on some distros.
+
 ## [2.1.0] - 2025-05-06
 
 This release is built with a entirely revamped compiler/release toolchain.

@@ -4,6 +4,15 @@ const int INT_BINARY_LITERAL = 0b101010;
 const int INT_OCTAL_LITERAL = 0o052;
 const int INT_NEGATIVE_LITERAL = -42;
 
+const int INT_HEX_LITERAL_SEP = 0x2_A;
+const int INT_BINARY_LITERAL_SEP = 0b10_10_10;
+const int INT_OCTAL_LITERAL_SEP = 0o0_5_2;
+
+const int _123 = 123;
+const int _0x123 = 0x123;
+const int _0123 = 0123;
+const string _0xabcd = "_0xabcd";
+
 const float FLOAT_LITERAL_FULL = 42.42f;
 const float FLOAT_LITERAL_NO_SUFFIX = 42.42;
 const float FLOAT_LITERAL_ENDS_WITH_DOT = 42.;
@@ -104,6 +113,21 @@ const int HASHED_STRING_SPECIAL_CHARACTERS = h"\"\n\\\xFF\x80";
 
 void main() 
 {
+    // Test integer literals
+    Assert(INT_HEX_LITERAL == INT_LITERAL);
+    Assert(INT_BINARY_LITERAL == INT_LITERAL);
+    Assert(INT_OCTAL_LITERAL == INT_LITERAL);
+    Assert(INT_NEGATIVE_LITERAL == -INT_LITERAL);
+
+    Assert(INT_HEX_LITERAL_SEP == INT_LITERAL);
+    Assert(INT_BINARY_LITERAL_SEP == INT_LITERAL);
+    Assert(INT_OCTAL_LITERAL_SEP == INT_LITERAL);
+
+    Assert(_123 == 123);
+    Assert(_0x123 == 0x123);
+    Assert(_0123 == 0123);
+    Assert(_0xabcd == "_0xabcd");
+
     // Test float literals
     Assert(FLOAT_LITERAL_FULL == FLOAT_LITERAL_NO_SUFFIX);
     Assert(FLOAT_LITERAL_ENDS_WITH_DOT == FLOAT_LITERAL_ENDS_WITH_DOT_SUFFIX);

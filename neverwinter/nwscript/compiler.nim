@@ -45,7 +45,9 @@ type
 
 const
   OptimizationFlagsO0* = {}
-  OptimizationFlagsO2* = fullSet(OptimizationFlag)
+  OptimizationFlagsO1* = {RemoveDeadCode}
+  OptimizationFlagsO2* = {RemoveDeadCode, RemoveDeadBranches}
+  OptimizationFlagsO3* = {RemoveDeadCode, RemoveDeadBranches, MeldInstructions}
 
 proc scriptCompApiNewCompiler(
   src, bin, dbt: cint,

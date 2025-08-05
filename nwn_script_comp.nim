@@ -4,6 +4,9 @@ import shared
 import neverwinter/nwscript/compiler
 import neverwinter/resman
 
+proc fmtOptFlags(flags: set[OptimizationFlag], indentSize: int = 36): string =
+  indent(join(toSeq(flags).mapIt("+" & $it), "\n"), indentSize)
+
 const ArgsHelp = """
 Compile one or more scripts using the official compiler library.
 
@@ -31,10 +34,14 @@ Usage:
   -y                          Continue processing input files even on error.
   -j N                        Parallel execution (default: all CPUs).
 
-  -O N                        Optimisation levels [default: 2]
+  -O N                        Optimisation levels [default: 1]
                                 0: Optimise nothing
-                                2: Aggressive optimisations; fastest and smallest code size:
-""" & indent(join(toSeq(OptimizationFlagsO2).mapIt("+" & $it), "\n"), 36) & """
+                                1: Safe optimisations only, as used by the game and toolset
+""" & fmtOptFlags(OptimizationFlagsO1, 36) & "\n" & """
+                                2: Aggressive optimisations; faster and smaller code size
+""" & fmtOptFlags(OptimizationFlagsO2, 36) & "\n" & """
+                                3: Experimental optimisations; untested or known to break something
+""" & fmtOptFlags(OptimizationFlagsO3, 36) & "\n" & """
 
 
   --max-include-depth=N       Maximum include depth [default: 16]
@@ -98,7 +105,9 @@ globalState.params = Params(
   debugSymbols: globalState.args["-g"].to_bool,
   optFlags: (case parseInt($globalState.args["-O"])
     of 0: OptimizationFlagsO0
+    of 1: OptimizationFlagsO1
     of 2: OptimizationFlagsO2
+    of 3: OptimizationFlagsO3
     else: raise newException(ValueError, "No such optimisation flag: " & $globalState.args["-O"])
   ),
   continueOnError: globalState.args["-y"].to_bool,

@@ -25,7 +25,7 @@ extern "C" void scriptCompApiInitCompiler(CScriptCompiler* instance, const char*
 {
     instance->SetGenerateDebuggerOutput(writeDebug);
     instance->SetOptimizationFlags(
-        writeDebug ? CSCRIPTCOMPILER_OPTIMIZE_NOTHING : CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING);
+        writeDebug ? CSCRIPTCOMPILER_OPTIMIZE_NOTHING : CSCRIPTCOMPILER_OPTIMIZE_AGGRESSIVE);
     instance->SetCompileConditionalOrMain(1);
     instance->SetIdentifierSpecification(lang);
     instance->SetOutputAlias(outputAlias);

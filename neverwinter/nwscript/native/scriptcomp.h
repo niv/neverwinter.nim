@@ -56,8 +56,14 @@ class CScriptCompilerIdentifierHashTableEntry;
 // Removes the jump and the dead branches in if (CONST) constructs
 #define CSCRIPTCOMPILER_OPTIMIZE_DEAD_BRANCHES                        0x00000004
 
+// Optimization groups - roughly corresponding to -O0, -O1, -O2, -O3. Each group includes the previous one.
+// Safe - Known good, used by the game and toolset
+// Aggressive - Probably good, used by the external compiler
+// Experimental - Untested or known to break something
 #define CSCRIPTCOMPILER_OPTIMIZE_NOTHING                              0x00000000
-#define CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING                           0xFFFFFFFF
+#define CSCRIPTCOMPILER_OPTIMIZE_SAFE                                 (CSCRIPTCOMPILER_OPTIMIZE_DEAD_FUNCTIONS)
+#define CSCRIPTCOMPILER_OPTIMIZE_AGGRESSIVE                           (CSCRIPTCOMPILER_OPTIMIZE_SAFE | CSCRIPTCOMPILER_OPTIMIZE_DEAD_BRANCHES)
+#define CSCRIPTCOMPILER_OPTIMIZE_EXPERIMENTAL                         (CSCRIPTCOMPILER_OPTIMIZE_AGGRESSIVE | CSCRIPTCOMPILER_OPTIMIZE_MELD_INSTRUCTIONS)
 
 
 class CScriptCompilerIncludeFileStackEntry

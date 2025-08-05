@@ -307,7 +307,7 @@ CScriptCompiler::CScriptCompiler(RESTYPE nSource, RESTYPE nCompiled, RESTYPE nDe
 
 	m_sLanguageSource = "";
 	m_sOutputAlias = "OVERRIDE";
-	m_nOptimizationFlags = CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING;
+	m_nOptimizationFlags = CSCRIPTCOMPILER_OPTIMIZE_SAFE;
 	m_nIdentifierListState = 0;
 
 	m_pSRStack = NULL;

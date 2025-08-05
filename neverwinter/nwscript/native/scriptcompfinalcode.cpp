@@ -1003,7 +1003,7 @@ int32_t CScriptCompiler::TraverseTreeForSwitchLabels(CScriptParseTreeNode *pNode
 		{
 			int32_t nCaseValue;
 
-			ConstantFoldNode(pNode->pLeft, TRUE);
+			ConstantFoldNode(pNode->pLeft);
 			// Evaluate the constant value that is contained.
 			if (pNode->pLeft != NULL &&
 			        pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_NEGATION &&
@@ -1250,7 +1250,7 @@ int32_t CScriptCompiler::GenerateIdentifiersFromConstantVariables(CScriptParseTr
 			        pNode->pRight->pLeft->pLeft->pLeft != NULL)
 			{
 				CScriptParseTreeNode *pNodeConstant = pNode->pRight->pLeft->pLeft->pLeft;
-				ConstantFoldNode(pNodeConstant, TRUE);
+				ConstantFoldNode(pNodeConstant);
 
 				int32_t nConstantOperation = pNodeConstant->nOperation;
 				int32_t nSign = 1;
@@ -1561,7 +1561,7 @@ int32_t CScriptCompiler::PreVisitGenerateCode(CScriptParseTreeNode *pNode)
 	{
 		int32_t nCaseValue;
 
-			ConstantFoldNode(pNode->pLeft, TRUE);
+			ConstantFoldNode(pNode->pLeft);
 		// Evaluate the constant value that is contained.
 		if (pNode->pLeft != NULL &&
 		        pNode->pLeft->nOperation == CSCRIPTCOMPILER_OPERATION_NEGATION &&

@@ -1544,11 +1544,8 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 // Destructively modify a node and all its children to decay it into a single
 // CONSTANT operation, if possible.
 // This function is safe to call multiple times on the same node.
-BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
+BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode)
 {
-	if (!bForce && !(m_nOptimizationFlags & CSCRIPTCOMPILER_OPTIMIZE_FOLD_CONSTANTS))
-		return FALSE;
-
 	if (!pNode)
 		return FALSE;
 
@@ -1596,9 +1593,9 @@ BOOL CScriptCompiler::ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce)
 
 	// In case of complex expression, start folding at the leaf nodes
 	// e.g.:  C = 3 + 2*4 - First fold 2*4 into 8, then 3+8 into 11
-	ConstantFoldNode(pNode->pLeft, bForce);
+	ConstantFoldNode(pNode->pLeft);
 	if (pNode->pRight)
-		ConstantFoldNode(pNode->pRight, bForce);
+		ConstantFoldNode(pNode->pRight);
 
 	// Can only fold if the operands are constants.
 	if (pNode->pLeft->nOperation != CSCRIPTCOMPILER_OPERATION_CONSTANT_INTEGER &&

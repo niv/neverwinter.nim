@@ -310,8 +310,9 @@ proc putValue*[T: GffFieldType](self: GffStruct, label: string, t: typedesc[T], 
   ## Assigns a new gff field to the given struct under label. The old value will
   ## be discarded.
   expect(label.len > 0 and label.len <= 16)
-  self.fields[label] = newGffField(T, value)
-  self.fields[label].struct = self
+  let field = newGffField(T, value)
+  field.struct = self
+  self.fields[label] = field
 
 proc `[]=`*[T: GffFieldType](self: GffStruct, label: string, t: typedesc[T], value: T) =
   ## Alias for putField.

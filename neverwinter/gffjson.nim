@@ -12,42 +12,45 @@ proc toJson*(s: GffStruct): JSONNode =
   if s of GffRoot: result["__data_type"] = %s.GffRoot.fileType
 
   for k, v in pairs(s.fields):
-    result[k] = newJObject()  # the outer container
-
-    let s: string = $v.fieldKind
-    result[k]["type"] = %s.toLowerAscii
+    # Fill the outer container before inserting it, so we hash k only once.
+    let field = newJObject()
+    field["type"] = %($v.fieldKind).toLowerAscii
 
     case v.fieldKind:
-    of GffFieldKind.Byte: result[k]["value"] = %v.getValue(GffByte)
-    of GffFieldKind.Char: result[k]["value"] = %v.getValue(GffChar)
-    of GffFieldKind.Word: result[k]["value"] = %v.getValue(GffWord)
-    of GffFieldKind.Short: result[k]["value"] = %v.getValue(GffShort)
-    of GffFieldKind.Dword: result[k]["value"] = %v.getValue(GffDword)
-    of GffFieldKind.Int: result[k]["value"] = %v.getValue(GffInt)
-    of GffFieldKind.Float: result[k]["value"] = %v.getValue(GffFloat)
-    of GffFieldKind.Dword64: result[k]["value"] = %v.getValue(GffDword64)
-    of GffFieldKind.Int64: result[k]["value"] = %v.getValue(GffInt64)
-    of GffFieldKind.Double: result[k]["value"] = %v.getValue(GffDouble)
-    of GffFieldKind.CExoString: result[k]["value"] = %v.getValue(GffCExoString)
+    of GffFieldKind.Byte: field["value"] = %v.getValue(GffByte)
+    of GffFieldKind.Char: field["value"] = %v.getValue(GffChar)
+    of GffFieldKind.Word: field["value"] = %v.getValue(GffWord)
+    of GffFieldKind.Short: field["value"] = %v.getValue(GffShort)
+    of GffFieldKind.Dword: field["value"] = %v.getValue(GffDword)
+    of GffFieldKind.Int: field["value"] = %v.getValue(GffInt)
+    of GffFieldKind.Float: field["value"] = %v.getValue(GffFloat)
+    of GffFieldKind.Dword64: field["value"] = %v.getValue(GffDword64)
+    of GffFieldKind.Int64: field["value"] = %v.getValue(GffInt64)
+    of GffFieldKind.Double: field["value"] = %v.getValue(GffDouble)
+    of GffFieldKind.CExoString: field["value"] = %v.getValue(GffCExoString)
     of GffFieldKind.CExoLocString:
       let entries = newJObject()
-      for kk, vv in pairs(v.getValue(GffCExoLocString).entries): entries[$kk] = %vv
-      let id = v.getValue(GffCExoLocString).strRef
+      let locStr = v.getValue(GffCExoLocString)
+      for kk, vv in pairs(locStr.entries): entries[$kk] = %vv
+      let id = locStr.strRef
       if id != BadStrRef:
         # See reader codepath for comment why this lives on entries now.
         entries["id"] = %(int64 id)
-      result[k]["value"] = entries
+      field["value"] = entries
 
-    of GffFieldKind.ResRef: result[k]["value"] = %v.getValue(GffResRef).string
-    of GffFieldKind.Void: result[k]["value64"] = %v.getValue(GffVoid).string.encode()
+    of GffFieldKind.ResRef: field["value"] = %v.getValue(GffResRef).string
+    of GffFieldKind.Void: field["value64"] = %v.getValue(GffVoid).string.encode()
 
     of GffFieldKind.Struct:
       let s = v.getValue(GffStruct)
-      result[k]["value"] = toJSON(s)
-      result[k]["__struct_id"] = %s.id
+      field["value"] = toJSON(s)
+      field["__struct_id"] = %s.id
     of GffFieldKind.List:
-      result[k]["value"] = newJArray()
-      for elem in v.getValue(GffList): result[k]["value"].add(elem.toJSON())
+      let list = newJArray()
+      for elem in v.getValue(GffList): list.add(elem.toJSON())
+      field["value"] = list
+
+    result[k] = field
 
 proc gffStructFromJson*(j: JSONNode, result: GffStruct) =
   if j.hasKey("__struct_id"):

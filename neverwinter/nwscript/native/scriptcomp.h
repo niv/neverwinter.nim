@@ -249,6 +249,23 @@ public:
 	///////////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////////
+	void SetRequireEntryPoint(BOOL bValue);
+	//---------------------------------------------------------------------
+	// Desc.: This routine will set whether an entry point (void main or
+	//        int StartingConditional) is required for compilation.
+	//
+	// bValue:  (IN) A value to determine whether an entry point is required.
+	//
+	//          TRUE (default):  An entry point is required. Compilation
+	//              will fail if neither void main() nor
+	//              int StartingConditional() is present.
+	//
+	//          FALSE:  No entry point is required. Useful for validating
+	//              include files that have no entry point.
+	//
+	///////////////////////////////////////////////////////////////////////
+
+	///////////////////////////////////////////////////////////////////////
 	int32_t CompileFile(const CExoString &sFileName);
 	//---------------------------------------------------------------------
 	// Desc.: This routine will generate whether the code in the file
@@ -485,6 +502,7 @@ private:
 	BOOL m_bCompileConditionalFile;
 	BOOL m_bOldCompileConditionalFile;
 	BOOL m_bCompileConditionalOrMain;
+	BOOL m_bRequireEntryPoint;
 	CExoString m_sLanguageSource;
 	CExoString m_sOutputAlias;
 	CExoString m_sGraphvizPath;
@@ -687,4 +705,21 @@ private:
 
 	CExoString  m_sCapturedError;
     STRREF      m_nCapturedErrorStrRef;
+
+	// Multi-error collection support.
+	// When m_bCollectAllErrors is TRUE, errors are accumulated into vectors
+	// instead of stopping at the first error. The parser will attempt to
+	// recover and continue parsing after each error.
+	BOOL m_bCollectAllErrors;
+	int32_t m_nMaxCollectedErrors;
+	std::vector<CExoString> m_vCapturedErrors;
+	std::vector<STRREF> m_vnCapturedErrorStrRefs;
+	CScriptParseTreeNode *m_pSavedParseTree;  // Completed function trees saved before error recovery
+
+public:
+	void SetCollectAllErrors(BOOL bValue) { m_bCollectAllErrors = bValue; }
+	BOOL GetCollectAllErrors() const { return m_bCollectAllErrors; }
+	int32_t GetCollectedErrorCount() const { return (int32_t)m_vCapturedErrors.size(); }
+	const CExoString& GetCollectedError(int32_t index) const { EXOASSERT(index >= 0 && index < (int32_t)m_vCapturedErrors.size()); return m_vCapturedErrors[index]; }
+	STRREF GetCollectedErrorStrRef(int32_t index) const { EXOASSERT(index >= 0 && index < (int32_t)m_vnCapturedErrorStrRefs.size()); return m_vnCapturedErrorStrRefs[index]; }
 };

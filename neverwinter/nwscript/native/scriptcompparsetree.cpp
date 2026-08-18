@@ -4468,6 +4468,14 @@ int32_t CScriptCompiler::PrintParseSourceError(int32_t nParsingError)
 
 	OutputError(nParsingError,psFileName,m_nLines,sErrorText);
 
+	// In multi-error mode, don't tear down the compiler state.
+	// Return a positive sentinel value so ParseSource() can recover and continue.
+	if (m_bCollectAllErrors)
+	{
+		m_sParserErrorExtraInfo = "";
+		return 1; // Positive: signals ParseSource to recover
+	}
+
 	nParsingError = STRREF_CSCRIPTCOMPILER_ERROR_ALREADY_PRINTED;
 
 	return CleanUpDuringCompile(nParsingError);
@@ -4590,7 +4598,138 @@ int32_t CScriptCompiler::ParseSource(const char *pScript, int32_t nScriptLength)
 
 		if (nParseNextCharReturn < 0)
 		{
-			return PrintParseSourceError(nParseNextCharReturn);
+			int32_t nErrorResult = PrintParseSourceError(nParseNextCharReturn);
+
+			// In multi-error mode, PrintParseSourceError returns positive (1) to signal recovery.
+			// We skip forward to a synchronization point and reset the parser state.
+			if (m_bCollectAllErrors && nErrorResult > 0)
+			{
+				// Check if we've hit the error limit
+				if ((int32_t)m_vCapturedErrors.size() >= m_nMaxCollectedErrors)
+				{
+					return STRREF_CSCRIPTCOMPILER_ERROR_ALREADY_PRINTED;
+				}
+
+				// Skip forward to a synchronization point.
+				// We look for ';' or '}' at brace depth 0 relative to current position.
+				int32_t nBraceDepth = 0;
+				bool bFoundSync = false;
+
+				while (ch != -1 && !bFoundSync)
+				{
+					if (ch == '{')
+					{
+						++nBraceDepth;
+					}
+					else if (ch == '}')
+					{
+						if (nBraceDepth > 0)
+						{
+							--nBraceDepth;
+							if (nBraceDepth == 0)
+							{
+								// Closed back to top-level (e.g. end of function body) - sync here
+								bFoundSync = true;
+							}
+						}
+						else
+						{
+							// Found an unmatched closing brace at depth 0 - sync after it
+							bFoundSync = true;
+						}
+					}
+					else if (ch == ';' && nBraceDepth == 0)
+					{
+						// Found a semicolon at depth 0 - sync after it
+						bFoundSync = true;
+					}
+
+					// Track line numbers during skip
+					if (ch == '\n')
+					{
+						++m_nLines;
+						m_nCharacterOnLine = 1;
+					}
+					else
+					{
+						++m_nCharacterOnLine;
+					}
+
+					// Advance to next character
+					ch = chNext;
+					if (i >= nScriptLength)
+					{
+						chNext = -1;
+					}
+					else
+					{
+						chNext = (unsigned char) pScript[i];
+					}
+					++i;
+				}
+
+				// --- Save completed function trees before recovery destroys the stack ---
+				if (m_bCollectAllErrors)
+				{
+					// The SR stack contains a ladder of FUNCTIONAL_UNIT nodes
+					// from the recursive PROGRAM grammar. Each FU with a non-NULL
+					// pLeft has a completed function body. Collect these and chain
+					// them via pRight links for later semantic analysis.
+					CScriptParseTreeNode *pChainHead = NULL;
+					CScriptParseTreeNode *pChainTail = NULL;
+
+					for (int32_t idx = 0; idx <= m_nSRStackStates; idx++)
+					{
+						CScriptParseTreeNode *p = m_pSRStack[idx].pCurrentTree;
+						if (p != NULL &&
+						    p->nOperation == CSCRIPTCOMPILER_OPERATION_FUNCTIONAL_UNIT &&
+						    p->pLeft != NULL)
+						{
+							// Detach from stack so DeleteCompileStack won't Clean() it
+							m_pSRStack[idx].pCurrentTree = NULL;
+							p->pRight = NULL;
+
+							if (pChainHead == NULL)
+							{
+								pChainHead = p;
+								pChainTail = p;
+							}
+							else
+							{
+								pChainTail->pRight = p;
+								pChainTail = p;
+							}
+						}
+					}
+
+					// Append collected chain to the saved tree accumulator
+					if (pChainHead != NULL)
+					{
+						if (m_pSavedParseTree == NULL)
+						{
+							m_pSavedParseTree = pChainHead;
+						}
+						else
+						{
+							CScriptParseTreeNode *pEnd = m_pSavedParseTree;
+							while (pEnd->pRight) pEnd = pEnd->pRight;
+							pEnd->pRight = pChainHead;
+						}
+					}
+				}
+				// --- End save ---
+
+				// Reset the parser state to top-level context
+				TokenInitialize();
+				DeleteCompileStack();
+				m_nSRStackStates = -1;
+				PushSRStack(0, 0, 0, NULL);
+
+				continue;
+			}
+
+			// Normal mode: return the error immediately
+			return nErrorResult;
 		}
 
 		while (nParseNextCharReturn >= 0)
@@ -4631,6 +4770,85 @@ int32_t CScriptCompiler::ParseSource(const char *pScript, int32_t nScriptLength)
 	// Parse an EOF.
 	//
 	///////////////////////////////////////////////
+
+	// In multi-error mode, if we've already collected errors, don't try to parse EOF
+	// as the parser state may not be in a valid terminal state after recovery.
+	if (m_bCollectAllErrors && !m_vCapturedErrors.empty())
+	{
+		// Save any post-recovery parsed functions from the stack.
+		// After error recovery, the parser may have successfully parsed
+		// additional functions. Collect them the same way as in recovery.
+		{
+			CScriptParseTreeNode *pChainHead = NULL;
+			CScriptParseTreeNode *pChainTail = NULL;
+
+			for (int32_t idx = 0; idx <= m_nSRStackStates; idx++)
+			{
+				CScriptParseTreeNode *p = m_pSRStack[idx].pCurrentTree;
+				if (p == NULL) continue;
+
+				if (p->nOperation == CSCRIPTCOMPILER_OPERATION_FUNCTIONAL_UNIT &&
+				    p->pLeft != NULL)
+				{
+					m_pSRStack[idx].pCurrentTree = NULL;
+					p->pRight = NULL;
+					if (pChainHead == NULL)
+					{
+						pChainHead = p;
+						pChainTail = p;
+					}
+					else
+					{
+						pChainTail->pRight = p;
+						pChainTail = p;
+					}
+				}
+				else if (p->nOperation == CSCRIPTCOMPILER_OPERATION_FUNCTION)
+				{
+					// The function may have a completed body in pReturnTree
+					// that hasn't been linked yet (e.g., FUNCTIONAL_UNIT rule 2
+					// term 8 was pending when we reached EOF). Complete the
+					// reduction manually.
+					CScriptParseTreeNode *pr = m_pSRStack[idx].pReturnTree;
+					if (pr != NULL && p->pRight == NULL)
+					{
+						p->pRight = pr;
+						m_pSRStack[idx].pReturnTree = NULL;
+					}
+
+					// Wrap bare FUNCTION nodes in FUNCTIONAL_UNIT
+					CScriptParseTreeNode *pFU = CreateScriptParseTreeNode(
+						CSCRIPTCOMPILER_OPERATION_FUNCTIONAL_UNIT, p, NULL);
+					m_pSRStack[idx].pCurrentTree = NULL;
+					if (pChainHead == NULL)
+					{
+						pChainHead = pFU;
+						pChainTail = pFU;
+					}
+					else
+					{
+						pChainTail->pRight = pFU;
+						pChainTail = pFU;
+					}
+				}
+			}
+
+			if (pChainHead != NULL)
+			{
+				if (m_pSavedParseTree == NULL)
+				{
+					m_pSavedParseTree = pChainHead;
+				}
+				else
+				{
+					CScriptParseTreeNode *pEnd = m_pSavedParseTree;
+					while (pEnd->pRight) pEnd = pEnd->pRight;
+					pEnd->pRight = pChainHead;
+				}
+			}
+		}
+		return 0;
+	}
 
 	nParseNextCharReturn = ParseNextCharacter(-1,-1, nullptr, 0);
 

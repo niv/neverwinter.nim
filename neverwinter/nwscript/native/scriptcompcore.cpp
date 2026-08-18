@@ -341,6 +341,7 @@ CScriptCompiler::CScriptCompiler(RESTYPE nSource, RESTYPE nCompiled, RESTYPE nDe
 	m_bCompileConditionalFile = FALSE;
 	m_bOldCompileConditionalFile = FALSE;
 	m_bCompileConditionalOrMain = FALSE;
+	m_bRequireEntryPoint = TRUE;
 	m_bAutomaticCleanUpAfterCompiles = TRUE;
 
 	m_nNumEngineDefinedStructures = 0;
@@ -360,6 +361,10 @@ CScriptCompiler::CScriptCompiler(RESTYPE nSource, RESTYPE nCompiled, RESTYPE nDe
     m_pDeliveredFileData = NULL;
     m_nDeliveredFileDataSize = 0;
     m_nDeliveredFileSize = 0;
+
+	m_bCollectAllErrors = FALSE;
+	m_nMaxCollectedErrors = 100;
+	m_pSavedParseTree = NULL;
 
 	Initialize();
 
@@ -497,6 +502,8 @@ void CScriptCompiler::Initialize( )
 
 	m_sCapturedError = "";
     m_nCapturedErrorStrRef = 0;
+	m_vCapturedErrors.clear();
+	m_vnCapturedErrorStrRefs.clear();
 
 	m_nLines = 1;
 	m_nCharacterOnLine = 1;
@@ -1147,6 +1154,14 @@ void CScriptCompiler::SetCompileConditionalOrMain(BOOL bValue)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  CScriptCompiler::SetRequireEntryPoint()
+///////////////////////////////////////////////////////////////////////////////
+void CScriptCompiler::SetRequireEntryPoint(BOOL bValue)
+{
+	m_bRequireEntryPoint = bValue;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //  CScriptCompiler::SetAutomaticCleanUpAfterCompiles()
 ///////////////////////////////////////////////////////////////////////////////
 //  Created By: Mark Brockington
@@ -1270,6 +1285,25 @@ int32_t CScriptCompiler::CompileFile(const CExoString &sFileName)
 		// Why?  It is taken off in CleanUpDuringCompile.
 		m_pcIncludeFileStack[m_nCompileFileLevel].m_sSourceScript = "";
 		return nReturnValue;
+	}
+
+	// In multi-error mode, ParseSource returns 0 even when errors were collected.
+	// If errors were accumulated, skip code generation and return the first error code.
+	if (m_bCollectAllErrors && !m_vCapturedErrors.empty())
+	{
+		// Walk any saved complete function trees to detect semantic errors
+		// even when parsing had errors.
+		if (m_pSavedParseTree != NULL && m_nCompileFileLevel == 1)
+		{
+			InitializeFinalCode();
+			CScriptParseTreeNode *pTree = InsertGlobalVariablesInParseTree(m_pSavedParseTree);
+			WalkParseTree(pTree);
+			// Code buffer not needed — we only wanted semantic error detection.
+			// CleanUpAfterCompile or the final teardown will handle memory.
+		}
+		m_pcIncludeFileStack[m_nCompileFileLevel-1].m_sSourceScript = "";
+		--m_nCompileFileLevel;
+		return STRREF_CSCRIPTCOMPILER_ERROR_ALREADY_PRINTED;
 	}
 
 	// We have successfully compiled this file.  If we are still in
@@ -1511,7 +1545,7 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 		}
 	}
 
-	m_sCapturedError = sFullErrorText;
+	CExoString sFinalError = sFullErrorText;
 
     CExoString sTraceIncludes = "";
     for (int i = 1; i < m_nCompileFileLevel; i++)
@@ -1524,10 +1558,26 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 
     if (!sTraceIncludes.IsEmpty())
     {
-        m_sCapturedError.Format("%s [via:%s]", m_sCapturedError.CStr(), sTraceIncludes.CStr());
+        sFinalError.Format("%s [via:%s]", sFinalError.CStr(), sTraceIncludes.CStr());
     }
 
-    m_nCapturedErrorStrRef = nError;
+    if (m_bCollectAllErrors)
+    {
+        m_vCapturedErrors.push_back(sFinalError);
+        m_vnCapturedErrorStrRefs.push_back(nError);
+
+        // Keep m_sCapturedError set to the first error for backward compatibility
+        if (m_vCapturedErrors.size() == 1)
+        {
+            m_sCapturedError = sFinalError;
+            m_nCapturedErrorStrRef = nError;
+        }
+    }
+    else
+    {
+        m_sCapturedError = sFinalError;
+        m_nCapturedErrorStrRef = nError;
+    }
 
 	// Print the full error text to the log file.
     // This is used and parsed by the toolset :( Do not remove.

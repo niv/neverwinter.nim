@@ -49,6 +49,14 @@ Usage:
   -s                          Simulate: Compile, but write no file.
                               Use --verbose to see what would be written.
 
+  -n --no-entry-point         Do not require an entry point (void main or
+                              int StartingConditional). Useful for validating
+                              include files.
+
+  -E --all-errors             Collect and report all errors per file instead
+                              of stopping at the first error. Useful for IDEs
+                              and language servers.
+
   --langspec NSS              Language spec to load [default: nwscript]
   --restype-src TYPE          ResType to use for source lookup [default: nss]
   --restype-bin TYPE          ResType to use for binary output [default: ncs]
@@ -71,6 +79,8 @@ type
     maxIncludeDepth: 1..200
     followSymlinks: bool
     graphvizOut: string
+    requireEntryPoint: bool
+    collectAllErrors: bool
 
   GlobalState = object
     successes, errors, skips: Atomic[uint]
@@ -116,6 +126,8 @@ globalState.params = Params(
   maxIncludeDepth: parseInt($globalState.args["--max-include-depth"]),
   followSymlinks: globalState.args["--follow-symlinks"],
   graphvizOut: if globalState.args["--graphviz"]: ($globalState.args["--graphviz"]) else: "",
+  requireEntryPoint: not globalState.args["--no-entry-point"].to_bool,
+  collectAllErrors: globalState.args["--all-errors"].to_bool,
 )
 
 if globalState.params.outDirectory != "" and not dirExists(globalState.params.outDirectory):
@@ -207,6 +219,8 @@ proc getThreadState(): ThreadState {.gcsafe.} =
     state.chDemandResRefResponse.open(maxItems=1)
     state.cNSS = newCompiler(params.langSpec, params.debugSymbols, resolveFile, params.maxIncludeDepth, params.graphvizOut)
     state.cNSS.setOptimizations(params.optFlags)
+    state.cNSS.setRequireEntryPoint(params.requireEntryPoint)
+    state.cNSS.setCollectAllErrors(params.collectAllErrors)
   state
 
 proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.gcsafe.} =
@@ -261,7 +275,24 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
         debug prefix, "no main (include?)", timingPostfix()
       else:
         atomicInc globalState.errors
-        if params.continueOnError:
+
+        if params.collectAllErrors and ret.errors.len > 0:
+          # Multi-error mode: print each collected error as a separate log line
+          for idx, e in ret.errors:
+            if idx == 0:
+              if params.continueOnError:
+                error prefix, e.str, timingPostfix()
+              else:
+                fatal prefix, e.str, timingPostfix()
+            else:
+              if params.continueOnError:
+                error prefix, e.str
+              else:
+                fatal prefix, e.str
+
+          if not params.continueOnError:
+            quit(1)
+        elif params.continueOnError:
           error prefix, ret.str, timingPostfix()
         else:
           fatal prefix, ret.str, timingPostfix()

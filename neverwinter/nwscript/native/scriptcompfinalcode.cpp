@@ -5551,7 +5551,7 @@ int32_t CScriptCompiler::PostVisitGenerateCode(CScriptParseTreeNode *pNode)
 		// Write the MODIFY_STACK_POINTER instruction to modify the stack.
 
 		pNode->nIntegerData = (m_nFunctionImpAbortStackPointer - m_nStackCurrentDepth) * 4;
-		//m_nStackCurrentDepth = m_nFunctionImpAbortStackPointer;
+		m_nStackCurrentDepth = m_nFunctionImpAbortStackPointer;
 
 		if (pNode->nIntegerData != 0)
 		{

@@ -161,16 +161,14 @@ proc serviceRmDemand(rm: ResMan, resref: ResRef, searchPath: seq[RMSearchPathEnt
       of pcFile: resContainerCache[q[1]] = newResFile(q[1])
       else: continue
     containers.add resContainerCache[q[1]]
-  for c in containers:
-    rm.add(c)
-  defer:
-    for c in containers:
-      rm.del(c)
 
-  if not rm.contains(resref):
-    return ""
-  else:
-    return rm.demand(resref).readAll
+  containers &= rm.containers
+
+  for c in containers:
+    if c.contains(resref):
+      return c.demand(resref).readAll
+
+  return ""
 
 var chDemandResRef: Channel[tuple[
   resref: ResRef,

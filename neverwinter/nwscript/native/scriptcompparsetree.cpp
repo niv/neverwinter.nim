@@ -4463,17 +4463,53 @@ int32_t CScriptCompiler::AddUserDefinedIdentifier(CScriptParseTreeNode *pFunctio
 						}
 					}
 
-					// The return type is part of the signature as well. Merging a
-					// declaration and implementation that differ only in return
-					// type keeps the declaration's type at the call site (no stack
-					// slot reserved for a non-void result) while the implementation
-					// still pushes its return value, yielding bytecode that
-					// unbalances the VM stack at run-time.
+					// The return type is part of the signature as well, but the two
+					// directions of a mismatch are not equally dangerous. The first
+					// declaration is canonical and decides what every call site
+					// does: a non-void canonical type makes callers reserve a
+					// return slot, a void one does not. The implementation writes
+					// a return value iff its own body declares a non-void type.
+					//
+					// - canonical non-void, implementation void: the slot exists
+					//   and is simply never filled. The stack stays balanced and
+					//   the caller reads a stale value. The shipped game scripts
+					//   depend on this being accepted (issue #157).
+					// - canonical void, implementation non-void: no slot was
+					//   reserved, yet the implementation writes one, corrupting
+					//   the caller's frame and unbalancing the VM stack. This is
+					//   issue #114 and must stay an error, as must any other
+					//   combination (differing sizes cannot be reconciled).
 					if (m_pcIdentifierList[nIdentifierIndex].m_nReturnType != m_pcIdentifierList[m_nOccupiedIdentifiers].m_nReturnType ||
 					        (m_pcIdentifierList[nIdentifierIndex].m_nReturnType == CSCRIPTCOMPILER_TOKEN_STRUCTURE_IDENTIFIER &&
 					         m_pcIdentifierList[nIdentifierIndex].m_psStructureReturnName != m_pcIdentifierList[m_nOccupiedIdentifiers].m_psStructureReturnName))
 					{
 						bReturnTypeDifferent = TRUE;
+
+						if (bParameterListDifferent == FALSE &&
+						        IsVoidReturnType(m_pcIdentifierList[m_nOccupiedIdentifiers].m_nReturnType) &&
+						        !IsVoidReturnType(m_pcIdentifierList[nIdentifierIndex].m_nReturnType))
+						{
+							CExoString sDeclaredType = DescribeReturnType(
+							                            GenerateDebuggerTypeAbbreviation(
+							                                m_pcIdentifierList[nIdentifierIndex].m_nReturnType,
+							                                m_pcIdentifierList[nIdentifierIndex].m_psStructureReturnName),
+							                            m_pcIdentifierList[nIdentifierIndex].m_psStructureReturnName);
+
+							CExoString sWarningText;
+							sWarningText.Format(
+							    "function %s: %s returns void, declaration returns %s; keeping the declared return type",
+							    m_pcIdentifierList[m_nOccupiedIdentifiers].m_psIdentifier.CStr(),
+							    bFunctionImplementation == TRUE ? "implementation" : "redeclaration",
+							    sDeclaredType.CStr());
+
+							OutputWalkTreeWarning(
+							    STRREF_CSCRIPTCOMPILER_ERROR_FUNCTION_IMPLEMENTATION_AND_DEFINITION_DIFFER,
+							    pFunctionDeclaration,
+							    sWarningText);
+
+							// Acceptable: fall through to the merge below.
+							bReturnTypeDifferent = FALSE;
+						}
 					}
 
 					if (bParameterListDifferent == FALSE && bReturnTypeDifferent == FALSE)

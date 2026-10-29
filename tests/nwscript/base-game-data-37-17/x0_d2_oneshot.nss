@@ -1,0 +1,18 @@
+//:://////////////////////////////////////////////////
+//:: X0_D2_ONCE
+//:: Copyright (c) 2002 Floodgate Entertainment
+//:://////////////////////////////////////////////////
+/*
+Check if the one-shot event hasn't occurred yet.
+ */
+//:://////////////////////////////////////////////////
+//:: Created By: Naomi Novik
+//:: Created On: 10/11/2002
+//:://////////////////////////////////////////////////
+
+#include "x0_i0_common"
+
+int StartingConditional()
+{
+    return (! GetBooleanValue(OBJECT_SELF, sOneShotVarname));
+}

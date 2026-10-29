@@ -1,0 +1,18 @@
+//:://////////////////////////////////////////////////
+//:: X0_D2_HEN_ADV3
+//:: Copyright (c) 2002 Floodgate Entertainment
+//:://////////////////////////////////////////////////
+/*
+Is the henchman currently offering this set of advice.
+ */
+//:://////////////////////////////////////////////////
+//:: Created By: Naomi Novik
+//:: Created On: 09/13/2002
+//:://////////////////////////////////////////////////
+
+#include "x0_i0_henchman"
+
+int StartingConditional()
+{
+    return (GetHasAdvice(GetPCSpeaker()) == 3);
+}

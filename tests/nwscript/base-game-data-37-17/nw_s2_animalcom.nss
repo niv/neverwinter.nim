@@ -1,0 +1,18 @@
+//::///////////////////////////////////////////////
+//:: Summon Animal Companion
+//:: NW_S2_AnimalComp
+//:: Copyright (c) 2001 Bioware Corp.
+//:://////////////////////////////////////////////
+/*
+    This spell summons a Druid's animal companion
+*/
+//:://////////////////////////////////////////////
+//:: Created By: Preston Watamaniuk
+//:: Created On: Sept 27, 2001
+//:://////////////////////////////////////////////
+
+void main()
+{
+    //Yep thats it
+    SummonAnimalCompanion();
+}

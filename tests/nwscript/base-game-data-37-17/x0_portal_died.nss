@@ -1,0 +1,20 @@
+//::///////////////////////////////////////////////
+//:: x0_portal_died
+//:: Copyright (c) 2001 Bioware Corp.
+//:://////////////////////////////////////////////
+/*
+    Did the player die?
+*/
+//:://////////////////////////////////////////////
+//:: Created By:
+//:: Created On:
+//:://////////////////////////////////////////////
+#include "x0_inc_portal"
+
+int StartingConditional()
+{
+    int iResult;
+
+    iResult = PortalPlayerDied(GetPCSpeaker());
+    return iResult;
+}

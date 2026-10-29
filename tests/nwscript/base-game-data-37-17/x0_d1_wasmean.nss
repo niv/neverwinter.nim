@@ -1,0 +1,19 @@
+//:://////////////////////////////////////////////////
+//:: X0_D1_WASNASTY
+//:: Copyright (c) 2002 Floodgate Entertainment
+//:://////////////////////////////////////////////////
+/*
+Use if player does something mean to NPC. Most useful
+for ongoing relationships. 
+ */
+//:://////////////////////////////////////////////////
+//:: Created By: Naomi Novik
+//:: Created On: 09/26/2002
+//:://////////////////////////////////////////////////
+
+#include "x0_i0_common"
+
+void main()
+{
+    SetFriendly(GetPCSpeaker(), FALSE);
+}

@@ -1,0 +1,18 @@
+//:://////////////////////////////////////////////////
+//:: X0_D2_NPC_NOTQ1
+//:: Copyright (c) 2002 Floodgate Entertainment
+//:://////////////////////////////////////////////////
+/*
+Checks that the PC is not on quest 1.
+ */
+//:://////////////////////////////////////////////////
+//:: Created By: Naomi Novik
+//:: Created On: 10/16/2002
+//:://////////////////////////////////////////////////
+
+#include "x0_i0_plotgiver"
+
+int StartingConditional()
+{
+    return (GetQuestStatus(GetPCSpeaker(), 1) == QUEST_NOT_TAKEN);
+}

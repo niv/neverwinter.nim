@@ -1,0 +1,19 @@
+//:://////////////////////////////////////////////////
+//:: X0_D2_NPC_DONEQ3
+//:: Copyright (c) 2002 Floodgate Entertainment
+//:://////////////////////////////////////////////////
+/*
+Has the speaker completed quest 3
+ */
+//:://////////////////////////////////////////////////
+//:: Created By: Naomi Novik
+//:: Created On: 09/26/2002
+//:://////////////////////////////////////////////////
+
+#include "x0_i0_plotgiver"
+
+int StartingConditional()
+{
+    return GetQuestStatus(GetPCSpeaker(), 3) == QUEST_COMPLETE;
+}
+

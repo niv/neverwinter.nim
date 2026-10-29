@@ -1,0 +1,16 @@
+//::///////////////////////////////////////////////
+//:: x0_dm_damage1
+//:: Copyright (c) 2001 Bioware Corp.
+//:://////////////////////////////////////////////
+/*
+Does one point of damage, useful for testing.
+*/
+//:://////////////////////////////////////////////
+//:: Created By:
+//:: Created On:
+//:://////////////////////////////////////////////
+void main()
+{
+    effect eDamage = EffectDamage(1);
+    ApplyEffectToObject(DURATION_TYPE_INSTANT, eDamage, OBJECT_SELF);
+}

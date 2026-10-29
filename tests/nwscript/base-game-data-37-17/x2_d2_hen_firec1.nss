@@ -1,0 +1,28 @@
+//::///////////////////////////////////////////////
+//:: x2_d2_hen_firec1
+//:: Copyright (c) 2001 Bioware Corp.
+//:://////////////////////////////////////////////
+/*
+ Returns TRUE if the player has previously used this
+henchman but had fired him/her.
+
+In Chapter 1.
+*/
+//:://////////////////////////////////////////////
+//:: Created By:    Brent
+//:: Created On:    August 2003
+//:://////////////////////////////////////////////
+
+#include "x0_i0_henchman"
+
+int StartingConditional()
+{
+    if (!GetIsHired() && GetPlayerHasHired(GetPCSpeaker())
+       && GetChapter() == 1 && GetLocalInt(OBJECT_SELF, "X2_FIRE_C1") == 0)
+       {
+        SetLocalInt(OBJECT_SELF, "X2_FIRE_C1", 1); // * Already said this fire line
+        return TRUE;
+       }
+    return FALSE;
+}
+

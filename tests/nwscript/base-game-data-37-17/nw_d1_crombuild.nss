@@ -1,0 +1,21 @@
+//::///////////////////////////////////////////////
+//:: Cromwell builds an item
+//:: Copyright (c) 2001 Bioware Corp.
+//:://////////////////////////////////////////////
+/*
+    At this point assumes that there is a valid item
+    to be built
+*/
+//:://////////////////////////////////////////////
+//:: Created By: Brent
+//:: Created On: November 19 2001
+//:://////////////////////////////////////////////
+
+#include "NW_O0_ITEMMAKER"
+
+void main()
+{
+    CreateForgeItem();
+
+}
+

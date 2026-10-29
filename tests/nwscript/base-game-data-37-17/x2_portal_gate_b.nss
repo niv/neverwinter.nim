@@ -1,0 +1,21 @@
+//::///////////////////////////////////////////////
+//:: Name x2_portal_gate_a
+//:: Copyright (c) 2001 Bioware Corp.
+//:://////////////////////////////////////////////
+/*
+    Not dead
+*/
+//:://////////////////////////////////////////////
+//:: Created By:  Keith Warner
+//:: Created On:  Jan 17/03
+//:://////////////////////////////////////////////
+
+int StartingConditional()
+{
+
+    if (GetLocalInt(GetPCSpeaker(), "NW_L_I_DIED") != 1)
+        return TRUE;
+    return FALSE;
+}
+
+

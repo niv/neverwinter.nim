@@ -1,0 +1,16 @@
+//::///////////////////////////////////////////////
+//:: Generic Associate Commands
+//:: NW_CH_MIDDLE.nss
+//:: Copyright (c) 2001 Bioware Corp.
+//:://////////////////////////////////////////////
+/*
+    The minion will stay midway to the player.
+*/
+//:://////////////////////////////////////////////
+//:: Created By:  Brent
+//:: Created On:  October 22, 2001
+//:://////////////////////////////////////////////
+void main()
+{
+    SetLocalFloat(OBJECT_SELF,"NW_MINION_DISTANCE", 7.0);
+}

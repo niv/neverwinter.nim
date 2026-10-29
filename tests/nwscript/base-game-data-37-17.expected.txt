@@ -1,0 +1,93 @@
+# Base-game script corpus expectations for base-game-data-37-17.
+#
+# Every .nss is compiled with no entry point required at -O1. Only files that
+# do not compile cleanly, or that produce warnings, are listed.
+#
+# Format: <name> <error code> <warning count>
+#
+# Regenerate with:
+#   NWN_UPDATE_BASELINE=1 nim c -r tests/nwscript/tbasescripts.nim
+
+nw_c2_wnattack5 622 0
+nw_c2_wnattack8 622 0
+nw_c2_wnshout2 622 0
+nw_c2_wnshout5 622 0
+nw_c2_wnshout8 622 0
+nw_c3_blockerd 622 0
+nw_c3_waypoint1 622 0
+nw_c3_waypoint4 622 0
+nw_c3_waypointd 6804 0
+nw_c8_lv203 582 0
+nw_cb_lv123 582 0
+nw_cb_lv203 582 0
+nw_cd_lv123 622 0
+nw_cd_lv203 622 0
+nw_cd_lv23 622 0
+nw_cd_lv73 622 0
+nw_ch_fighter1 617 0
+nw_ci_lv123 582 0
+nw_ci_lv203 582 0
+nw_d1_fthostile 622 0
+nw_d2_chg13ing8 566 0
+nw_d2_chg13inl9 566 0
+nw_d2_ing6 566 0
+nw_d2_ing8wig13 566 0
+nw_d2_inl9 566 0
+nw_d2_races 566 0
+nw_d2_racesnh 566 0
+nw_e0_default2 622 0
+nw_e0_default4 622 0
+nw_i0_assoc 587 0
+nw_s0_clokchaos 582 0
+nw_s0_grshconj 582 0
+nw_s0_masdomn 582 0
+nw_s0_mirrimage 582 0
+nw_s0_mislead 582 0
+nw_s0_prchaos 582 0
+nw_s0_prlaw 582 0
+nw_s0_rmvblddef 582 0
+nw_s0_shadconj 565 0
+nw_s0_shades 582 0
+nw_s0_shldlaw 582 0
+pus_tm_lizdoor 603 0
+x0_inc_skills 0 1
+x0_o2_sec_chest 582 0
+x0_o2_sec_fdsgn1 582 0
+x0_o2_sec_fdsgn2 582 0
+x0_o2_sec_lvrdbl 582 0
+x0_o2_sec_lvrsin 582 0
+x0_o2_sec_ppltoc 582 0
+x0_o2_sec_ppltsq 582 0
+x0_o2_sec_tdoor 582 0
+x0_o2_sec_wdoor 582 0
+x0_skctrap_act_1 0 1
+x0_skctrap_act_2 0 1
+x0_skctrap_act_3 0 1
+x0_skctrap_act_4 0 1
+x0_skctrap_act_5 0 1
+x0_skctrap_act_6 0 1
+x0_skctrap_act_7 0 1
+x0_skctrap_act_8 0 1
+x0_skctrap_act_9 0 1
+x0_skctrap_act_a 0 1
+x0_skctrap_act_b 0 1
+x0_skctrap_act_c 0 1
+x0_skctrap_act_d 0 1
+x0_skctrap_act_e 0 1
+x0_skctrap_con_1 0 1
+x0_skctrap_con_2 0 1
+x0_skctrap_con_3 0 1
+x0_skctrap_con_4 0 1
+x0_skctrap_con_5 0 1
+x0_skctrap_con_6 0 1
+x0_skctrap_con_7 0 1
+x0_skctrap_con_8 0 1
+x0_skctrap_con_9 0 1
+x0_skctrap_con_a 0 1
+x0_skctrap_con_b 0 1
+x0_skctrap_con_c 0 1
+x0_skctrap_con_d 0 1
+x2_abort_cutscn 0 1
+x2_act_ws_makeit 0 1
+x2_inc_cutscene 0 1
+x2_s2_wildshpedk 582 0

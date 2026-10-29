@@ -78,6 +78,21 @@ extern "C" void scriptCompApiSetRequireEntryPoint(CScriptCompiler* instance, boo
     instance->SetRequireEntryPoint(state);
 }
 
+extern "C" int32_t scriptCompApiGetWarningCount(CScriptCompiler* instance)
+{
+    return instance->GetWarningCount();
+}
+
+extern "C" int32_t scriptCompApiGetWarningCode(CScriptCompiler* instance, int32_t idx)
+{
+    return (int32_t)instance->GetWarningCode(idx);
+}
+
+extern "C" const char* scriptCompApiGetWarningText(CScriptCompiler* instance, int32_t idx)
+{
+    return instance->GetWarningText(idx);
+}
+
 extern "C" void scriptCompApiDestroyCompiler(CScriptCompiler* instance)
 {
     delete instance;

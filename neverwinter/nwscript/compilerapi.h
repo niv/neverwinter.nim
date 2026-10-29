@@ -135,6 +135,26 @@ EXPORT_SYMBOL void scriptCompApiSetGenerateDebuggerOutput(CScriptCompiler* insta
 EXPORT_SYMBOL void scriptCompApiSetRequireEntryPoint(CScriptCompiler* instance, bool state);
 
 //
+// Get the number of warnings produced by the last compile of this instance.
+// Warnings are non-fatal: they never change the result code, and the list is
+// cleared at the start of every compile.
+//
+EXPORT_SYMBOL int32_t scriptCompApiGetWarningCount(CScriptCompiler* instance);
+
+//
+// Get the STRREF of a warning by index. Note that compiler error/warning
+// strrefs are negative (e.g. -617 corresponds to result code 617).
+//
+EXPORT_SYMBOL int32_t scriptCompApiGetWarningCode(CScriptCompiler* instance, int32_t idx);
+
+//
+// Get the formatted text of a warning by index, including file, line and
+// include trace. Pointer is owned by the compiler and is valid until the next
+// compile. Returns "" for out-of-range indexes.
+//
+EXPORT_SYMBOL const char* scriptCompApiGetWarningText(CScriptCompiler* instance, int32_t idx);
+
+//
 // Destroy the compiler instance. You should call this when you're done
 // using it to free allocated memory.
 //

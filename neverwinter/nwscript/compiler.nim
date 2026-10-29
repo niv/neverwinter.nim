@@ -35,6 +35,14 @@ type
     str: string
     bytecode: string  # "" if none written
     debugcode: string # "" if none written
+    warnings: seq[Warning]
+
+  Warning* = tuple
+    ## A non-fatal diagnostic. `code` matches the error strref numbering used
+    ## by `CompileResult.code`, and `str` is the fully formatted message
+    ## including file, line and include trace.
+    code: int32
+    str: string
 
 type
   # Needs to match scriptcomp.h
@@ -67,6 +75,10 @@ proc scriptCompApiInitCompiler(
 proc scriptCompApiCompileFile(instance: CScriptCompiler, fn: cstring): tuple[code: int32, str: cstring] {.importc.}
 
 proc scriptCompApiDeliverFile(instance: CScriptCompiler, data: cstring, size: csize_t) {.importc.}
+
+proc scriptCompApiGetWarningCount(instance: CScriptCompiler): int32 {.importc.}
+proc scriptCompApiGetWarningCode(instance: CScriptCompiler, idx: int32): int32 {.importc.}
+proc scriptCompApiGetWarningText(instance: CScriptCompiler, idx: int32): cstring {.importc.}
 
 # Since the C level API calls back for each invocation, we need to cache the
 # currently-calling compiler instance here. This makes all procs threadsafe, as long
@@ -198,12 +210,20 @@ proc compileFile*(instance: ScriptCompiler, fn: string): CompileResult =
   assert fn != ""
   assert currentCompileResults.bytecode == ""
   assert currentCompileResults.debugcode == ""
+  assert currentCompileResults.warnings.len == 0
 
   let q = scriptCompApiCompileFile(instance.compiler, fn.cstring)
 
   swap(result, currentCompileResults)
   result.code = q.code * -1
   result.str  = strip $(q.str)
+
+  # Warnings are reported separately from the result code; they never make a
+  # compile fail. The C side stores strrefs as negative values, so flip them to
+  # the positive numbering used by `code` and `str`.
+  for idx in 0..<scriptCompApiGetWarningCount(instance.compiler):
+    result.warnings.add (code: scriptCompApiGetWarningCode(instance.compiler, idx) * -1,
+                         str:  strip $scriptCompApiGetWarningText(instance.compiler, idx))
 
 proc scriptCompApiGetOptimizationFlags(instance: CScriptCompiler): uint32 {.importc.}
 proc scriptCompApiSetOptimizationFlags(instance: CScriptCompiler, flags: uint32) {.importc.}

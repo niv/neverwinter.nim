@@ -56,6 +56,10 @@ Usage:
                               entry point are validated but no code is
                               generated. Useful for validating include files.
 
+  --fatal-warnings            Treat warnings as errors: a script that compiles
+                              with warnings is counted as an error and no
+                              output is written for it.
+
   --langspec NSS              Language spec to load [default: nwscript]
   --restype-src TYPE          ResType to use for source lookup [default: nss]
   --restype-bin TYPE          ResType to use for binary output [default: ncs]
@@ -79,6 +83,7 @@ type
     followSymlinks: bool
     graphvizOut: string
     requireEntryPoint: bool
+    fatalWarnings: bool
 
   GlobalState = object
     args: OptArgs  # readonly
@@ -129,6 +134,7 @@ globalState.params = Params(
   followSymlinks: globalState.args["--follow-symlinks"],
   graphvizOut: if globalState.args["--graphviz"]: ($globalState.args["--graphviz"]) else: "",
   requireEntryPoint: not globalState.args["--no-require-entry-point"].to_bool,
+  fatalWarnings: globalState.args["--fatal-warnings"].to_bool,
 )
 
 if globalState.params.outDirectory != "" and not dirExists(globalState.params.outDirectory):
@@ -253,6 +259,22 @@ proc doCompile(num, total: Positive, p: string, overrideOutPath: string = "") {.
       else: " [" & $ms & "ms]"
 
     let prefix = format("[$#/$#] $#: ", num, total, p)
+
+    # Warnings are diagnostics, not failures: they are reported regardless of
+    # the compile outcome and never affect the result code. The message already
+    # carries file, line and include trace, so it is logged verbatim.
+    for w in ret.warnings:
+      warn w.str
+
+    if params.fatalWarnings and ret.code == 0 and ret.warnings.len > 0:
+      atomicInc gErrors
+      if params.continueOnError:
+        error prefix, "warnings treated as errors (--fatal-warnings)", timingPostfix()
+      else:
+        fatal prefix, "warnings treated as errors (--fatal-warnings)", timingPostfix()
+        gAborted.store(true)
+      return
+
     case ret.code
     of 0:
       proc writeData(fn, data: string) =

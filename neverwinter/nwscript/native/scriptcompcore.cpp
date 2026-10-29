@@ -500,6 +500,8 @@ void CScriptCompiler::Initialize( )
 	m_sCapturedError = "";
     m_nCapturedErrorStrRef = 0;
 
+	m_vWarnings.clear();
+
 	m_nLines = 1;
 	m_nCharacterOnLine = 1;
 
@@ -1496,46 +1498,9 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 		return nError;
 	}
 
-	CExoString sFullErrorText;
-
-	if (psFileName->Left(1) == "!")
-	{
-		if (nLineNumber > 0)
-		{
-			sFullErrorText.Format("%s(%d): %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sErrorText.CStr());
-		}
-		else
-		{
-			sFullErrorText.Format("%s: %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),sErrorText.CStr());
-		}
-	}
-	else
-	{
-		if (nLineNumber > 0)
-		{
-			sFullErrorText.Format("%s.nss(%d): %s\n",psFileName->CStr(),nLineNumber,sErrorText.CStr());
-		}
-		else
-		{
-			sFullErrorText.Format("%s.nss: %s\n",psFileName->CStr(),sErrorText.CStr());
-		}
-	}
+	CExoString sFullErrorText = FormatMessage(psFileName, nLineNumber, sErrorText);
 
 	m_sCapturedError = sFullErrorText;
-
-    CExoString sTraceIncludes = "";
-    for (int i = 1; i < m_nCompileFileLevel; i++)
-    {
-        sTraceIncludes = sTraceIncludes + " " + m_pcIncludeFileStack[i].m_sCompiledScriptName + ".nss";
-
-        if (m_pcIncludeFileStack[i].m_nLine > 0)
-            sTraceIncludes = sTraceIncludes + "(" + CExoString::ToString(m_pcIncludeFileStack[i].m_nLine) + ")";
-    }
-
-    if (!sTraceIncludes.IsEmpty())
-    {
-        m_sCapturedError.Format("%s [via:%s]", m_sCapturedError.CStr(), sTraceIncludes.CStr());
-    }
 
     m_nCapturedErrorStrRef = nError;
 
@@ -1548,6 +1513,76 @@ int32_t CScriptCompiler::OutputError(int32_t nError, CExoString *psFileName, int
 #endif
 
 	return nError;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  CScriptCompiler::FormatMessage()
+///////////////////////////////////////////////////////////////////////////////
+//  Description:  Builds the "file(line): text" form shared by errors and
+//                warnings, including the include-trace suffix.
+///////////////////////////////////////////////////////////////////////////////
+
+CExoString CScriptCompiler::FormatMessage(CExoString *psFileName, int32_t nLineNumber, const CExoString &sText)
+{
+	CExoString sFullText;
+
+	if (psFileName->Left(1) == "!")
+	{
+		if (nLineNumber > 0)
+		{
+			sFullText.Format("%s(%d): %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),nLineNumber,sText.CStr());
+		}
+		else
+		{
+			sFullText.Format("%s: %s\n",psFileName->Right(psFileName->GetLength()-1).CStr(),sText.CStr());
+		}
+	}
+	else
+	{
+		if (nLineNumber > 0)
+		{
+			sFullText.Format("%s.nss(%d): %s\n",psFileName->CStr(),nLineNumber,sText.CStr());
+		}
+		else
+		{
+			sFullText.Format("%s.nss: %s\n",psFileName->CStr(),sText.CStr());
+		}
+	}
+
+    CExoString sTraceIncludes = "";
+    for (int i = 1; i < m_nCompileFileLevel; i++)
+    {
+        sTraceIncludes = sTraceIncludes + " " + m_pcIncludeFileStack[i].m_sCompiledScriptName + ".nss";
+
+        if (m_pcIncludeFileStack[i].m_nLine > 0)
+            sTraceIncludes = sTraceIncludes + "(" + CExoString::ToString(m_pcIncludeFileStack[i].m_nLine) + ")";
+    }
+
+    if (!sTraceIncludes.IsEmpty())
+    {
+        sFullText.Format("%s [via:%s]", sFullText.CStr(), sTraceIncludes.CStr());
+    }
+
+	return sFullText;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  CScriptCompiler::OutputWarning()
+///////////////////////////////////////////////////////////////////////////////
+//  Description:  Non-fatal counterpart to OutputError(). The message is
+//                collected for the caller to report, but never becomes the
+//                captured error and never affects the compile result code.
+///////////////////////////////////////////////////////////////////////////////
+
+int32_t CScriptCompiler::OutputWarning(int32_t nWarning, CExoString *psFileName, int32_t nLineNumber, const CExoString &sWarningText)
+{
+	CExoString sPrefixed;
+	sPrefixed.Format("WARNING: %s", sWarningText.CStr());
+
+	m_vWarnings.push_back(
+	    std::make_pair((STRREF)nWarning, FormatMessage(psFileName, nLineNumber, sPrefixed)));
+
+	return 0;
 }
 
 

@@ -479,6 +479,40 @@ int32_t CScriptCompiler::OutputWalkTreeError(int32_t nError, CScriptParseTreeNod
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  CScriptCompiler::OutputWalkTreeWarning()
+///////////////////////////////////////////////////////////////////////////////
+//  Description:  Warning counterpart of OutputWalkTreeError(). Carries the
+//                same file/line information, but does not fail the compile.
+///////////////////////////////////////////////////////////////////////////////
+
+int32_t CScriptCompiler::OutputWalkTreeWarning(int32_t nWarning, CScriptParseTreeNode *pNode, const CExoString &sWarningText)
+{
+	CExoString *psFileName;
+	if (pNode != NULL && pNode->m_nFileReference != -1)
+	{
+		psFileName = m_ppsParseTreeFileNames[pNode->m_nFileReference];
+	}
+	else
+	{
+		psFileName = &(m_pcIncludeFileStack[m_nCompileFileLevel].m_sCompiledScriptName);
+	}
+
+	int32_t nLine;
+	if (pNode != NULL)
+	{
+		nLine = pNode->nLine;
+	}
+	else
+	{
+		nLine =  0;
+	}
+
+	OutputWarning(nWarning, psFileName, nLine, sWarningText);
+
+	return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //  CScriptCompiler::InsertGlobalVariablesInParseTree()
 ///////////////////////////////////////////////////////////////////////////////
 //  Created By: Mark Brockington

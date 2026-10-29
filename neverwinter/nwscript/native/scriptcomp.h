@@ -17,6 +17,7 @@
 #pragma once
 
 #include <vector>
+#include <utility>
 #include <algorithm>
 
 #include "exobase.h"
@@ -330,6 +331,27 @@ public:
 
     STRREF GetCapturedErrorStrRef() const { return m_nCapturedErrorStrRef; }
 
+	// Non-fatal diagnostics collected during the compile. The list is cleared
+	// at the start of every top-level CompileFile() call. Warnings never
+	// affect the compile result code.
+	int32_t GetWarningCount() const { return (int32_t)m_vWarnings.size(); }
+
+	STRREF GetWarningCode(int32_t nIndex) const
+	{
+		if (nIndex < 0 || nIndex >= GetWarningCount())
+			return 0;
+		return m_vWarnings[nIndex].first;
+	}
+
+	// Formatted warning text, including file and line. Static buffer owned by
+	// the compiler; valid until the next compile.
+	const char *GetWarningText(int32_t nIndex) const
+	{
+		if (nIndex < 0 || nIndex >= GetWarningCount())
+			return "";
+		return m_vWarnings[nIndex].second.CStr();
+	}
+
 	int32_t WriteFinalCodeToFile(const CExoString &sFileName);
 	int32_t WriteDebuggerOutputToFile(CExoString sFileName);
 
@@ -430,6 +452,8 @@ private:
 	int32_t ParseSource(const char *pScript, int32_t nScriptLength);
 
 	int32_t OutputError(int32_t nError, CExoString *psFileName, int32_t nLineNumber, const CExoString &sErrorText);
+	int32_t OutputWarning(int32_t nWarning, CExoString *psFileName, int32_t nLineNumber, const CExoString &sWarningText);
+	CExoString FormatMessage(CExoString *psFileName, int32_t nLineNumber, const CExoString &sText);
 	CScriptParseTreeNode *DuplicateScriptParseTree(CScriptParseTreeNode *pNode);
 	CScriptParseTreeNode *CreateScriptParseTreeNode(int32_t nNodeOperation, CScriptParseTreeNode *pNodeLeft, CScriptParseTreeNode *pNodeRight);
 	BOOL CheckForBadLValue(CScriptParseTreeNode *pNode);
@@ -442,6 +466,7 @@ private:
 	CScriptParseTreeNodeBlock *m_pParseTreeNodeBlockTail;
 
 	int32_t OutputWalkTreeError(int32_t nError, CScriptParseTreeNode *pNode);
+	int32_t OutputWalkTreeWarning(int32_t nWarning, CScriptParseTreeNode *pNode, const CExoString &sWarningText);
 	int32_t PreVisitGenerateCode(CScriptParseTreeNode *pNode);
 	int32_t InVisitGenerateCode(CScriptParseTreeNode *pNode);
 	int32_t PostVisitGenerateCode(CScriptParseTreeNode *pNode);
@@ -707,4 +732,6 @@ private:
 
 	CExoString  m_sCapturedError;
     STRREF      m_nCapturedErrorStrRef;
+
+	std::vector<std::pair<STRREF, CExoString> > m_vWarnings;
 };

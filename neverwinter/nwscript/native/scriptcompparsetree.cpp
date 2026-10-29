@@ -60,6 +60,36 @@
 
 //::///////////////////////////////////////////////////////////////////////////
 //::
+//::  Return type helpers for declaration/implementation diagnostics.
+//::
+//::///////////////////////////////////////////////////////////////////////////
+
+static BOOL IsVoidReturnType(int32_t nType)
+{
+	return nType == CSCRIPTCOMPILER_TOKEN_VOID_IDENTIFIER ||
+	       nType == CSCRIPTCOMPILER_TOKEN_KEYWORD_VOID;
+}
+
+// Turns the debugger type abbreviation into something a script author can read.
+static CExoString DescribeReturnType(const CExoString &sAbbreviation, const CExoString &sStructureName)
+{
+	if (sAbbreviation == "v") return "void";
+	if (sAbbreviation == "i") return "int";
+	if (sAbbreviation == "f") return "float";
+	if (sAbbreviation == "o") return "object";
+	if (sAbbreviation == "s") return "string";
+
+	// Structs come back as "tNNNN"; the name is more useful than the index.
+	if (sAbbreviation.Left(1) == "t" && !sStructureName.IsEmpty())
+	{
+		return sStructureName;
+	}
+
+	return "a non-void type";
+}
+
+//::///////////////////////////////////////////////////////////////////////////
+//::
 //::  UnwrapConditionNode()
 //::
 //::  Peel off the wrapper nodes that the expression grammars put around a

@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.3.2] - 2026-10-30
+
+### Added
+
+- scriptcomp now emits some messages as non-fatal warnings, and the API also carries this metadata.
+- scriptcomp gained `--fatal-warnings` to treat warnings as errors.
+- scriptcomp: The test suite now compiles the entire base-game script corpus (`tests/nwscript/base-game-data-37-17`) against a checked-in expectation table (some are already broken and known to fail).
+
+### Fixed
+
+- scriptcomp: A function whose implementation returns `void` while its declaration returns a value now compiles with a warning instead of failing. The opposite mismatch remains an error, as it would otherwise result in a stack misalign.
+- Hardened the build scaffold to prevent including the wrong arch binaries.
+- Fixed the build scaffold dropping some binaries on x86_64-macos build.
+
 ## [2.3.1] - 2026-08-25
 
 ### Fixed

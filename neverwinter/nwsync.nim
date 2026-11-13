@@ -1,4 +1,4 @@
-import std/[streams, critbits, os, algorithm, strutils, sequtils, math, options]
+import std/[streams, critbits, os, algorithm, strutils, sequtils, math, options, sets]
 
 import neverwinter/[restype, resref, streamext, checksums]
 
@@ -86,8 +86,10 @@ proc totalSize*(mf: Manifest): int64 =
 
 proc deduplicatedSize*(mf: Manifest): int64 =
   ## Dedup size of manifest.
-  let a = mf.entries.mapIt((sha1: it.sha1, size: it.size))
-  a.deduplicate().mapIt(int64 it.size).sum()
+  var seen = initHashSet[(string, uint32)](mf.entries.len)
+  for e in mf.entries:
+    if not seen.containsOrIncl((e.sha1, e.size)):
+      result += int64 e.size
 
 proc readResRef(io: Stream): ResRef =
   let resref = io.readString(16).strip(leading=false,trailing=true,chars={'\0'}).toLowerAscii

@@ -575,10 +575,33 @@ public:
 
         if (m_psStringData && !m_psStringData->IsEmpty())
         {
-            CExoString sanitized = m_psStringData->RemoveAll("\"\n\\<>|");
-            if (sanitized.IsEmpty())
-                sanitized = "?";
-            fprintf(fp, "STR: '%s'\\n", sanitized.CStr());
+            // The graph uses shape=record, where { } | < > are field syntax and
+            // the label is a quoted string. Escape all of them.
+            fprintf(fp, "STR: '");
+            for (const char *p = m_psStringData->CStr(); *p; ++p)
+            {
+                switch (*p)
+                {
+                    case '{':
+                    case '}':
+                    case '|':
+                    case '<':
+                    case '>':
+                    case '"':
+                    case '\\':
+                        fputc('\\', fp);
+                        fputc(*p, fp);
+                        break;
+                    case '\n':
+                        fputs("\\n", fp);
+                        break;
+                    case '\r':
+                        break;
+                    default:
+                        fputc(*p, fp);
+                }
+            }
+            fprintf(fp, "'\\n");
         }
 
         if (m_psTypeName && !m_psTypeName->IsEmpty())

@@ -337,10 +337,11 @@ proc containers*(self: ResMan): seq[ResContainer] =
 
 proc del*(self: ResMan, c: ResContainer) =
   ## Remove a container from this ResMan.
+  ## The others keep their order (seq.del would move the last one into the gap).
   let idx = self.containers.find(c)
-  if idx > -1: self.containers.del(idx)
+  if idx > -1: self.containers.delete(idx)
 
-proc del*(self: ResMan, idx: int) = self.containers.del(idx)
+proc del*(self: ResMan, idx: int) = self.containers.delete(idx)
   ## Remove a container from this ResMan (by id).
 
 proc cache*(self: ResMan): WeightedLRU[ResRef, Res] = self.cache

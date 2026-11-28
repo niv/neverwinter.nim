@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.4.0] - 2026-11-28
+
+### Fixed
+
+- resman: Removing a container no longer reorders the others. This made `nwn_script_comp` read the wrong copy of an include when `ovr/` overrides one, differently from run to run with `-j` above 1.
+
+### Performance Improvements
+
+- nwsync: `nwn_nwsync_prune` no longer takes minutes per manifest to compute the deduplicated manifest size (`Manifest.deduplicatedSize` is now linear instead of quadratic).
+
 ## [2.3.2] - 2026-10-30
 
 ### Added
